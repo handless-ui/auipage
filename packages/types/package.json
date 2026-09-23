@@ -1,0 +1,29 @@
+{
+    "name": "@auipage/types",
+    "version": "0.1.0-alpha.1",
+    "description": "@auipage/types",
+    "type": "module",
+    "typings": "index.d.ts",
+    "sideEffects": false,
+    "scripts": {},
+    "keywords": [
+        "ui",
+        "page",
+        "agent"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/handless-ui/auipage.git",
+        "directory": "packages/types"
+    },
+    "author": {
+        "name": "zxl20070701",
+        "url": "https://zxl20070701.github.io/notebook/home.html"
+    },
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/handless-ui/auipage/issues"
+    },
+    "homepage": "https://github.com/handless-ui/auipage#readme",
+    "dependencies": {}
+}

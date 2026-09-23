@@ -1,0 +1,105 @@
+.container {
+    width: 350px;
+    height: 500px;
+    border: 1px solid #000;
+    display: inline-block;
+    margin: 10px;
+    border-radius: 8px;
+    vertical-align: top;
+}
+
+.message-list-container {
+    height: 450px;
+    overflow: auto;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.input-container {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-container>input {
+    width: 200px;
+    height: 30px;
+    padding: 5px;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.input-container>button {
+    width: 50px;
+    height: 30px;
+    margin-left: 10px;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.ctrl-container {
+    box-sizing: border-box;
+    height: 50px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.ctrl-container>button {
+    margin-right: 10px;
+    border: none;
+    background-color: #000;
+    color: white;
+    cursor: pointer;
+}
+
+.ctrl-container>button:hover {
+    outline: 1px solid rgb(55, 55, 56);
+}
+
+.thread-list-container {
+    height: 450px;
+    overflow: auto;
+}
+
+.thread-list-container>.thread-item {
+    margin: 5px 10px;
+    padding: 5px;
+    user-select: none;
+    cursor: pointer;
+}
+
+.thread-list-container>.thread-item[status="regular"]:hover {
+    text-decoration: underline;
+}
+
+.thread-list-container>.thread-item[status="regular"]>.unarchive {
+    display: none;
+}
+
+.thread-list-container>.thread-item[status="archived"] {
+    cursor: not-allowed;
+    color: #757575;
+    background-color: #c3c3c3;
+    text-decoration: line-through;
+}
+
+.thread-list-container>.thread-item[status="archived"]>.archived {
+    display: none;
+}
+
+.thread-list-container>.active {
+    outline: 2px solid #2196F3;
+    padding: 5px;
+    border-radius: 5px;
+    background-color: #8dd7e0;
+}
+
+.thread-list-container>.thread-item>button {
+    margin-left: 5px;
+}
+
+.must-last:not(:last-child) {
+    display: none;
+}

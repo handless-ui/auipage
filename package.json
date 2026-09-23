@@ -1,0 +1,38 @@
+{
+  "name": "auipage",
+  "version": "0.1.0-alpha.1",
+  "description": "智能体快速开发框架，用于快速开发智能体网页应用。",
+  "type": "module",
+  "scripts": {
+    "prepublishOnly": "node ./publish.js --mode=error",
+    "publish": "node ./publish.js --mode=publish",
+    "postinstall": "node ./postinstall.js",
+    "dev": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/handless-ui/auipage.git"
+  },
+  "keywords": [
+    "ui",
+    "page",
+    "agent"
+  ],
+  "author": "zxl20070701",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/handless-ui/auipage/issues"
+  },
+  "homepage": "https://github.com/handless-ui/auipage#readme",
+  "devDependencies": {
+    "@oipage/cli": "0.3.0-alpha.5"
+  },
+  "dependencies": {
+    "@auipage/agent": "workspace:^",
+    "@auipage/core": "workspace:^",
+    "@auipage/fetch": "workspace:^",
+    "@auipage/model": "workspace:^",
+    "@oipage/browser.js": "^1.1.0-alpha.0",
+    "oipage": "^2.1.0"
+  }
+}

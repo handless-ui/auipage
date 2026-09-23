@@ -1,0 +1,147 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@auipage/agent':
+        specifier: workspace:^
+        version: link:packages/agent
+      '@auipage/core':
+        specifier: workspace:^
+        version: link:packages/core
+      '@auipage/fetch':
+        specifier: workspace:^
+        version: link:packages/fetch
+      '@auipage/model':
+        specifier: workspace:^
+        version: link:packages/model
+      '@oipage/browser.js':
+        specifier: ^1.1.0-alpha.0
+        version: 1.1.0-alpha.0
+      oipage:
+        specifier: ^2.1.0
+        version: 2.1.0
+    devDependencies:
+      '@oipage/cli':
+        specifier: 0.3.0-alpha.5
+        version: 0.3.0-alpha.5
+
+  packages/agent:
+    dependencies:
+      '@auipage/model':
+        specifier: workspace:^
+        version: link:../model
+      '@auipage/types':
+        specifier: workspace:^
+        version: link:../types
+      oipage:
+        specifier: ^2.1.0
+        version: 2.1.0
+
+  packages/core:
+    dependencies:
+      '@auipage/types':
+        specifier: ^0.1.0-alpha.1
+        version: link:../types
+      oipage:
+        specifier: ^2.1.0
+        version: 2.1.0
+
+  packages/fetch:
+    dependencies:
+      '@auipage/types':
+        specifier: workspace:^
+        version: link:../types
+
+  packages/model:
+    dependencies:
+      '@auipage/fetch':
+        specifier: workspace:^
+        version: link:../fetch
+      '@auipage/types':
+        specifier: workspace:^
+        version: link:../types
+
+  packages/types: {}
+
+packages:
+
+  '@oipage/browser.js@1.1.0-alpha.0':
+    resolution: {integrity: sha512-dgn5FhIVhK7GieKdGxY5DZhUsF6FRkxoS/1Omr0Fp2rjQROsOmKwaBgkwrnfjohpWNn51Kg4DbpLQ/y5fLHQQg==}
+
+  '@oipage/cli@0.3.0-alpha.5':
+    resolution: {integrity: sha512-e+9iERoCMlB1oNDuZ5ry2eQK4+20SqHt7Qsef7IpJybMMzyEr6I8l+tZrigdQmVLOxbEL1oWv68N0lWj5ksj7w==}
+    hasBin: true
+
+  eval-express@0.1.1:
+    resolution: {integrity: sha512-feWveHpKFzjPQNGhJ3nRncekU9/EwmEbrMn+0Ubl2o7i9M+/2ioB6bgHQ/jaqzUOE+nA4WFTZlO5tBJ3t/AuVA==}
+
+  oipage@1.10.0:
+    resolution: {integrity: sha512-vudRhwbS6KC4k5+NA2KNn7vuJHJxVWmf2oTR+Uwz3Lj/5IM2gceuv4hOTTVYNY+PCJ1nNJk19zOQ7jLVnzrAKw==}
+    hasBin: true
+
+  oipage@2.1.0:
+    resolution: {integrity: sha512-7/pzEANtcKtubVKo11riCphnS5ZtYHe9lmOOQmdgSEA+xIKd1jG5eohNTqaWa6uygtZmFh2I6TInLrAi4jxctQ==}
+
+  vislite@1.11.0:
+    resolution: {integrity: sha512-Qq4qf2B97XjDd44XcIDV+aguS+Vbf7AgagRnZCpDaZWSUS+uuhK5os6zrtgX3ulnILuBjvnpSJbtZPZ7Yee2rg==}
+
+  xhtml-to-json@0.1.0:
+    resolution: {integrity: sha512-mKVH/Tsm6xfvyxixqjqIYlT9kZvoPHwy99w4B1Jp62Trd1GvhMHyJEOKTpFFzyg26LFbIP42QEltAAvqhsTCng==}
+
+  xhtml-to-json@0.2.1:
+    resolution: {integrity: sha512-ObIXPAXHbtOtG3qGAVqw+7O/Q0Q7MJQM3NOpzciZV495g1ktCNp02hEtYzMtA3FypB5V76/QSUWnXKEws+RnTg==}
+
+  zipaper@0.2.1:
+    resolution: {integrity: sha512-3YfwXznzQ5wrVNF2EXxXDJNAitJG62BzpeEhAUOThC6jCWxaUqEi1R1ed/MtUYjawzQT5BazR6SHxegsgbozGQ==}
+
+  zipaper@0.4.0:
+    resolution: {integrity: sha512-bMnejSrw/hVgpK5rX5BLQcrtzOM4S3Jw47MtQKvtPycho/U6FpCG/5PtvfPzUil4R+TfLpqsHGanre1f8fjgoQ==}
+
+snapshots:
+
+  '@oipage/browser.js@1.1.0-alpha.0':
+    dependencies:
+      oipage: 1.10.0
+
+  '@oipage/cli@0.3.0-alpha.5':
+    dependencies:
+      oipage: 2.1.0
+      vislite: 1.11.0
+      xhtml-to-json: 0.2.1
+      zipaper: 0.4.0
+
+  eval-express@0.1.1: {}
+
+  oipage@1.10.0:
+    dependencies:
+      vislite: 1.11.0
+      xhtml-to-json: 0.1.0
+      zipaper: 0.2.1
+
+  oipage@2.1.0: {}
+
+  vislite@1.11.0:
+    dependencies:
+      oipage: 2.1.0
+
+  xhtml-to-json@0.1.0: {}
+
+  xhtml-to-json@0.2.1: {}
+
+  zipaper@0.2.1:
+    dependencies:
+      eval-express: 0.1.1
+      oipage: 1.10.0
+      vislite: 1.11.0
+
+  zipaper@0.4.0:
+    dependencies:
+      eval-express: 0.1.1
+      oipage: 1.10.0
+      vislite: 1.11.0

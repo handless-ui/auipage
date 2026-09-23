@@ -1,0 +1,9 @@
+v0.1.0:
+    date:
+    changes:
+      - 初始化版本
+        1、@auipage/types 提供类型定义
+        2、@auipage/core 提供核心功能
+        3、@auipage/model 提供模型相关功能
+        4、@auipage/agent 提供智能体相关功能
+        5、@auipage/fetch 提供数据获取相关功能

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>auipage 测试页面</title>
+    <link rel="shortcut icon" href="./logo.png">
+    <link rel="stylesheet" href="./src/style.css">
+    <script src="./node_modules/@oipage/browser.js/dist/browser.js"></script>
+    <script>
+        browserjs.prototype.extend({
+            scrollTop() {
+                this[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'end',
+                    inline: 'nearest'
+                });
+                return this;
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div>
+
+        <!-- 聊天列表界面 -->
+        <div class="container">
+            <div class="message-list-container" id="message-list-id"></div>
+            <div class="input-container">
+                <input type="text" placeholder="请输入消息">
+                <button id="send-btn">发送</button>
+            </div>
+        </div>
+
+        <!-- 聊天内容界面 -->
+        <div class="container">
+            <div class="ctrl-container">
+                <button id="newThread-btn">新建会话</button>
+            </div>
+            <div class="thread-list-container" id="thread-list-id"></div>
+        </div>
+
+    </div>
+    <script type="module">
+        import { AuiPage } from "@auipage/core";
+        import adapter from "./src/adapter/index.js";
+        import runtime from "./src/runtime/index.js";
+        import showPlain from "./src/tools/showPlain.js";
+
+        let aui = new AuiPage({
+            adapter, // 适配器
+            runtime, // 运行时
+            tools: [showPlain],
+        });
+
+        // console.log(aui);
+
+        // 发送消息
+        let inputEl = browserjs("input")[0];
+        browserjs("button").bind("click", async () => {
+            let plain = inputEl.value;
+            if (plain.trim() === "") {
+                return;
+            }
+            aui.sendMessage({
+                role: "user",
+                content: [{
+                    type: "text",
+                    text: plain,
+                }]
+            });
+            inputEl.value = "";
+        });
+
+        browserjs("#newThread-btn").bind("click", () => {
+            aui.newThread();
+        });
+
+    </script>
+</body>
+
+</html>

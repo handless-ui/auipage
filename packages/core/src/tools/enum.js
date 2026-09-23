@@ -1,0 +1,1 @@
+export let EmptyFunction = () => void 0;
