@@ -16,6 +16,37 @@ auipage 的核心层：业务侧实现 Adapter 对接模型与存储，UI 侧实
 
 <img src="https://nodei.co/npm/@auipage/core.png?downloads=true&amp;downloadRank=true&amp;stars=true" alt="NPM">
 
+## 安装
+
+```
+npm install --save @auipage/core
+```
+
+通常配合 `@auipage/agent`（对话循环）、`@auipage/model`（模型请求）一起使用。
+
+## 导出
+
+| 导出名 | 类型 | 作用 |
+| --- | --- | --- |
+| `AuiPage` | 构造器 | 框架核心，管理 adapter / runtime、消息与会话状态 |
+| `ChatTransportAdapter` | 适配器基类 | 对接模型对话接口，流式产出消息片段 |
+| `MessageHistoryAdapter` | 适配器基类 | 历史消息的加载与追加 |
+| `ThreadListAdapter` | 适配器基类 | 会话列表的增删改查 |
+| `ThreadListRuntime` | 运行时基类 | 会话列表的 UI 渲染钩子 |
+| `ChatContentRuntime` | 运行时基类 | 对话内容的 UI 渲染钩子 |
+| `defineTool` | 函数 | 定义前端工具（`description` / `execute` / `render`） |
+| `generator` | 函数 | 把回调式异步流转成 `AsyncGenerator` |
+| `MessageStream` | 构造器 | 消息流封装（`send` / `end`），服务端配合 `CreateTool` 推送 SSE |
+
+## 文档
+
+- [快速上手](./docs/quick-start.md)：完整可运行示例与整体流程
+- [AuiPage](./docs/auipage.md)：构造参数、实例属性与方法、消息结构
+- [Adapter](./docs/adapters.md)：三个适配器的接口与实现示例
+- [Runtime](./docs/runtimes.md)：两个运行时的渲染钩子约定
+- [defineTool](./docs/define-tool.md)：前端工具定义
+- [generator](./docs/generator.md)：回调式流到 `AsyncGenerator` 的转换
+
 ## 版权
 
 MIT License
