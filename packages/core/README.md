@@ -41,7 +41,7 @@ npm install --save @auipage/core
 ## 文档
 
 - [快速上手](./docs/quick-start.md)：完整可运行示例与整体流程
-- [AuiPage](./docs/auipage.md)：构造参数、实例属性与方法、消息结构
+- [AuiPage](./docs/auipage.md)：构造参数、实例属性与方法、消息结构、任务生命周期事件
 - [Adapter](./docs/adapters.md)：三个适配器的接口与实现示例
 - [Runtime](./docs/runtimes.md)：两个运行时的渲染钩子约定
 - [defineTool](./docs/define-tool.md)：前端工具定义

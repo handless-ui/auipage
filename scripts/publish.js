@@ -3,9 +3,9 @@
 //   npm run prepublishOnly  -> node publish.js --mode=error     阻止用户误用 npm publish
 //   npm run publish         -> node publish.js --mode=publish   依次发布 packages/ 下的子包
 
-import { spawn, spawnSync } from 'child_process';
-import { readdirSync, readFileSync } from 'fs';
-import { join } from 'path';
+const { spawn, spawnSync } = require('child_process');
+const { readdirSync, readFileSync } = require('fs');
+const { join } = require('path');
 
 // 简单的 sleep（避免引入 setTimeout 套 Promise 的样板）
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));

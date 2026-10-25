@@ -77,6 +77,66 @@ page.sendMessage({
 | `archiveThread(threadId)` | 同上，走归档；归档当前会话也进入新建状态 |
 | `unarchiveThread(threadId)` | 取消归档，只同步 UI，不自动切换会话 |
 
+## 任务生命周期事件
+
+`AuiPage` 暴露两个任务级生命周期事件，用于在 `sendMessage` 驱动的整轮对话内挂副作用（例如"新任务来了清掉旧的推荐问""自然完成才追加新推荐问"）。
+
+### 事件名
+
+| 事件 | 触发时机 |
+| --- | --- |
+| `task:start` | `sendMessage` 通过"执行中"校验后立即触发 |
+| `task:end` | 本轮对话结束时触发，包括：自然走完、流式过程出错 |
+
+### 订阅与解绑
+
+```javascript
+const off = page.on("task:end", (payload) => {
+    if (payload.status === "complete") showRecommendedQuestions();
+});
+
+// 不再需要时
+page.off("task:end", off);
+```
+
+- 同名事件可注册多个 handler，按注册顺序串行触发；
+- handler 内部抛错被吞掉，不会影响 `sendMessage` 的主流程与 Promise 状态；
+- `on / off` 均链式返回 `AuiPage` 实例。
+
+### 回调载荷
+
+```typescript
+type TaskLifecyclePayload = {
+    taskId: string;              // 本次 sendMessage 自增生成的唯一 id
+    threadId: string | undefined; // 任务发起时所处的会话 id，新建会话场景为 undefined
+    message: ChatContentMessage; // 本次发送的原始页面消息
+};
+
+// task:end 在上面基础上多一个 status
+type TaskEndPayload = TaskLifecyclePayload & {
+    status: "complete" | "error";
+};
+```
+
+| `status` | 含义 | 是否入库 |
+| --- | --- | --- |
+| `complete` | 流自然走完 | 是 |
+| `error` | 流式过程抛错 | 否 |
+
+### 推荐问场景示例
+
+```javascript
+// 新任务一来就清掉旧的推荐问
+page.on("task:start", () => removeRecommendedQuestions());
+
+// 只有自然完成才追加推荐问；error 不追加
+page.on("task:end", ({ status, threadId }) => {
+    if (status === "complete") {
+        fetchRecommendedQuestions(threadId).then(render);
+    }
+});
+```
+
 ## 消息结构
 
 ```typescript

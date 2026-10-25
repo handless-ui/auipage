@@ -26,5 +26,3 @@ export type { Response, FetchResponse, FetchResponseEvent } from "./response.js"
  * content-type 为 text/event-stream 时 data 事件会自动提取 SSE 的 data: 载荷。
  */
 export declare function fetch(options: FetchOptions): Promise<Response>;
-
-export default fetch;

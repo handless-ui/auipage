@@ -111,11 +111,14 @@ page.sendMessage({
 ## 一轮对话的流程
 
 1. `new AuiPage()` 时调用 `ThreadList.list()`，结果交给 `ThreadList.init` 渲染。
-2. `sendMessage` 先把用户消息逐段交给 `ChatContent.append`，再调 `ChatTransport.run()` 拿到流。
+2. `sendMessage` 通过"执行中"校验后**立即**触发 `task:start` 事件，再把用户消息逐段交给 `ChatContent.append`，并调 `ChatTransport.run()` 拿到流。
 3. 流里的 `text / thinking / loading` 增量拼接到当前消息；`tool-call` 按[前端执行 / 后端等待](./auipage.md#工具调用流程tool-call)的规则处理。
 4. 流结束后合并消息；当前没有会话时调 `ThreadList.new()` 创建（返回假值则中止本轮），并触发 `ThreadList.append`。
-5. 消息写入 `currentMessages`，调 `MessageHistory.append()` 落库，Promise resolve；执行中重复发消息会被拒绝。
-6. 对话执行中 `activeThread` 切换会话会被忽略；`deleteThread` / `archiveThread` 等操作透传到 adapter 与 runtime。
+5. 消息写入 `currentMessages`，调 `MessageHistory.append()` 落库，Promise resolve，触发 `task:end { status: "complete" }`；执行中重复发消息会被拒绝。
+6. 流式过程中出错时 Promise reject 并触发 `task:end { status: "error" }`，不入库。
+7. 对话执行中 `activeThread` 切换会话会被忽略；`deleteThread` / `archiveThread` 等操作透传到 adapter 与 runtime。
+
+> 想在新任务开始时清掉旧推荐问、或在自然结束后追加推荐问？见 [AuiPage 文档 - 任务生命周期事件](./auipage.md#任务生命周期事件)。
 
 ## 下一步
 

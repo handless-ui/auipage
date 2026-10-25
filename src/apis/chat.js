@@ -1,5 +1,5 @@
-import { Agent, CreateTool } from "@auipage/agent";
-import { MessageStream } from "@auipage/core";
+import { Agent, CreateTool } from "@auipage/agent/src/index.js";
+import { MessageStream } from "@auipage/core/src/index.js";
 import readPlain from "../tools/readPlain.js";
 
 export default {

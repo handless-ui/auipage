@@ -25,7 +25,7 @@ npm install --save @auipage/fetch
 ## 用法
 
 ```javascript
-import fetch from "@auipage/fetch";
+import { fetch } from "@auipage/fetch";
 
 fetch({
     url: "https://example.com/api/chat",

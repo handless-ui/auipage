@@ -1,6 +1,6 @@
-import { fetch } from "@auipage/fetch";
+import { fetch } from "@auipage/fetch/src/index.js";
 import parseString from "./parseString.js";
-import handleChoices from "./streamHandler.js";
+import handleChoices, { flushThinkBuffer } from "./streamHandler.js";
 
 export default function completions(params, logback, thinkback) {
     return new Promise((resolve, reject) => {
@@ -50,6 +50,8 @@ export default function completions(params, logback, thinkback) {
                         state
                     );
                 }
+                // 冲刷 <think> 标签截断残留
+                flushThinkBuffer(state, callbacks);
                 resolve({ content: state.content, tool_calls: state.tool_calls });
             });
 

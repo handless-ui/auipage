@@ -1,14 +1,14 @@
 {
     "name": "@auipage/core",
-    "version": "0.1.0-alpha.1",
+    "version": "0.1.0",
     "description": "@auipage/core",
     "type": "module",
     "main": "./src/index.js",
     "typings": "types/index.d.ts",
     "sideEffects": false,
     "scripts": {
-        "prepublishOnly": "node ../../swap-pkg.js --mode=publish",
-        "postpublish": "node ../../swap-pkg.js --mode=restore"
+        "prepublishOnly": "node ../../scripts/swap-pkg.js --mode=publish",
+        "postpublish": "node ../../scripts/swap-pkg.js --mode=restore"
     },
     "repository": {
         "type": "git",
@@ -30,7 +30,7 @@
     },
     "homepage": "https://github.com/handless-ui/auipage#readme",
     "dependencies": {
-        "@auipage/types": "^0.1.0-alpha.1",
+        "@auipage/types": "workspace:^",
         "oipage": "^2.1.0"
     }
 }

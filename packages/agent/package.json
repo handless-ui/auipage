@@ -1,14 +1,14 @@
 {
     "name": "@auipage/agent",
-    "version": "0.1.0-alpha.1",
+    "version": "0.1.0",
     "description": "@auipage/agent",
     "type": "module",
     "main": "./src/index.js",
     "typings": "types/index.d.ts",
     "sideEffects": false,
     "scripts": {
-        "prepublishOnly": "node ../../swap-pkg.js --mode=publish",
-        "postpublish": "node ../../swap-pkg.js --mode=restore"
+        "prepublishOnly": "node ../../scripts/swap-pkg.js --mode=publish",
+        "postpublish": "node ../../scripts/swap-pkg.js --mode=restore"
     },
     "repository": {
         "type": "git",

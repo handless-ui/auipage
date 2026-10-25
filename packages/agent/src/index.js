@@ -1,4 +1,4 @@
-import { Model } from "@auipage/model";
+import { Model } from "@auipage/model/src/index.js";
 import runConversation from "./runConversation.js";
 import CreateTool from "./createTool.js";
 

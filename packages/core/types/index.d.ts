@@ -11,7 +11,13 @@ export {
     AuiPage,
     type AuiPageOptions,
     type AuiPageAdapterSet,
-    type AuiPageRuntimeSet
+    type AuiPageRuntimeSet,
+    type AuiLifecycleEvent,
+    type AuiTaskStatus,
+    type TaskLifecyclePayload,
+    type TaskEndPayload,
+    type TaskStartHandler,
+    type TaskEndHandler
 } from "./auipage.js";
 
 /* ---------- 适配器 ---------- */

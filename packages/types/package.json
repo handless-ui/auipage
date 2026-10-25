@@ -1,6 +1,6 @@
 {
     "name": "@auipage/types",
-    "version": "0.1.0-alpha.1",
+    "version": "0.1.0",
     "description": "@auipage/types",
     "type": "module",
     "typings": "index.d.ts",

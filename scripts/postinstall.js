@@ -1,5 +1,5 @@
-import { readdirSync } from "fs";
-import { readJSON, writeJSON, copyDisk } from "oipage/nodejs/disk/index.js";
+const { readdirSync } = require("fs");
+const { readJSON, writeJSON, copyDisk } = require("oipage/nodejs/disk/index.js");
 
 const version = readJSON("./package.json").version;
 readdirSync("./packages").forEach(function (pkgName) {

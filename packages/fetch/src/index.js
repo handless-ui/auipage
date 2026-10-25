@@ -11,4 +11,3 @@ const adapter = isBrowser ? browserAdapter : nodeAdapter;
 const fetch = createFetch(adapter);
 
 export { fetch };
-export default fetch;

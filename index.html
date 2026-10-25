@@ -57,6 +57,15 @@
 
         // console.log(aui);
 
+        // 生命周期示例
+        aui.on("task:start", (payload) => {
+            console.log("[aui] task:start", payload);
+        });
+
+        aui.on("task:end", (payload) => {
+            console.log("[aui] task:end", payload);
+        });
+
         // 发送消息
         let inputEl = browserjs("input")[0];
         browserjs("button").bind("click", async () => {

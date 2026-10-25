@@ -34,6 +34,31 @@ export interface AuiPageOptions {
     tools?: Tool[];
 }
 
+/** 任务生命周期事件名 */
+export type AuiLifecycleEvent = "task:start" | "task:end";
+
+/** 任务结束状态 */
+export type AuiTaskStatus = "complete" | "error";
+
+/** task:start 回调载荷 */
+export interface TaskLifecyclePayload {
+    /** 本次 sendMessage 自增生成的唯一任务 id */
+    taskId: string;
+    /** 任务发起时所处的会话 ID；新建会话场景下为 undefined */
+    threadId: string | undefined;
+    /** 本次发送的原始页面消息 */
+    message: ChatContentMessage;
+}
+
+/** task:end 回调载荷；在 TaskLifecyclePayload 基础上附带 status */
+export interface TaskEndPayload extends TaskLifecyclePayload {
+    status: AuiTaskStatus;
+}
+
+/** 生命周期事件 handler 签名 */
+export type TaskStartHandler = (payload: TaskLifecyclePayload) => void;
+export type TaskEndHandler = (payload: TaskEndPayload) => void;
+
 export declare class AuiPage {
     constructor(options: AuiPageOptions);
 
@@ -58,9 +83,20 @@ export declare class AuiPage {
 
     /**
      * 发送一条消息并驱动完整的流式对话流程；
-     * 上一轮执行中时以 "当前正在执行中" reject，全部完成（含落库）后 resolve。
+     * 上一轮执行中时以 "当前正在执行中" reject，全部完成（含落库）后 resolve；
+     * 流式过程出错时以原始 error reject（同时触发 task:end { status: "error" }）。
      */
     sendMessage(message: ChatContentMessage): Promise<void>;
+
+    /**
+     * 订阅任务生命周期事件。同名事件可注册多个 handler，触发时按注册顺序串行调用，
+     * handler 内部抛错被吞掉，不会影响 sendMessage 主流程。链式返回 AuiPage。
+     */
+    on(event: "task:start", handler: TaskStartHandler): this;
+    on(event: "task:end", handler: TaskEndHandler): this;
+
+    /** 取消事件订阅；handler 未注册过则 no-op。链式返回 AuiPage */
+    off(event: AuiLifecycleEvent, handler: Function): this;
 
     /**
      * 切换到指定会话；threadId 为 undefined 表示进入新建会话状态。

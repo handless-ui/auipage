@@ -33,6 +33,15 @@ function AuiPage(options) {
     // 当前会话内容
     this.currentMessages = [];
 
+    // 任务生命周期事件：task:start / task:end
+    this._events = { "task:start": [], "task:end": [] };
+
+    // 任务自增序号，用于生成 taskId
+    this._taskSeq = 0;
+
+    // 当前正在执行的任务句柄（sendMessage 进入执行期时写入）
+    this._currentTask = null;
+
     // 请求对话列表
     this.adapter.ThreadList.list()?.then((threads) => {
 
@@ -41,6 +50,32 @@ function AuiPage(options) {
     });
 
 }
+
+// 触发生命周期事件；handler 抛错被吞掉，避免影响 sendMessage 主流程
+AuiPage.prototype._emit = function (event, payload) {
+    let handlers = this._events[event];
+    if (!handlers) return;
+    // 复制一份，防止 off() 在回调中修改原数组
+    handlers.slice().forEach(function (fn) {
+        try { fn(payload); } catch (e) { /* 吞掉 handler 异常 */ }
+    });
+};
+
+// 订阅生命周期事件
+AuiPage.prototype.on = function (event, handler) {
+    if (!this._events[event]) this._events[event] = [];
+    this._events[event].push(handler);
+    return this;
+};
+
+// 取消订阅
+AuiPage.prototype.off = function (event, handler) {
+    let list = this._events[event];
+    if (!list) return this;
+    let idx = list.indexOf(handler);
+    if (idx >= 0) list.splice(idx, 1);
+    return this;
+};
 
 AuiPage.prototype.sendMessage = function (message) {
     let _this = this;
@@ -64,16 +99,47 @@ AuiPage.prototype.sendMessage = function (message) {
             return;
         }
 
-        let cacheMessages = [message]; // 缓存消息，用于生成历史消息
+        // 写入任务上下文，供后续协同使用
+        let taskId = String(++this._taskSeq);
+        this._currentTask = {
+            taskId,
+            message,
+            generator,
+            cacheMessages: [message],
+            preType: "",
+            preText: "",
+            textTypes: ["loading", "thinking", "text"],
+            streamFun: void 0,
+            tool_calls: {},
+            resolve,
+            reject,
+            ended: false
+        };
 
-        let preType = "", preText = ""; // 上一个消息的类型和文本
-        let textTypes = ["loading", "thinking", "text"]; // 非特殊类型
+        // 任务开始生命周期
+        this._emit("task:start", {
+            taskId,
+            threadId: this.currentThreadId,
+            message
+        });
 
-        let streamFun, tool_calls = {};
+        let cacheMessages = this._currentTask.cacheMessages;
+        let preType = this._currentTask.preType;
+        let preText = this._currentTask.preText;
+        let textTypes = this._currentTask.textTypes;
+        let streamFun = this._currentTask.streamFun;
+        let tool_calls = this._currentTask.tool_calls;
 
         for (let i = 0; i < message.content.length; i++) {
             this.runtime.ChatContent.append(message.role, message.content[i]);
         }
+
+        // 同步写入 _currentTask 的小工具
+        let sync = function () {
+            _this._currentTask.preType = preType;
+            _this._currentTask.preText = preText;
+            _this._currentTask.streamFun = streamFun;
+        };
 
         (function doit() {
             generator?.next().then(async function (res) {
@@ -224,50 +290,86 @@ AuiPage.prototype.sendMessage = function (message) {
                         if (streamFun) streamFun(res.value.text);
                     }
 
+                    sync();
                     doit();
                 } else {
-                    if (preText) {
-                        cacheMessages.push({
-                            role: "assistant",
-                            content: [{
-                                type: preType,
-                                text: preText
-                            }]
-                        });
-                        preText = "";
-                        preType = "";
-                    }
-
-                    // 把准备入库的消息转换为历史消息
-                    let historyMessages = toHistoryMessages({ messages: cacheMessages });
-
-                    // 判断一下currentThreadId是否有值，如果没有，需要新建新的会话
-                    if (_this.currentThreadId === void 0) {
-                        let newThread = await _this.adapter.ThreadList.new(historyMessages);
-
-                        if (!newThread) {
-                            reject(new Error("新建会话失败"));
-                            _this.isExecuting = false;
-                            return;
-                        }
-
-                        await _this.runtime.ThreadList.append(newThread);
-                        _this.activeThread(newThread.threadId, true);
-                    }
-
-                    _this.currentMessages.push(historyMessages);
-                    _this.adapter.MessageHistory.append(_this.currentThreadId, historyMessages);
-
-                    _this.isExecuting = false;
-                    resolve();
+                    sync();
+                    _this._finalize("complete", true);
                 }
             }, err => {
-                _this.isExecuting = false;
-                reject(err);
+                _this._finalize("error", false, err);
             });
         })();
 
     });
+};
+
+/**
+ * 收尾当前 sendMessage 任务。统一处理：残留文本归并、是否入库、isExecuting 复位、
+ * 发出 task:end 事件、释放 Promise。
+ *
+ * @param {"complete"|"error"} status 任务结束原因
+ * @param {boolean} isHistory 是否走入库分支（complete 始终 true；error 始终 false）
+ * @param {Error|string} [err] status === "error" 时附带的错误对象
+ */
+AuiPage.prototype._finalize = async function (status, isHistory, err) {
+    let task = this._currentTask;
+    if (!task || task.ended) return;
+    task.ended = true;
+
+    let { taskId, message, cacheMessages, preType, preText, resolve, reject } = task;
+
+    // 1. 残留文本归并到 cacheMessages
+    if (preText) {
+        cacheMessages.push({
+            role: "assistant",
+            content: [{ type: preType, text: preText }]
+        });
+        task.preText = "";
+        task.preType = "";
+    }
+
+    // 2. 入库分支
+    if (isHistory) {
+        try {
+            let historyMessages = toHistoryMessages({ messages: cacheMessages });
+
+            if (this.currentThreadId === void 0) {
+                let newThread = await this.adapter.ThreadList.new(historyMessages);
+
+                if (!newThread) {
+                    // 新建会话失败 → 退化为 error，不入库、不 resolve
+                    this.isExecuting = false;
+                    this._currentTask = null;
+                    this._emit("task:end", { taskId, threadId: this.currentThreadId, message, status: "error" });
+                    reject(new Error("新建会话失败"));
+                    return;
+                }
+
+                await this.runtime.ThreadList.append(newThread);
+                this.activeThread(newThread.threadId, true);
+            }
+
+            this.currentMessages.push(historyMessages);
+            this.adapter.MessageHistory.append(this.currentThreadId, historyMessages);
+        } catch (e) {
+            // 入库链路本身抛错 → 退化为 error
+            this.isExecuting = false;
+            this._currentTask = null;
+            this._emit("task:end", { taskId, threadId: this.currentThreadId, message, status: "error" });
+            reject(e);
+            return;
+        }
+    }
+
+    // 4. 复位、emit task:end、释放 Promise
+    this.isExecuting = false;
+    this._currentTask = null;
+
+    this._emit("task:end", { taskId, threadId: this.currentThreadId, message, status });
+
+    if (status === "error") reject(err);
+    else resolve();
 };
 
 AuiPage.prototype.activeThread = function (threadId, __noLoad__) {
