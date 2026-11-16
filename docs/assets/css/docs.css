@@ -5,13 +5,14 @@
    补丁区按时间顺序追加，后者覆盖前者；调整时优先改补丁区，
    不要删 !important，它用来压过原始样式的同等特异性。
    ------------------------------------------------------------
-   三栏外壳（窄轨 + 目录树 + 内容 + 卡片页头）：        行 871, 901
-   首页大气版（网格底 + 超大标题 + 预览卡）：           行 1562
-   首页拓扑卡浅色化：                          行 1647
-   拓扑卡右侧留白：                           行 1660
-   窄轨文字横排修正：                          行 1666
-   浅色统一补丁（代码块 / 表格 / 留白）：             行 1524
-   首页 PC 单栏（旧）：                       行 1290
+   三栏外壳（窄轨 + 目录树 + 内容 + 卡片页头）：        行 887, 917
+   首页大气版（网格底 + 超大标题 + 预览卡）：           行 1578
+   首页拓扑卡浅色化：                          行 1662
+   拓扑卡右侧留白：                           行 1675
+   窄轨文字横排修正：                          行 1681
+   浅色统一补丁（代码块 / 表格 / 留白）：             行 1540
+   首页 PC 单栏（旧）：                       行 1306
+   断点常量：PC ≥ 641px、移动端 ≤ 640px（窄屏 PC 收紧规则在文件末尾）
    ============================================================ */
 /* ===========================================================
    auipage 文档站 —— 内核控制台
@@ -728,7 +729,7 @@ table.spec tbody td:first-child { color: var(--ink); }
 .foot .sign { font-size: 12.5px; color: var(--ink-3); line-height: 1.9; }
 .foot .sign b { color: var(--ink); }
 
-@media (max-width: 1080px) {
+@media (max-width: 980px) {
     .hero-inner { grid-template-columns: 1fr; gap: 34px; }
     .cards { grid-template-columns: 1fr; }
     .foot-inner { grid-template-columns: 1fr 1fr; }
@@ -742,8 +743,8 @@ table.spec tbody td:first-child { color: var(--ink); }
     h1 { font-size: 32px; }
 }
 
-/* ================= mobile（≤720px）：不影响 PC ================= */
-@media (max-width: 720px) {
+/* ================= mobile（≤640px）：不影响 PC ================= */
+@media (max-width: 640px) {
     /* 顶栏：导航横向可滚动，次要信息收起 */
     .topbar,
     .topbar-inner {
@@ -855,7 +856,7 @@ table.spec tbody td:first-child { color: var(--ink); }
 }
 
 /* 安装条在窄屏：命令内部换行，复制按钮留在行尾 */
-@media (max-width: 720px) {
+@media (max-width: 640px) {
     .install {
         max-width: 100%;
         flex-wrap: nowrap;
@@ -878,7 +879,7 @@ table.spec tbody td:first-child { color: var(--ink); }
     }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
     code { overflow-wrap: anywhere; }
 }
 
@@ -1170,7 +1171,7 @@ body.drawer-open { overflow: hidden; }
 
 /* ---------- 响应式 ---------- */
 
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
     body { grid-template-columns: 1fr; }
 
     .rail { display: none; }
@@ -1242,7 +1243,7 @@ body.drawer-open { overflow: hidden; }
 }
 
 /* 顶栏移除后目录树贴顶（PC） */
-@media (min-width: 1081px) {
+@media (min-width: 641px) {
     .tree { top: 20px; }
 }
 
@@ -1274,7 +1275,7 @@ html[data-theme="light"] .block-head h2 { color: #10151c; }
 html[data-theme="light"] .hero h1 span { text-shadow: none; }
 
 /* ---------- 手机端 hero 收敛 ---------- */
-@media (max-width: 720px) {
+@media (max-width: 640px) {
     .hero-inner { padding: 36px 20px 34px; }
     .hero h1 { font-size: 25px; line-height: 1.3; }
     .hero h1 br { display: none; }
@@ -1283,7 +1284,7 @@ html[data-theme="light"] .hero h1 span { text-shadow: none; }
 html[data-theme="light"] .hero::before { opacity: .4; }
 
 /* ---------- hero 按钮网格（手机） ---------- */
-@media (max-width: 720px) {
+@media (max-width: 640px) {
     .hero-inner > * { max-width: 100%; }
     .hero-actions {
         display: grid;
@@ -1304,7 +1305,7 @@ html[data-theme="light"] .hero::before { opacity: .4; }
 /* ============================================================
    首页（PC）回到单栏大气版：不显示目录树，内容占满宽度
    ============================================================ */
-@media (min-width: 1081px) {
+@media (min-width: 641px) {
     body.home .doc-stage,
     body.home .stage,
     body.home .shell,
@@ -1461,7 +1462,7 @@ body > footer > *,
 body > .foot > * { min-width: 0; }
 
 /* ---------- PC 首页正文留白（hero 仍通栏） ---------- */
-@media (min-width:1081px) {
+@media (min-width:641px) {
     body.home main,
     body.home .doc-main,
     body.home .article {
@@ -1478,8 +1479,8 @@ body > .foot > * { min-width: 0; }
     }
 }
 
-/* ---------- 1081–1440 窄桌面：收起中栏目录树，内容占满 ---------- */
-@media (max-width:1200px) and (min-width:1081px) {
+/* ---------- 641–1200 窄桌面：收起中栏目录树，内容占满 ---------- */
+@media (max-width:1200px) and (min-width:641px) {
     body:not(.home) .sidebar,
     body:not(.home) .side,
     body:not(.home) .tree { display: none !important; }
@@ -1563,7 +1564,7 @@ table th, table.spec th {
     background: #f7f9fb !important;
     color: #23282f !important;
 }
-@media (min-width: 1081px) {
+@media (min-width: 641px) {
     .stage, .doc-stage, .docs-shell, .shell {
         box-sizing: border-box !important;
     }
@@ -1672,7 +1673,7 @@ body.home .topo h3, body.home .topo .topo-title { color: #0f1419 !important; fon
 body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
 
 /* 拓扑卡右侧留白 */
-@media (min-width: 1081px) {
+@media (min-width: 641px) {
     body.home .hero-inner { padding: 0 40px !important; }
     body.home .topo { max-width: 100% !important; }
 }
@@ -1700,7 +1701,7 @@ body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
 
 
 /* ============================================================
-   移动端（≤1080px）补充：表格不溢出、不被裁
+   窄屏（≤1080px）补充：表格不溢出、不被裁（PC 窄屏同样适用）
    ============================================================ */
 @media (max-width: 1080px) {
     table {
@@ -1730,9 +1731,9 @@ body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
 }
 
 /* ============================================================
-   移动端（≤1080px）：三站单栏（rail / 目录树收起，导航走抽屉）
+   移动端（≤640px）：三站单栏（rail / 目录树收起，导航走抽屉）
    ============================================================ */
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
     body { display: block !important; grid-template-columns: none !important; }
     .shell { display: block !important; grid-template-columns: none !important; }
     .shell > .rail, .shell > .tree { display: none !important; }
@@ -1757,7 +1758,7 @@ body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
    移动端抽屉：改为单列（参照四站的抽屉样式）
    rail 只保留关闭按钮，目录树占满整宽，当前项黑底白字
    ============================================================ */
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
     .drawer {
         grid-template-columns: 1fr !important;
         grid-template-rows: 64px minmax(0, 1fr) !important;
@@ -1841,7 +1842,7 @@ body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
 }
 
 /* 移动端抽屉条目：去掉残留的品牌色左侧竖条 */
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
     .drawer .tree a,
     .drawer .tree a.on,
     .drawer .tree a.active {
@@ -1855,7 +1856,7 @@ body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
 }
 
 /* 移动端汉堡：正方形（border-box）+ 相对顶栏垂直居中 */
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
     .m-burger {
         position: absolute !important;
         top: 50% !important;
@@ -1869,7 +1870,7 @@ body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
 }
 
 /* 移动端抽屉：关闭按钮与顶栏汉堡对齐到同一水平线 */
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
     .drawer-rail { padding: 6px 14px !important; }
     .drawer-tree-title { top: 20px !important; }
 }
@@ -1890,6 +1891,140 @@ body.home .topo .topo-note, body.home .topo small { color: #6b7280 !important; }
 
 /* 文档 logo：尺寸微调（桌面 40px，手机顶栏 32px） */
 .rail-mark { width: 40px !important; height: 40px !important; }
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
     .m-brand .rail-mark { width: 32px !important; height: 32px !important; }
+}
+/* ============================================================
+   窄屏 PC（641–1080px）：保持桌面三栏外观，只收紧尺寸
+   说明：移动端（抽屉 / 汉堡 / 单栏）从 1080px 下调到 640px，
+        640px 以上一律沿用 PC 布局；本段负责把 PC 的尺寸
+        压到窄屏也能放得下（rail 变窄、内边距收紧、字号微缩）。
+   维护提示：断点常量统一为 PC_MIN=641 / MOBILE_MAX=640。
+   ============================================================ */
+@media (min-width: 641px) and (max-width: 1080px) {
+    :root { --rail-w: 68px; }
+
+    /* 左窄轨：图标与文字等比缩小，保留竖排导航 */
+    .rail { gap: 16px; padding: 12px 0 12px; }
+    .rail-nav { padding: 0 6px; }
+    .rail-nav a { padding: 8px 0 6px; font-size: 9.5px; gap: 4px; }
+    .rail-nav a svg { width: 17px; height: 17px; }
+    .rail-mark { width: 30px !important; height: 30px !important; }
+    .rail-foot { gap: 6px; }
+    .rail-gh { width: 26px; height: 26px; }
+    .rail-ver { font-size: 8px !important; }
+
+    /* 舞台：左右内边距与大间距收紧，正文占满一列 */
+    .stage, .doc-stage, .docs-shell, .shell {
+        max-width: none !important;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+        gap: 0 !important;
+    }
+
+    .article, .doc-main, main {
+        padding-left: 0 !important;
+        padding-right: 16px !important;
+    }
+
+    /* 卡片页头降低纵向尺寸，标题降一档 */
+    .pagehead, .doc-hero, .page-head, .guide-hero { padding: 20px 18px 18px !important; border-radius: 14px !important; }
+    .pagehead h1, .article h1, .doc-hero h1 { font-size: 26px !important; letter-spacing: -.4px !important; }
+    .article .lede { font-size: 14px !important; }
+
+    /* 首页：内容自适应宽度，hero 单列堆叠但保持 PC 观感 */
+    body.home > footer, body.home > .foot { grid-column: 2 / -1 !important; }
+    body.home .hero { padding: 46px 0 40px !important; }
+    body.home .hero-inner { padding: 0 20px !important; gap: 34px !important; }
+    body.home .hero h1 { font-size: clamp(30px, 6.2vw, 44px) !important; }
+    body.home .hero .lede { font-size: 14.5px !important; }
+    body.home .topo, body.home .toc { margin-top: 24px !important; }
+    body.home main, body.home .doc-main, body.home .article {
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+    }
+
+    /* 版本 / 依赖 / 位置：保持 PC 的三列，不跟随 860px 断点竖排 */
+    .pkgbar { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+
+    /* 代码块 / 表格不再横向溢出 */
+    pre, .code, .code-body, .table-wrap { max-width: 100% !important; overflow-x: auto !important; }
+
+    /* 页脚：窄屏两列 */
+    .foot-inner { grid-template-columns: 1fr 1fr !important; gap: 22px !important; }
+}
+
+/* 641–860px：更窄一档，rail 再收一点，避免正文被挤 */
+@media (min-width: 641px) and (max-width: 860px) {
+    :root { --rail-w: 62px; }
+    .rail-nav { padding: 0 4px; }
+    .rail-nav a { font-size: 9px; }
+    .rail-nav a em { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .stage, .doc-stage, .docs-shell, .shell {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    .article, .doc-main, main { padding-right: 12px !important; }
+    .pagehead h1, .article h1, .doc-hero h1 { font-size: 23px !important; }
+    body.home .hero h1 { font-size: clamp(28px, 6.6vw, 36px) !important; }
+}
+/* ---------- 窄屏 PC（641–1080px）：表格第二列不再强制单行 ----------
+   桌面宽度足够时类型列一行显示没问题；窄屏下 { A, B, C } 这类联合类型
+   会横向溢出压到后一列，这里放开换行并取消固定列宽。 */
+@media (min-width: 641px) and (max-width: 1080px) {
+    td:nth-child(2), th:nth-child(2) {
+        width: auto !important;
+        white-space: normal !important;
+    }
+    td:nth-child(2) code, th:nth-child(2) code {
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
+}
+/* ---------- 窄屏 PC（641–1080px）：表格里的代码优先按词换行 ----------
+   表格不溢出的补丁用了 word-break: break-all，窄屏下会把 AsyncGenerator、
+   description 这类标识符从中间劈开；这里改成只在必要时断开。 */
+@media (min-width: 641px) and (max-width: 1080px) {
+    td code, th code {
+        word-break: normal !important;
+        overflow-wrap: anywhere !important;
+    }
+}
+
+/* ============================================================
+   第二轮修补（断点常量：PC >= 641px、移动端 <= 640px）
+   ① 首页 hero：>= 750px 恢复 PC 双栏（左文案 + 右上「路由」目录卡）
+      原因：<= 1080px 的表格/hero 兜底补丁把 .hero-inner 压成了单栏，
+            目录卡被移到按钮下方整宽显示；这里在 750-1080px 重新立起来。
+   ② 页脚：PC 下从窄轨右侧开始
+      原因：body 是 grid（列 1 = 左窄轨），而 body > .foot 用
+            grid-column: 1 / -1 横贯整行，第一列会落进窄轨下面被遮住。
+   ============================================================ */
+@media (min-width: 641px) {
+    body > footer,
+    body > .foot {
+        grid-column: 2 / -1 !important;
+    }
+}
+
+@media (min-width: 750px) and (max-width: 1080px) {
+    body.home .hero-inner {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr) !important;
+        gap: 28px !important;
+        padding: 0 18px !important;
+        align-items: start !important;
+    }
+    body.home .hero h1,
+    body.home .hero-inner h1 {
+        font-size: clamp(26px, 3.2vw, 34px) !important;
+        line-height: 1.16 !important;
+    }
+    body.home .toc,
+    body.home .topo {
+        margin-top: 0 !important;
+    }
+    body.home .toc {
+        padding: 44px 14px 12px !important;
+    }
 }
