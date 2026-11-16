@@ -1,0 +1,75 @@
+<!--meta {"title": "@auipage/fetch · auipage 文档", "desc": "跨端流式 fetch 的用法、事件与 SSE 自动解析规则。", "section": "packages", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/fetch</span></div>
+<h1><em>Package 04</em>@auipage/fetch</h1>
+<p class="lede">跨端流式 fetch：Node 下走 <code>http</code>/<code>https</code>，浏览器下走原生 fetch + ReadableStream，自动适配；SSE 响应自动按事件缓冲解析。</p>
+<div class="badges"><span class="badge">fetch</span><span class="badge">0.1.0</span><span class="badge">浏览器 + Node</span></div></div>
+<div class="pkgbar">
+  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">依赖</span><span class="v">@auipage/types</span></div>
+  <div><span class="k">位置</span><span class="v">packages/fetch</span></div>
+</div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>用法</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">client.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { fetch } from "@auipage/fetch";
+
+fetch({
+    url: "https://example.com/api/chat",
+    method: "POST",                                  // 默认 GET
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "hello" })       // 原样发送，不会自动 stringify
+})
+    .then(res =&gt; {
+        res.on("data", chunk =&gt; console.log(chunk));
+        res.on("end", () =&gt; console.log("done"));
+        res.on("error", err =&gt; console.error(err));
+    })
+    .catch(err =&gt; console.error(err));</pre></div>
+</div>
+  <p style="margin-top:14px"><code>res</code> 上还能读到 <code>status</code>、<code>ok</code>（2xx 为 true）、<code>headers</code>。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>三个事件</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>事件</th><th>触发时机</th><th>回调参数</th></tr></thead>
+  <tbody><tr><td><code>data</code></td><td>收到一段数据；SSE 模式下为每个完整事件的 <code>data:</code> 内容</td><td><code>(payload: string)</code></td></tr><tr><td><code>end</code></td><td>响应体读取完毕</td><td><code>()</code></td></tr><tr><td><code>error</code></td><td>网络或读取出错</td><td><code>(err: Error)</code></td></tr></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>SSE 自动解析</h2></div>
+  <div class="prose">
+  <p>响应头 <code>Content-Type</code> 含 <code>text/event-stream</code> 时自动开启，不需要任何配置：</p>
+  <ul>
+    <li>按空行（<code>\n\n</code>，也兼容 <code>\r\n\r\n</code>）切分事件，<b>跨 chunk 的事件会自动拼接</b>；</li>
+    <li><code>data</code> 回调拿到的是去掉 <code>data: </code> 前缀的字符串，<b>不会自动 JSON.parse</b>；</li>
+    <li>非 SSE 响应行为不变，<code>data</code> 拿到的是原始 chunk。</li>
+  </ul>
+  <div class="note" style="margin-top:14px">
+    <b>为什么强调"不自动 parse"：</b>把解析权留给调用方，才能兼容带 <code>[DONE]</code> 结束标记、
+    多行 <code>data:</code>、以及非 JSON 的自定义格式。
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>两个注意点</h2></div>
+  <div class="prose">
+  <ul>
+    <li><b>非 2xx 不进 catch</b>：用 <code>res.status</code> / <code>res.ok</code> 判断，这样错误响应体也能照常读取。</li>
+    <li><b>暂不支持超时与取消</b>：需要时用 <code>AbortController</code> 在外层包装，或直接读 <code>end</code> 事件提前收尾。</li>
+  </ul>
+</div>
+</section>
+
+<nav class="pager">
+<a href="{{base}}packages/types.html"><span class="dir">← 上一页</span><span class="name">@auipage/types</span></a>
+<a class="next" href="{{base}}packages/model.html"><span class="dir">下一页 →</span><span class="name">@auipage/model</span></a>
+  </nav>

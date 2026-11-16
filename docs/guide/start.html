@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>快速开始 · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="auipage 的安装、启动、目录结构与最小装配。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=919b9b92">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
+      <a href="../packages/types.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+    </nav>
+    <div class="rail-foot">
+      <a class="rail-gh" href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener" title="GitHub 仓库"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 10l4 6M13 4l4 6-4 6"/></svg></a>
+      <span class="rail-ver">v0.1.0</span>
+    </div>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
+      <a href="../packages/types.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="on">02 · 快速开始</a>
+    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="">07 · @auipage/core</a>
+  </aside>
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="on">02 · 快速开始</a>
+    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="">07 · @auipage/core</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>开始</span><span class="sep">/</span><span>快速开始</span></div>
+<h1><em>Guide 02</em>快速开始</h1>
+<p class="lede">仓库根目录本身就是一个可运行的示例：装依赖、起服务、改适配器。</p>
+<div class="badges"><span class="badge hi">Node 18+</span><span class="badge">pnpm</span><span class="badge">oipage dev server</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>安装与启动</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">terminal</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>pnpm i
+npm run dev
+
+# http://127.0.0.1:20000/</pre></div>
+</div>
+  <p style="margin-top:14px">dev server 由 <code>oipage</code> 提供：同时起 mock 接口与前端页面，改代码热更新。
+  示例默认接本地 ollama（<code>qwen3.5</code>），也可以在 <code>src/apis/chat.js</code> 里换成任意 OpenAI 协议服务。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>目录结构</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">tree</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>src/
+├── apis/
+│   └── chat.js          服务端接口：Agent + CreateTool 驱动 SSE
+├── adapter/
+│   └── ...              三个适配器的实现
+├── runtime/
+│   └── ...              会话列表与对话内容的 DOM 渲染
+├── tools/
+│   └── ...              后端工具 readPlain 与前端工具 showPlain
+├── index.js             页面入口
+└── style.css            示例样式</pre></div>
+</div>
+  <p style="margin-top:14px">四个目录正对应框架的四块拼图：<b>apis</b> 是服务端编排，<b>adapter</b> 是数据接缝，
+  <b>runtime</b> 是渲染接缝，<b>tools</b> 是工具定义。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>最小装配</h2></div>
+  <div class="prose">
+  <p>页面侧只需要一个 <code>AuiPage</code>，把适配器与运行时塞进去，剩下交给组件库或你自己的 DOM。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">main.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { AuiPage } from "@auipage/core";
+
+const page = new AuiPage({
+    adapter,        // { ChatTransport, MessageHistory, ThreadList }
+    runtime: {      // { ChatContent, ThreadList }
+        ChatContent: chatContentRuntime,
+        ThreadList: threadListRuntime
+    },
+    tools: []       // 前端工具，可选
+});
+
+page.start();</pre></div>
+</div>
+  <p style="margin-top:14px">已经用 React 或 Vue 的话，直接用上层组件库省掉运行时：
+  <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">@auipage/react</a>、
+  <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">@auipage/vue</a>。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>服务端一侧</h2></div>
+  <div class="prose">
+  <p>示例的 <code>src/apis/chat.js</code> 用 <code>Agent</code> + <code>CreateTool</code> 直接把对话结果写成 SSE：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">src/apis/chat.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { Agent, CreateTool } from "@auipage/agent";
+import { MessageStream } from "@auipage/core";
+
+const ms = new MessageStream(
+    data =&gt; res.write("data: " + JSON.stringify(data) + "\n\n"),
+    () =&gt; res.end()
+);
+const ct = new CreateTool(ms);
+
+const agent = new Agent({
+    model: { model: "qwen3.5", apiKey: "ollama", baseURL: "http://localhost:11434/v1" },
+    tools: [ ct.create(readPlain), ct.create(showPlain) ]
+});
+
+await agent.generate(messages);</pre></div>
+</div>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../index.html"><span class="dir">← 上一页</span><span class="name">总览</span></a>
+<a class="next" href="../packages/types.html"><span class="dir">下一页 →</span><span class="name">@auipage/types</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot">
+    <div class="foot-inner">
+      <div class="col">
+        <h4>开始</h4>
+        <a href="../index.html">总览</a>
+        <a href="../guide/start.html">快速开始</a>
+      </div>
+      <div class="col">
+        <h4>包</h4>
+        <a href="../packages/types.html">@auipage/types</a>
+        <a href="../packages/fetch.html">@auipage/fetch</a>
+        <a href="../packages/model.html">@auipage/model</a>
+        <a href="../packages/agent.html">@auipage/agent</a>
+        <a href="../packages/core.html">@auipage/core</a>
+      </div>
+      <div class="col">
+        <h4>生态</h4>
+        <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+        <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+        <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+      </div>
+      <div class="sign">
+        <b>auipage</b> — 智能体网页应用开发框架<br>
+        MIT License · Copyright (c) <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/js/docs.js?v=919b9b92"></script>
+
+</body>
+</html>

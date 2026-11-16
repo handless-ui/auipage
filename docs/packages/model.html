@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@auipage/model · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="OpenAI 风格 chat/completions 封装：实例、签名与工具调用。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=919b9b92">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
+      <a href="../packages/types.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+    </nav>
+    <div class="rail-foot">
+      <a class="rail-gh" href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener" title="GitHub 仓库"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 10l4 6M13 4l4 6-4 6"/></svg></a>
+      <span class="rail-ver">v0.1.0</span>
+    </div>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
+      <a href="../packages/types.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 快速开始</a>
+    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="on">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="">07 · @auipage/core</a>
+  </aside>
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 快速开始</a>
+    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="on">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="">07 · @auipage/core</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/model</span></div>
+<h1><em>Package 05</em>@auipage/model</h1>
+<p class="lede">OpenAI 风格 <code>chat/completions</code> 的流式封装：请求拼装、SSE 增量解析、工具调用切片拼接，同协议的其他服务（DeepSeek 等）直接换 <code>baseURL</code> 即可。</p>
+<div class="badges"><span class="badge">model</span><span class="badge">0.1.0</span><span class="badge">OpenAI 协议</span></div></div>
+<div class="pkgbar">
+  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">依赖</span><span class="v">@auipage/fetch</span></div>
+  <div><span class="k">位置</span><span class="v">packages/model</span></div>
+</div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>创建实例</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">model.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { Model } from "@auipage/model";
+
+const model = new Model({
+    model: "deepseek-chat",                     // 模型名
+    apiKey: "your-api-key",
+    baseURL: "https://api.deepseek.com/v1"      // 请求时拼接 /chat/completions
+});</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>completions 签名</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>model.completions(
+    {
+        messages: ChatMessage[],   // OpenAI 格式消息
+        tools?: Tool[],            // 可选，默认 []；自动取每项 description 作为 tools 提交
+        stream?: boolean           // 默认 false
+    },
+    logback?,                      // (delta: string) =&gt; void     正文增量
+    thinkback?                     // (reasoning: string) =&gt; void  推理过程增量
+): Promise&lt;{ content: string, tool_calls: ModelToolCall[] }&gt;</pre></div>
+</div>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>要点</th><th>说明</th></tr></thead>
+  <tbody><tr><td><code>thinkback</code></td><td>接收 <code>delta.reasoning</code> / <code>delta.reasoning_content</code>；正文里的 <code>&lt;think&gt;...&lt;/think&gt;</code> 会被剥除，剩余内容并入 <code>content</code>。</td></tr><tr><td><code>stream: false</code></td><td>两个回调依然会调用，只是在响应结束后各触发一次。</td></tr><tr><td><code>tool_calls</code></td><td>已按 <code>id</code> 切片、把分片的 <code>function.arguments</code> 拼成完整字符串。</td></tr></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>带工具调用的请求</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">chat.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>await model.completions({
+    messages: [
+        { role: "system", content: "你是一个助手。" },
+        { role: "user", content: "查一下南京今天的天气" }
+    ],
+    tools: [{
+        description: {
+            type: "function",
+            function: {
+                name: "getWeather",
+                description: "查询指定城市的天气",
+                parameters: {
+                    type: "object",
+                    properties: { city: { type: "string" } },
+                    required: ["city"]
+                }
+            }
+        }
+    }],
+    stream: true
+}, chunk =&gt; process.stdout.write(chunk), reasoning =&gt; console.log("[think]", reasoning))
+.then(({ content, tool_calls }) =&gt; console.log(content, tool_calls));</pre></div>
+</div>
+  <p style="margin-top:14px">注意 <code>tools</code> 传的是"带 <code>description</code> 的对象数组"，
+  模型要的不是裸 schema —— 这是本包与 <code>agent</code> 之间的小约定。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../packages/fetch.html"><span class="dir">← 上一页</span><span class="name">@auipage/fetch</span></a>
+<a class="next" href="../packages/agent.html"><span class="dir">下一页 →</span><span class="name">@auipage/agent</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot">
+    <div class="foot-inner">
+      <div class="col">
+        <h4>开始</h4>
+        <a href="../index.html">总览</a>
+        <a href="../guide/start.html">快速开始</a>
+      </div>
+      <div class="col">
+        <h4>包</h4>
+        <a href="../packages/types.html">@auipage/types</a>
+        <a href="../packages/fetch.html">@auipage/fetch</a>
+        <a href="../packages/model.html">@auipage/model</a>
+        <a href="../packages/agent.html">@auipage/agent</a>
+        <a href="../packages/core.html">@auipage/core</a>
+      </div>
+      <div class="col">
+        <h4>生态</h4>
+        <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+        <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+        <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+      </div>
+      <div class="sign">
+        <b>auipage</b> — 智能体网页应用开发框架<br>
+        MIT License · Copyright (c) <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/js/docs.js?v=919b9b92"></script>
+
+</body>
+</html>

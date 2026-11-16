@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<link rel="icon" href="{{base}}assets/img/logo.png">
+<meta name="description" content="{{desc}}">
+<link rel="stylesheet" href="{{base}}assets/css/docs.css?v={{assetVer}}">
+</head>
+<body{{#if home}} class="home"{{/if}}>
+<a class="skip" href="#main">跳到正文</a>
+{{> topbar}}
+{{> mobile}}
+<div class="stage">
+<div class="shell{{#if home}} shell-home{{/if}}">
+{{> sidebar}}
+{{#if home}}<div class="article">{{/if}}
+{{#if home}}<main id="main">{{else}}<main class="article">{{/if}}
+{{content}}
+</main>
+{{#if home}}</div>{{/if}}
+</div>
+</div>
+{{> footer}}
+{{> scripts}}
+</body>
+</html>

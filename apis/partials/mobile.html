@@ -1,0 +1,25 @@
+<div class="mobiletop">
+    <a class="m-brand" href="{{base}}index.html"><img class="rail-mark" src="{{base}}assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="{{base}}index.html"><img class="rail-mark" src="{{base}}assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="{{base}}index.html" class="{{active:index.html}}"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="{{base}}guide/start.html" class="{{active:guide/start.html}}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
+      <a href="{{base}}packages/types.html" class="{{in:packages}}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="{{base}}index.html" class="{{active:index.html}}">01 · 总览</a><a href="{{base}}guide/start.html" class="{{active:guide/start.html}}">02 · 快速开始</a>
+    <div class="group">包（自底向上）</div><a href="{{base}}packages/types.html" class="{{active:packages/types.html}}">03 · @auipage/types</a><a href="{{base}}packages/fetch.html" class="{{active:packages/fetch.html}}">04 · @auipage/fetch</a><a href="{{base}}packages/model.html" class="{{active:packages/model.html}}">05 · @auipage/model</a><a href="{{base}}packages/agent.html" class="{{active:packages/agent.html}}">06 · @auipage/agent</a><a href="{{base}}packages/core.html" class="{{active:packages/core.html}}">07 · @auipage/core</a>
+  </aside>
+    </div>
+  </div>

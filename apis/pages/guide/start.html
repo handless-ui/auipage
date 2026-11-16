@@ -1,0 +1,97 @@
+<!--meta {"title": "快速开始 · auipage 文档", "desc": "auipage 的安装、启动、目录结构与最小装配。", "section": "guide", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>开始</span><span class="sep">/</span><span>快速开始</span></div>
+<h1><em>Guide 02</em>快速开始</h1>
+<p class="lede">仓库根目录本身就是一个可运行的示例：装依赖、起服务、改适配器。</p>
+<div class="badges"><span class="badge hi">Node 18+</span><span class="badge">pnpm</span><span class="badge">oipage dev server</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>安装与启动</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">terminal</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>pnpm i
+npm run dev
+
+# http://127.0.0.1:20000/</pre></div>
+</div>
+  <p style="margin-top:14px">dev server 由 <code>oipage</code> 提供：同时起 mock 接口与前端页面，改代码热更新。
+  示例默认接本地 ollama（<code>qwen3.5</code>），也可以在 <code>src/apis/chat.js</code> 里换成任意 OpenAI 协议服务。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>目录结构</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">tree</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>src/
+├── apis/
+│   └── chat.js          服务端接口：Agent + CreateTool 驱动 SSE
+├── adapter/
+│   └── ...              三个适配器的实现
+├── runtime/
+│   └── ...              会话列表与对话内容的 DOM 渲染
+├── tools/
+│   └── ...              后端工具 readPlain 与前端工具 showPlain
+├── index.js             页面入口
+└── style.css            示例样式</pre></div>
+</div>
+  <p style="margin-top:14px">四个目录正对应框架的四块拼图：<b>apis</b> 是服务端编排，<b>adapter</b> 是数据接缝，
+  <b>runtime</b> 是渲染接缝，<b>tools</b> 是工具定义。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>最小装配</h2></div>
+  <div class="prose">
+  <p>页面侧只需要一个 <code>AuiPage</code>，把适配器与运行时塞进去，剩下交给组件库或你自己的 DOM。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">main.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { AuiPage } from "@auipage/core";
+
+const page = new AuiPage({
+    adapter,        // { ChatTransport, MessageHistory, ThreadList }
+    runtime: {      // { ChatContent, ThreadList }
+        ChatContent: chatContentRuntime,
+        ThreadList: threadListRuntime
+    },
+    tools: []       // 前端工具，可选
+});
+
+page.start();</pre></div>
+</div>
+  <p style="margin-top:14px">已经用 React 或 Vue 的话，直接用上层组件库省掉运行时：
+  <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">@auipage/react</a>、
+  <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">@auipage/vue</a>。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>服务端一侧</h2></div>
+  <div class="prose">
+  <p>示例的 <code>src/apis/chat.js</code> 用 <code>Agent</code> + <code>CreateTool</code> 直接把对话结果写成 SSE：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">src/apis/chat.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { Agent, CreateTool } from "@auipage/agent";
+import { MessageStream } from "@auipage/core";
+
+const ms = new MessageStream(
+    data =&gt; res.write("data: " + JSON.stringify(data) + "\n\n"),
+    () =&gt; res.end()
+);
+const ct = new CreateTool(ms);
+
+const agent = new Agent({
+    model: { model: "qwen3.5", apiKey: "ollama", baseURL: "http://localhost:11434/v1" },
+    tools: [ ct.create(readPlain), ct.create(showPlain) ]
+});
+
+await agent.generate(messages);</pre></div>
+</div>
+</div>
+</section>
+
+<nav class="pager">
+<a href="{{base}}index.html"><span class="dir">← 上一页</span><span class="name">总览</span></a>
+<a class="next" href="{{base}}packages/types.html"><span class="dir">下一页 →</span><span class="name">@auipage/types</span></a>
+  </nav>

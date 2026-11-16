@@ -4,6 +4,8 @@
   "description": "智能体快速开发框架，用于快速开发智能体网页应用。",
   "type": "module",
   "scripts": {
+    "docs": "node apis/build.mjs",
+    "docs:dev": "node apis/build.mjs --serve",
     "prepublishOnly": "node ./scripts/publish.js --mode=error",
     "publish": "npm run build && node ./scripts/publish.js --mode=publish",
     "postinstall": "node ./scripts/postinstall.js && npm run build",

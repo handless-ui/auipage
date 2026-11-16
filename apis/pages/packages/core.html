@@ -1,0 +1,98 @@
+<!--meta {"title": "@auipage/core · auipage 文档", "desc": "核心层导出：AuiPage、三套适配器、两个运行时、defineTool 与 MessageStream。", "section": "packages", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/core</span></div>
+<h1><em>Package 07</em>@auipage/core</h1>
+<p class="lede">核心层：业务侧实现 Adapter 对接模型与存储，UI 侧实现 Runtime 负责渲染，<code>AuiPage</code> 把两者串起来，统一处理会话、历史、流式对话与入库。</p>
+<div class="badges"><span class="badge">core</span><span class="badge">0.1.0</span><span class="badge">AuiPage</span><span class="badge">Adapter</span><span class="badge">Runtime</span></div></div>
+<div class="pkgbar">
+  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">依赖</span><span class="v">@auipage/types</span></div>
+  <div><span class="k">位置</span><span class="v">packages/core</span></div>
+</div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>导出</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>导出</th><th>类型</th><th>作用</th></tr></thead>
+  <tbody><tr><td><code>AuiPage</code></td><td>构造器</td><td>框架核心，管理 adapter / runtime、消息与会话状态</td></tr><tr><td><code>ChatTransportAdapter</code></td><td>适配器基类</td><td>对接模型对话接口，流式产出片段</td></tr><tr><td><code>MessageHistoryAdapter</code></td><td>适配器基类</td><td>历史消息的加载与追加</td></tr><tr><td><code>ThreadListAdapter</code></td><td>适配器基类</td><td>会话列表的增删改查</td></tr><tr><td><code>ThreadListRuntime</code></td><td>运行时基类</td><td>会话列表的 UI 渲染钩子</td></tr><tr><td><code>ChatContentRuntime</code></td><td>运行时基类</td><td>对话内容的 UI 渲染钩子</td></tr><tr><td><code>defineTool</code></td><td>函数</td><td>定义前端工具（<code>description</code> / <code>execute</code> / <code>render</code>）</td></tr><tr><td><code>generator</code></td><td>函数</td><td>把回调式异步流转成 <code>AsyncGenerator</code></td></tr><tr><td><code>MessageStream</code></td><td>构造器</td><td>消息流封装（<code>send</code> / <code>end</code>），服务端配合 <code>CreateTool</code> 推 SSE</td></tr></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>三个适配器</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">adapter.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>new ChatTransportAdapter({
+    async *run({ messages, context }) { /* yield 片段 */ },
+    response(name, data) { /* 工具结果回传 */ }
+});
+
+new MessageHistoryAdapter({
+    async load(threadId) { /* 历史消息组 */ },
+    async append(threadId, group) { /* 落库 */ }
+});
+
+new ThreadListAdapter({
+    async list() {},       async new(firstGroup) {},
+    async archive(id) {},  async unarchive(id) {},  async delete(id) {}
+});</pre></div>
+</div>
+  <p style="margin-top:14px">三个实例按固定 key 组合成 <code>{ ChatTransport, MessageHistory, ThreadList }</code> 交给 <code>AuiPage</code>。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>两个运行时</h2></div>
+  <div class="prose">
+  <p>运行时是"状态到渲染"的翻译层，基类里只有钩子，具体实现由 UI 框架决定：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>运行时</th><th>钩子职责</th></tr></thead>
+  <tbody><tr><td><code>ChatContentRuntime</code></td><td>消息追加、文本增量拼接、工具卡片状态流转、清空与载入历史</td></tr><tr><td><code>ThreadListRuntime</code></td><td>会话列表渲染、激活态切换、归档/删除后的界面同步</td></tr></tbody>
+</table></div>
+  <div class="note" style="margin-top:14px">
+    <b>React 与 Vue 组件库就是这两个运行时的完整实现</b>，所以它们只做"调 DOM/VDOM"，
+    真正的流程控制仍在 <code>AuiPage</code> 里，一份逻辑两种框架共用。
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>defineTool 与 generator</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">core.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const tool = defineTool({
+    description: { type: "function", function: { name: "getTime", parameters: {} } },
+    execute() { return new Date().toLocaleString(); },
+    render: props =&gt; node                 // 可选：交互组件
+});
+
+const stream = generator((push, end, error) =&gt; {
+    source.on("data", push);              // 回调式 → AsyncGenerator
+    source.on("end", end);
+    source.on("error", error);
+});</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>MessageStream</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">server.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const ms = new MessageStream(
+    data =&gt; res.write("data: " + JSON.stringify(data) + "\n\n"),  // send 的落点
+    () =&gt; res.end()                                                 // end 的落点
+);</pre></div>
+</div>
+  <p style="margin-top:14px">它只做一件事：把"要推给页面的数据"抽象成一个可 <code>send</code> 的对象，
+  前端工具挂起时由 <code>CreateTool</code> 通过它把事件写进 SSE。因此换成 WebSocket 只要换这两个函数。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="{{base}}packages/agent.html"><span class="dir">← 上一页</span><span class="name">@auipage/agent</span></a>
+  </nav>

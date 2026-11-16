@@ -1,0 +1,86 @@
+<!--meta {"title": "@auipage/model · auipage 文档", "desc": "OpenAI 风格 chat/completions 封装：实例、签名与工具调用。", "section": "packages", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/model</span></div>
+<h1><em>Package 05</em>@auipage/model</h1>
+<p class="lede">OpenAI 风格 <code>chat/completions</code> 的流式封装：请求拼装、SSE 增量解析、工具调用切片拼接，同协议的其他服务（DeepSeek 等）直接换 <code>baseURL</code> 即可。</p>
+<div class="badges"><span class="badge">model</span><span class="badge">0.1.0</span><span class="badge">OpenAI 协议</span></div></div>
+<div class="pkgbar">
+  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">依赖</span><span class="v">@auipage/fetch</span></div>
+  <div><span class="k">位置</span><span class="v">packages/model</span></div>
+</div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>创建实例</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">model.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { Model } from "@auipage/model";
+
+const model = new Model({
+    model: "deepseek-chat",                     // 模型名
+    apiKey: "your-api-key",
+    baseURL: "https://api.deepseek.com/v1"      // 请求时拼接 /chat/completions
+});</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>completions 签名</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>model.completions(
+    {
+        messages: ChatMessage[],   // OpenAI 格式消息
+        tools?: Tool[],            // 可选，默认 []；自动取每项 description 作为 tools 提交
+        stream?: boolean           // 默认 false
+    },
+    logback?,                      // (delta: string) =&gt; void     正文增量
+    thinkback?                     // (reasoning: string) =&gt; void  推理过程增量
+): Promise&lt;{ content: string, tool_calls: ModelToolCall[] }&gt;</pre></div>
+</div>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>要点</th><th>说明</th></tr></thead>
+  <tbody><tr><td><code>thinkback</code></td><td>接收 <code>delta.reasoning</code> / <code>delta.reasoning_content</code>；正文里的 <code>&lt;think&gt;...&lt;/think&gt;</code> 会被剥除，剩余内容并入 <code>content</code>。</td></tr><tr><td><code>stream: false</code></td><td>两个回调依然会调用，只是在响应结束后各触发一次。</td></tr><tr><td><code>tool_calls</code></td><td>已按 <code>id</code> 切片、把分片的 <code>function.arguments</code> 拼成完整字符串。</td></tr></tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>带工具调用的请求</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">chat.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>await model.completions({
+    messages: [
+        { role: "system", content: "你是一个助手。" },
+        { role: "user", content: "查一下南京今天的天气" }
+    ],
+    tools: [{
+        description: {
+            type: "function",
+            function: {
+                name: "getWeather",
+                description: "查询指定城市的天气",
+                parameters: {
+                    type: "object",
+                    properties: { city: { type: "string" } },
+                    required: ["city"]
+                }
+            }
+        }
+    }],
+    stream: true
+}, chunk =&gt; process.stdout.write(chunk), reasoning =&gt; console.log("[think]", reasoning))
+.then(({ content, tool_calls }) =&gt; console.log(content, tool_calls));</pre></div>
+</div>
+  <p style="margin-top:14px">注意 <code>tools</code> 传的是"带 <code>description</code> 的对象数组"，
+  模型要的不是裸 schema —— 这是本包与 <code>agent</code> 之间的小约定。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="{{base}}packages/fetch.html"><span class="dir">← 上一页</span><span class="name">@auipage/fetch</span></a>
+<a class="next" href="{{base}}packages/agent.html"><span class="dir">下一页 →</span><span class="name">@auipage/agent</span></a>
+  </nav>
