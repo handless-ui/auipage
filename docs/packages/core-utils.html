@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>defineTool 与 generator · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="页面侧工具定义、渲染与回传，以及把回调式异步流转成 AsyncGenerator。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="on">14 · defineTool 与 generator</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="on">14 · defineTool 与 generator</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>参考</span><span class="sep">/</span><span>defineTool 与 generator</span></div>
+<h1><em>Package 14</em>defineTool 与 generator</h1>
+<p class="lede">两个小工具：<code>defineTool</code> 省掉工具描述的多层嵌套，<code>generator</code> 把回调式异步流转成 <code>AsyncGenerator</code>。它们不含业务概念，单独也能用。</p>
+<div class="badges"><span class="badge">defineTool</span><span class="badge">generator</span><span class="badge">无业务耦合</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>defineTool 签名</h2></div>
+  <div class="prose">
+  <p>等价于手写 <code>{ description: { type: "function", function: {...} }, execute, render }</code>，只是省掉嵌套包装。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>defineTool(options: {
+    name: string,        // 工具名，模型据此调用，同批工具内唯一
+    description: string, // 给模型看的功能说明
+    parameters: object,  // JSON Schema
+    execute?: (args: object) =&gt; any | Promise&lt;any&gt;,
+    render?:  (data: { args: object, result: any, status: string }) =&gt; any | Promise&lt;any&gt;
+}): Tool</pre></div>
+</div>
+  <div class="table-wrap" style="margin-top:14px"><table class="spec">
+  <thead><tr><th>字段</th><th>必填</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>name</code> / <code>description</code> / <code>parameters</code></td><td>是</td><td>组装进 <code>description.function</code></td></tr>
+    <tr><td><code>execute(args)</code></td><td>否</td><td>页面侧执行，抛错会被捕获并记为 <code>status: "error"</code></td></tr>
+    <tr><td><code>render(data)</code></td><td>否</td><td><code>execute</code> 完成后的 UI 交互（弹窗确认、表单补充等），<b>返回值才是回传给模型的最终结果</b></td></tr>
+  </tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>注册后的流转</h2></div>
+  <div class="prose">
+  <ol>
+    <li><code>description</code> 收入 <code>tools_description</code>，随 <code>context.tools</code> 发给服务端；</li>
+    <li>流中出现 <code>caller: "frontend"</code> 的 <code>tool-call</code> 时，页面执行 <code>execute</code>；</li>
+    <li>有 <code>render</code> 时，<code>execute</code> 结果先交给它做 UI 交互，其返回值经 <code>ChatTransport.response("tool-result", ...)</code> 回传服务端。</li>
+  </ol>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">tools/showPlain.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { defineTool } from "@auipage/core";
+
+export default defineTool({
+    name: "showPlain",
+    description: "显示文本文件中的内容",
+    parameters: {
+        type: "object",
+        properties: {
+            content: { type: "string", description: "需要显示的文本内容" }
+        },
+        required: ["content"]
+    },
+    async execute(args) {
+        return args.content;        // 拿到原始结果
+    },
+    async render({ result }) {
+        alert(result);              // 在 UI 上展示
+        return "显示成功";           // 这才是回传给模型的结果
+    }
+});</pre></div>
+</div>
+  <div class="note" style="margin-top:14px">
+    <b>省略 <code>execute</code></b> 只在 <code>CreateTool</code> 桥接场景下合法；直接本地跑 Agent 时，无 <code>execute</code> 的工具执行会报错。
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>generator 签名</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>generator(
+    rawFun: (
+        next:  (value: any) =&gt; void,  // 推送一个值，可多次调用，按顺序消费
+        done:  () =&gt; void,            // 结束
+        error: (err: any) =&gt; void     // 报错，消费者侧会抛出
+    ) =&gt; void
+): AsyncGenerator&lt;any&gt;</pre></div>
+</div>
+  <p style="margin-top:14px"><code>rawFun</code> 会被立即执行；<code>done()</code> / <code>error()</code> 之后再调 <code>next()</code> 会被忽略。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>generator 示例</h2></div>
+  <div class="prose">
+  <p><b>接 Agent：</b>它的流式更新走 <code>logback</code> / <code>thinkback</code>，包一层就是 <code>AuiPage</code> 需要的片段流：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">adapter/chatTransport.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { generator, ChatTransportAdapter } from "@auipage/core";
+import { Agent } from "@auipage/agent";
+
+const agent = new Agent({
+    model: { model: "gpt-4o-mini", apiKey: "sk-...", baseURL: "https://api.openai.com/v1" },
+    stream: true
+});
+
+const chatTransport = new ChatTransportAdapter({
+    run: ({ messages }) =&gt; generator((next, done, error) =&gt; {
+        agent.generate(messages,
+            text  =&gt; next({ type: "text", text }),
+            think =&gt; next({ type: "thinking", text: think })
+        ).then(done, error);
+    })
+});</pre></div>
+</div>
+  <p style="margin-top:16px"><b>任意回调式 API：</b>事件发射器、定时器、文件读取都能包。</p>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">stream.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { generator } from "@auipage/core";
+
+const stream = generator((next, done, error) =&gt; {
+    emitter.on("data", next);
+    emitter.on("end", done);
+    emitter.on("error", error);
+});
+
+for await (const chunk of stream) {
+    console.log(chunk);
+}</pre></div>
+</div>
+  <div class="note" style="margin-top:14px">
+    消费者提前 <code>break</code> 不会通知生产者；底层连接需要手动关闭。
+  </div>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../packages/core-ports.html"><span class="dir">← 上一页</span><span class="name">Adapter 与 Runtime</span></a>
+<a class="next" href="../index.html"><span class="dir">下一页 →</span><span class="name">回到总览</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
+
+</body>
+</html>

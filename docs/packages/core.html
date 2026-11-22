@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>@auipage/core · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
-<meta name="description" content="核心层导出：AuiPage、三套适配器、两个运行时、defineTool 与 MessageStream。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=2af1fb36">
+<meta name="description" content="核心层概览：AuiPage、三个 Adapter、两个 Runtime、defineTool、generator 与 MessageStream。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -17,13 +17,9 @@
     </a>
     <nav class="rail-nav" aria-label="主导航">
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
-      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
-      <a href="../packages/types.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
     </nav>
-    <div class="rail-foot">
-      <a class="rail-gh" href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener" title="GitHub 仓库"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 10l4 6M13 4l4 6-4 6"/></svg></a>
-      <span class="rail-ver">v0.1.0</span>
-    </div>
   </aside>
 
 <div class="mobiletop">
@@ -39,159 +35,199 @@
       <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
       <nav class="rail-nav" aria-label="主导航">
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
-      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
-      <a href="../packages/types.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
     </nav>
     </div>
     <div class="drawer-tree">
       <div class="drawer-tree-title">文档目录</div>
       <aside class="tree">
-    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 快速开始</a>
-    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="on">07 · @auipage/core</a>
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="on">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
   </aside>
+
     </div>
   </div>
 
 <div class="stage">
 <div class="shell">
 <aside class="tree">
-    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 快速开始</a>
-    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="on">07 · @auipage/core</a>
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="on">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
   </aside>
 
 
 <main class="article">
-<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/core</span></div>
-<h1><em>Package 07</em>@auipage/core</h1>
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>参考</span><span class="sep">/</span><span>@auipage/core</span></div>
+<h1><em>Package 11</em>@auipage/core</h1>
 <p class="lede">核心层：业务侧实现 Adapter 对接模型与存储，UI 侧实现 Runtime 负责渲染，<code>AuiPage</code> 把两者串起来，统一处理会话、历史、流式对话与入库。</p>
 <div class="badges"><span class="badge">core</span><span class="badge">0.1.0</span><span class="badge">AuiPage</span><span class="badge">Adapter</span><span class="badge">Runtime</span></div></div>
 <div class="pkgbar">
   <div><span class="k">版本</span><span class="v">0.1.0</span></div>
-  <div><span class="k">依赖</span><span class="v">@auipage/types</span></div>
+  <div><span class="k">依赖</span><span class="v">不依赖其他 auipage 包</span></div>
   <div><span class="k">位置</span><span class="v">packages/core</span></div>
 </div>
 
 <section class="block">
-  <div class="block-head"><span class="idx">01</span><h2>导出</h2></div>
+  <div class="block-head"><span class="idx">01</span><h2>最小装配</h2></div>
   <div class="prose">
-  <div class="table-wrap"><table class="spec">
-  <thead><tr><th>导出</th><th>类型</th><th>作用</th></tr></thead>
-  <tbody><tr><td><code>AuiPage</code></td><td>构造器</td><td>框架核心，管理 adapter / runtime、消息与会话状态</td></tr><tr><td><code>ChatTransportAdapter</code></td><td>适配器基类</td><td>对接模型对话接口，流式产出片段</td></tr><tr><td><code>MessageHistoryAdapter</code></td><td>适配器基类</td><td>历史消息的加载与追加</td></tr><tr><td><code>ThreadListAdapter</code></td><td>适配器基类</td><td>会话列表的增删改查</td></tr><tr><td><code>ThreadListRuntime</code></td><td>运行时基类</td><td>会话列表的 UI 渲染钩子</td></tr><tr><td><code>ChatContentRuntime</code></td><td>运行时基类</td><td>对话内容的 UI 渲染钩子</td></tr><tr><td><code>defineTool</code></td><td>函数</td><td>定义前端工具（<code>description</code> / <code>execute</code> / <code>render</code>）</td></tr><tr><td><code>generator</code></td><td>函数</td><td>把回调式异步流转成 <code>AsyncGenerator</code></td></tr><tr><td><code>MessageStream</code></td><td>构造器</td><td>消息流封装（<code>send</code> / <code>end</code>），服务端配合 <code>CreateTool</code> 推 SSE</td></tr></tbody>
-</table></div>
-</div>
-</section>
-
-<section class="block">
-  <div class="block-head"><span class="idx">02</span><h2>三个适配器</h2></div>
-  <div class="prose">
+  <p>一个 <code>AuiPage</code>，三个适配器按固定 key 组合，两个运行时按固定 key 组合。实例会按 <code>name</code> 去掉后缀后挂载，例如 <code>ChatTransportAdapter</code> → <code>page.adapter.ChatTransport</code>。</p>
   <div class="code">
-  <div class="code-head"><span class="file">adapter.js</span><button data-copy="">复制</button></div>
-  <div class="code-body"><pre>new ChatTransportAdapter({
-    async *run({ messages, context }) { /* yield 片段 */ },
-    response(name, data) { /* 工具结果回传 */ }
-});
+  <div class="code-head"><span class="file">main.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { AuiPage } from "@auipage/core";
 
-new MessageHistoryAdapter({
-    async load(threadId) { /* 历史消息组 */ },
-    async append(threadId, group) { /* 落库 */ }
-});
-
-new ThreadListAdapter({
-    async list() {},       async new(firstGroup) {},
-    async archive(id) {},  async unarchive(id) {},  async delete(id) {}
+const page = new AuiPage({
+    adapter: {
+        ChatTransport:  chatTransport,     // ChatTransportAdapter
+        MessageHistory: messageHistory,    // MessageHistoryAdapter
+        ThreadList:     threadList          // ThreadListAdapter
+    },
+    runtime: {
+        ThreadList:  threadListUI,         // ThreadListRuntime
+        ChatContent: chatUI                // ChatContentRuntime
+    },
+    tools: []                              // 可选：页面侧工具
 });</pre></div>
 </div>
-  <p style="margin-top:14px">三个实例按固定 key 组合成 <code>{ ChatTransport, MessageHistory, ThreadList }</code> 交给 <code>AuiPage</code>。</p>
-</div>
-</section>
-
-<section class="block">
-  <div class="block-head"><span class="idx">03</span><h2>两个运行时</h2></div>
-  <div class="prose">
-  <p>运行时是"状态到渲染"的翻译层，基类里只有钩子，具体实现由 UI 框架决定：</p>
-  <div class="table-wrap"><table class="spec">
-  <thead><tr><th>运行时</th><th>钩子职责</th></tr></thead>
-  <tbody><tr><td><code>ChatContentRuntime</code></td><td>消息追加、文本增量拼接、工具卡片状态流转、清空与载入历史</td></tr><tr><td><code>ThreadListRuntime</code></td><td>会话列表渲染、激活态切换、归档/删除后的界面同步</td></tr></tbody>
-</table></div>
   <div class="note" style="margin-top:14px">
-    <b>React 与 Vue 组件库就是这两个运行时的完整实现</b>，所以它们只做"调 DOM/VDOM"，
-    真正的流程控制仍在 <code>AuiPage</code> 里，一份逻辑两种框架共用。
+    <b>构造后立即调用</b> <code>ThreadList.list()</code>，结果传给 <code>ThreadListRuntime.init()</code>。
+    挂载后的每个实例上会写入 <code>aui</code>，反向指向页面实例。
   </div>
 </div>
 </section>
 
 <section class="block">
-  <div class="block-head"><span class="idx">04</span><h2>defineTool 与 generator</h2></div>
+  <div class="block-head"><span class="idx">02</span><h2>导出</h2></div>
   <div class="prose">
-  <div class="code">
-  <div class="code-head"><span class="file">core.js</span><button data-copy="">复制</button></div>
-  <div class="code-body"><pre>const tool = defineTool({
-    description: { type: "function", function: { name: "getTime", parameters: {} } },
-    execute() { return new Date().toLocaleString(); },
-    render: props =&gt; node                 // 可选：交互组件
-});
-
-const stream = generator((push, end, error) =&gt; {
-    source.on("data", push);              // 回调式 → AsyncGenerator
-    source.on("end", end);
-    source.on("error", error);
-});</pre></div>
-</div>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>导出</th><th>类型</th><th>作用</th></tr></thead>
+  <tbody>
+    <tr><td><code>AuiPage</code></td><td>构造器</td><td>框架核心，管理 adapter / runtime、消息与会话状态</td></tr>
+    <tr><td><code>ChatTransportAdapter</code></td><td>适配器基类</td><td>对接模型对话接口，流式产出消息片段</td></tr>
+    <tr><td><code>MessageHistoryAdapter</code></td><td>适配器基类</td><td>历史消息的加载与追加</td></tr>
+    <tr><td><code>ThreadListAdapter</code></td><td>适配器基类</td><td>会话列表的增删改查</td></tr>
+    <tr><td><code>ThreadListRuntime</code></td><td>运行时基类</td><td>会话列表的 UI 渲染钩子</td></tr>
+    <tr><td><code>ChatContentRuntime</code></td><td>运行时基类</td><td>对话内容的 UI 渲染钩子</td></tr>
+    <tr><td><code>defineTool</code></td><td>函数</td><td>定义前端工具（<code>name</code> / <code>description</code> / <code>parameters</code> / <code>execute</code> / <code>render</code>）</td></tr>
+    <tr><td><code>generator</code></td><td>函数</td><td>把回调式异步流转成 <code>AsyncGenerator</code></td></tr>
+    <tr><td><code>MessageStream</code></td><td>构造器</td><td>服务端消息流封装（<code>send</code> / <code>end</code>），配合 <code>CreateTool</code> 推 SSE</td></tr>
+  </tbody>
+</table></div>
 </div>
 </section>
 
 <section class="block">
-  <div class="block-head"><span class="idx">05</span><h2>MessageStream</h2></div>
+  <div class="block-head"><span class="idx">03</span><h2>两条接缝</h2></div>
+  <div class="prose">
+  <div class="cards">
+      <div class="card">
+        <span class="tag">Adapter</span>
+        <h3>数据侧：三个接口</h3>
+        <p><code>ChatTransport</code> 产出流片段，<code>MessageHistory</code> 读写历史，
+        <code>ThreadList</code> 管理会话。方法缺省时为空函数。</p>
+        <p><a href="../packages/core-ports.html">接口与示例 →</a></p>
+      </div>
+      <div class="card">
+        <span class="tag">Runtime</span>
+        <h3>界面侧：两个钩子</h3>
+        <p><code>ThreadListRuntime</code> 六个回调，<code>ChatContentRuntime</code> 的
+        <code>append</code> 用返回值承载“更新函数 / 结束回调”。</p>
+        <p><a href="../packages/core-ports.html">渲染约定 →</a></p>
+      </div>
+      <div class="card">
+        <span class="tag">Tool</span>
+        <h3>页面侧工具</h3>
+        <p><code>defineTool</code> 定义工具，经 <code>AuiPage.tools</code> 注册；
+        有 <code>render</code> 时，界面交互的返回值才是回传给模型的结果。</p>
+        <p><a href="../packages/core-utils.html">defineTool →</a></p>
+      </div>
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>MessageStream</h2></div>
   <div class="prose">
   <div class="code">
   <div class="code-head"><span class="file">server.js</span><button data-copy="">复制</button></div>
-  <div class="code-body"><pre>const ms = new MessageStream(
+  <div class="code-body"><pre>import { MessageStream } from "@auipage/core";
+
+const ms = new MessageStream(
     data =&gt; res.write("data: " + JSON.stringify(data) + "\n\n"),  // send 的落点
     () =&gt; res.end()                                                 // end 的落点
 );</pre></div>
 </div>
-  <p style="margin-top:14px">它只做一件事：把"要推给页面的数据"抽象成一个可 <code>send</code> 的对象，
-  前端工具挂起时由 <code>CreateTool</code> 通过它把事件写进 SSE。因此换成 WebSocket 只要换这两个函数。</p>
+  <p style="margin-top:14px">它只做一件事：把“要推给页面的数据”抽象成可 <code>send</code> 的对象。
+  前端工具挂起时，<code>CreateTool</code> 通过它把事件写进 SSE。换成 WebSocket，只要换这两个函数。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th><th>代价</th></tr></thead>
+  <tbody>
+    <tr><td>只做一个 React 聊天页</td><td><code>assistant-ui</code>、Vercel AI SDK 的 <code>useChat</code></td><td>状态与组件绑定，换框架要重写</td></tr>
+    <tr><td>不需要会话列表和历史</td><td>自己维护消息数组 + 渲染循环</td><td>流式拼接、工具状态要自己管</td></tr>
+    <tr><td>已有内部聊天框架</td><td>复用内部框架，只在服务端接 <code>@auipage/model</code></td><td>没有跨端复用</td></tr>
+    <tr><td>UI 极简、只要文本</td><td>自己写 <code>AsyncGenerator</code> + 渲染</td><td>没有会话/历史/工具的统一流程</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px"><b>判断标准：</b>如果你预计会换一次 UI 框架，或服务端要同时喂 Web 和桌面端，把流程抽出来才划算。</p>
 </div>
 </section>
 
 <nav class="pager">
 <a href="../packages/agent.html"><span class="dir">← 上一页</span><span class="name">@auipage/agent</span></a>
+<a class="next" href="../packages/core-auipage.html"><span class="dir">下一页 →</span><span class="name">AuiPage</span></a>
   </nav>
 </main>
 
 </div>
 </div>
-<footer class="foot">
+<footer class="foot" id="site-foot">
     <div class="foot-inner">
-      <div class="col">
-        <h4>开始</h4>
-        <a href="../index.html">总览</a>
-        <a href="../guide/start.html">快速开始</a>
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
       </div>
-      <div class="col">
-        <h4>包</h4>
-        <a href="../packages/types.html">@auipage/types</a>
-        <a href="../packages/fetch.html">@auipage/fetch</a>
-        <a href="../packages/model.html">@auipage/model</a>
-        <a href="../packages/agent.html">@auipage/agent</a>
-        <a href="../packages/core.html">@auipage/core</a>
-      </div>
-      <div class="col">
-        <h4>生态</h4>
-        <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
-        <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
-        <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
-      </div>
-      <div class="sign">
-        <b>auipage</b> — 智能体网页应用开发框架<br>
-        MIT License · Copyright (c) <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/js/docs.js?v=2af1fb36"></script>
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
 
 </body>
 </html>

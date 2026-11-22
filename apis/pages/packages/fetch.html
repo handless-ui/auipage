@@ -1,16 +1,16 @@
 <!--meta {"title": "@auipage/fetch · auipage 文档", "desc": "跨端流式 fetch 的用法、事件与 SSE 自动解析规则。", "section": "packages", "demos": false}-->
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/fetch</span></div>
-<h1><em>Package 04</em>@auipage/fetch</h1>
+<h1><em>Package 08</em>@auipage/fetch</h1>
 <p class="lede">跨端流式 fetch：Node 下走 <code>http</code>/<code>https</code>，浏览器下走原生 fetch + ReadableStream，自动适配；SSE 响应自动按事件缓冲解析。</p>
 <div class="badges"><span class="badge">fetch</span><span class="badge">0.1.0</span><span class="badge">浏览器 + Node</span></div></div>
 <div class="pkgbar">
   <div><span class="k">版本</span><span class="v">0.1.0</span></div>
-  <div><span class="k">依赖</span><span class="v">@auipage/types</span></div>
+  <div><span class="k">依赖</span><span class="v">无运行时依赖</span></div>
   <div><span class="k">位置</span><span class="v">packages/fetch</span></div>
 </div>
 
 <section class="block">
-  <div class="block-head"><span class="idx">01</span><h2>用法</h2></div>
+  <div class="block-head"><span class="idx">01</span><h2>最小可用</h2></div>
   <div class="prose">
   <div class="code">
   <div class="code-head"><span class="file">client.js</span><button data-copy="">复制</button></div>
@@ -69,7 +69,23 @@ fetch({
 </div>
 </section>
 
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th><th>代价</th></tr></thead>
+  <tbody>
+    <tr><td>只在浏览器跑</td><td>原生 <code>fetch</code> + <code>body.getReader()</code></td><td>自己写 SSE 切包与 <code>\r\n</code> 兼容</td></tr>
+    <tr><td>只在 Node 跑</td><td><code>undici</code> / <code>axios</code> / 原生 <code>http</code></td><td>仍要自己处理事件边界</td></tr>
+    <tr><td>用官方模型 SDK</td><td><code>openai</code> 等 SDK 自带的流式读取</td><td>多一个依赖，少一层掌控</td></tr>
+    <tr><td>只要一次性请求</td><td>原生 <code>fetch</code> 即可</td><td>没有流式能力</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px">它只在“同一份读取代码要跑在浏览器和 Node 两端”时值得用。单端项目，原生方案完全够。</p>
+</div>
+</section>
+
 <nav class="pager">
-<a href="{{base}}packages/types.html"><span class="dir">← 上一页</span><span class="name">@auipage/types</span></a>
+<a href="{{base}}guide/ui.html"><span class="dir">← 上一页</span><span class="name">换界面</span></a>
 <a class="next" href="{{base}}packages/model.html"><span class="dir">下一页 →</span><span class="name">@auipage/model</span></a>
   </nav>

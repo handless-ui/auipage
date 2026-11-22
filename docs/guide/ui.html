@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>换界面 · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="同一套 AuiPage 逻辑，换成原生 DOM、React 或 Vue 渲染；运行时只负责把状态画出来。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="on">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="on">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>教程</span><span class="sep">/</span><span>换界面</span></div>
+<h1><em>Guide 07</em>换界面</h1>
+<p class="lede">流程只有一份，界面可以有很多种。这一章把上一章的 DOM 运行时换掉，看看哪些代码会动、哪些不会。</p>
+<div class="badges"><span class="badge hi">Runtime</span><span class="badge">DOM</span><span class="badge">React / Vue</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>会动与不会动</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>换 UI 框架时</th><th>是否要改</th><th>原因</th></tr></thead>
+  <tbody>
+    <tr><td><code>AuiPage</code> 的装配与调用</td><td>不改</td><td>它只认接口，不认渲染</td></tr>
+    <tr><td>三个 Adapter</td><td>不改</td><td>数据侧与界面无关</td></tr>
+    <tr><td><code>ChatContentRuntime</code></td><td>重写</td><td><code>append</code> 里创建节点、返回更新函数</td></tr>
+    <tr><td><code>ThreadListRuntime</code></td><td>重写</td><td>侧边栏的列表与激活态</td></tr>
+    <tr><td>工具卡片</td><td>重写</td><td>它属于 <code>ChatContentRuntime</code> 的渲染范围</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px">换句话说：<b>状态机不动，只换“把状态画出来”的那一层</b>。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>原生 DOM 的两个约定</h2></div>
+  <div class="prose">
+  <p>看起来只是 <code>appendChild</code>，其实有两个返回值的约定必须遵守，否则流式增量会整段重绘：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">runtime/chatContent.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const chatUI = new ChatContentRuntime({
+    init: messages =&gt; {
+        chatEl.innerHTML = "";
+        messages.forEach(({ role, content }) =&gt;
+            content.forEach(part =&gt; renderPart(role, part))
+        );
+    },
+    append: (role, part) =&gt; {
+        const node = renderPart(role, part);
+
+        // 约定一：文本类片段返回“更新函数”，后续增量只改这个节点
+        if (part.type === "text" || part.type === "thinking" || part.type === "loading") {
+            return text =&gt; {
+                node.textContent += text;
+                chatEl.scrollTop = chatEl.scrollHeight;
+            };
+        }
+
+        // 约定二：tool-call 的 pending 片段返回“结束回调”，按 id 缓存到 success / error
+        if (part.type === "tool-call") {
+            return finalPart =&gt; updateCard(node, finalPart);
+        }
+    }
+});</pre></div>
+</div>
+  <div class="note" style="margin-top:14px">
+    <b>前端工具会回调两次</b>：第一次带 <code>render</code>，由你在界面上做交互并返回界面结果；
+    第二次用界面结果做最终渲染。回传给模型的是 <code>render</code> 的返回值。
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>React / Vue：直接用现成实现</h2></div>
+  <div class="prose">
+  <p>两个兄弟仓库就是这两个运行时的完整实现，装配方式与上一章完全一样，只是不再手写 DOM：</p>
+  <div class="cards">
+      <div class="card">
+        <span class="tag">React</span>
+        <h3><a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">@auipage/react</a></h3>
+        <p><code>ChatContent</code> + <code>ThreadList</code> 两个组件，
+        render-prop 把每个片段交给你，样式与结构完全自定义。</p>
+      </div>
+      <div class="card">
+        <span class="tag">Vue</span>
+        <h3><a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">@auipage/vue</a></h3>
+        <p>同结构、同接口，用作用域插槽渲染片段；
+        与 React 版共用同一份 <code>AuiPage</code> 流程。</p>
+      </div>
+      <div class="card">
+        <span class="tag">自研</span>
+        <h3>自己的组件库</h3>
+        <p>继承两个 Runtime 基类，按约定实现钩子即可；
+        框架按 <code>name</code> 挂载，不要求特定生命周期。</p>
+      </div>
+  </div>
+  <p style="margin-top:14px">如果只是固定用一个框架、一个页面，直接用这两个库比从零实现 Runtime 省事得多。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>什么时候别换</h2></div>
+  <div class="prose">
+  <p>运行时的意义是“同一套逻辑多处复用”。如果出现下面这些情况，抽象反而是负担：</p>
+  <ul>
+    <li>只有一个页面，且短期不会换框架——直接写组件更直接；</li>
+    <li>UI 需求非常定制（富文本编辑器、画布），Runtime 的钩子会成为约束；</li>
+    <li>团队没有维护两套 Runtime 的成本，固定一个框架更省心。</li>
+  </ul>
+  <p>框架给的是“可替换”，不是“必须替换”。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../guide/core.html"><span class="dir">← 上一页</span><span class="name">装框架</span></a>
+<a class="next" href="../packages/fetch.html"><span class="dir">下一页 →</span><span class="name">API 参考</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
+
+</body>
+</html>

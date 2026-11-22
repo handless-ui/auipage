@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一个包都不用 · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="不安装任何依赖，用原生 fetch 手写一个流式对话页，先看清这条链路到底在做什么。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="on">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="on">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>教程</span><span class="sep">/</span><span>一个包都不用</span></div>
+<h1><em>Guide 03</em>一个包都不用</h1>
+<p class="lede">先不装任何依赖：一个输入框、一个发送按钮、一段原生 <code>fetch</code>。把它跑通，你就知道后面每个包到底替你省了什么。</p>
+<div class="badges"><span class="badge hi">0 依赖</span><span class="badge">原生 fetch</span><span class="badge">SSE</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>今天要做的东西</h2></div>
+  <div class="prose">
+  <p>一个最朴素的智能体页面：输入一句话，服务端逐字把回复推回来，页面实时显示。</p>
+  <p>它由两个文件组成，都不需要 <code>npm install</code>：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>文件</th><th>干什么</th></tr></thead>
+  <tbody><tr><td><code>server.js</code></td><td>Node 内置 <code>http</code> 起接口，把回复拆成 SSE 事件逐条写回</td></tr><tr><td><code>index.html</code></td><td>页面用原生 <code>fetch</code> 读流，把事件拼成文字</td></tr></tbody>
+</table></div>
+  <div class="note" style="margin-top:14px">
+    <b>为什么拆成两个进程？</b> 模型的 key 和调用逻辑必须留在服务端，浏览器只拿 SSE 事件。
+    这一层分离，后面的所有包都沿用。
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>服务端：把回复拆成事件</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">server.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import http from "node:http";
+
+http.createServer((req, res) =&gt; {
+    // 跨域，方便页面从别的端口访问
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    if (req.method === "OPTIONS") return res.end();
+
+    if (req.method !== "POST" || req.url !== "/api/chat") {
+        res.writeHead(404);
+        return res.end();
+    }
+
+    let body = "";
+    req.on("data", chunk =&gt; body += chunk);
+    req.on("end", () =&gt; {
+        const { messages } = JSON.parse(body);
+
+        res.writeHead(200, {
+            "Content-Type": "text/event-stream;charset=utf-8",
+            "Cache-Control": "no-cache"
+        });
+
+        // 假装这是模型回复，逐字推送
+        const reply = "你说的是：" + messages.at(-1).content;
+        let i = 0;
+
+        const timer = setInterval(() =&gt; {
+            if (i &gt;= reply.length) {
+                clearInterval(timer);
+                res.write("data: [DONE]\n\n");
+                res.end();
+                return;
+            }
+            res.write("data: " + JSON.stringify({
+                type: "text",
+                text: reply[i++]
+            }) + "\n\n");
+        }, 50);
+    });
+}).listen(3000, () =&gt; console.log("http://127.0.0.1:3000"));</pre></div>
+</div>
+  <p style="margin-top:14px">要点只有一个：<b>每条消息以 <code>data: </code> 开头，以空行结束</b>。
+  SSE 协议就这么简单，浏览器会自动帮你按事件切分——但原生 <code>fetch</code> 不会。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>页面：一句话发出去，逐字接住</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">index.html</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>&lt;!DOCTYPE html&gt;
+&lt;meta charset="UTF-8"&gt;
+&lt;input id="q" placeholder="说点什么"&gt;
+&lt;button id="send"&gt;发送&lt;/button&gt;
+&lt;div id="out"&gt;&lt;/div&gt;
+
+&lt;script&gt;
+const out = document.querySelector("#out");
+
+document.querySelector("#send").onclick = async () =&gt; {
+    out.textContent = "";
+
+    const res = await fetch("http://127.0.0.1:3000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            messages: [{ role: "user", content: document.querySelector("#q").value }]
+        })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // 按空行切成完整事件；最后一段可能还没收完，留到下一轮
+        const events = buffer.split("\n\n");
+        buffer = events.pop();
+
+        for (const event of events) {
+            const line = event.split("\n").find(l =&gt; l.startsWith("data:"));
+            if (!line) continue;
+
+            const payload = line.slice(5).trim();
+            if (payload === "[DONE]") return;
+
+            const data = JSON.parse(payload);
+            if (data.type === "text") out.textContent += data.text;
+        }
+    }
+};
+&lt;/script&gt;</pre></div>
+</div>
+  <p style="margin-top:14px">跑起来：<code>node server.js</code>，再用任意静态服务器打开 <code>index.html</code>
+  （例如 <code>npx serve .</code>），输入一句话就能看到逐字输出。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>你已经踩到的坑</h2></div>
+  <div class="prose">
+  <p>这段代码能跑，但把真实模型接上来之后，下面每一条都会变成 bug：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>坑</th><th>为什么会发生</th><th>谁替你处理</th></tr></thead>
+  <tbody>
+    <tr><td>事件被切在半个 chunk 上</td><td>网络传输不按事件边界分片，<code>data:</code> 可能被截成两半</td><td><code>@auipage/fetch</code> 的缓冲切分</td></tr>
+    <tr><td>服务端用 CRLF 换行</td><td><code>\r\n\r\n</code> 不是 <code>\n\n</code>，按后者切会整段粘住</td><td><code>@auipage/fetch</code> 兼容两种</td></tr>
+    <tr><td><code>[DONE]</code> 不是 JSON</td><td>直接把每条 <code>data:</code> 丢给 <code>JSON.parse</code> 会抛错</td><td>上层封装先行判断</td></tr>
+    <tr><td>非 2xx 不抛错</td><td>原生 <code>fetch</code> 只把状态放进 <code>res.status</code></td><td>用 <code>res.ok</code> 自己判断</td></tr>
+    <tr><td>Node 里没有 <code>reader</code></td><td><code>res.body.getReader()</code> 只在浏览器存在</td><td><code>@auipage/fetch</code> 自动换 <code>http</code></td></tr>
+    <tr><td>事件不止文本</td><td>思考增量、工具调用、工具结果都要走同一条流</td><td><code>AuiPage</code> 按类型分发</td></tr>
+  </tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>这一步，你完全可以自己做</h2></div>
+  <div class="prose">
+  <p>上面两个文件加起来不到 80 行，<b>没有任何一个 auipage 包参与</b>。如果你的需求只有“发一句话、收一段流式文本”，
+  到这里就可以结束了，不需要往下看。</p>
+  <p>继续往下，是为了解决这段代码做不到的三件事：接真实模型、让模型调工具、管理多个会话。
+  每一章都会同时给出“装包版”和“自己写版”，你可以只挑需要的部分。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../guide/start.html"><span class="dir">← 上一页</span><span class="name">跑起示例</span></a>
+<a class="next" href="../guide/model.html"><span class="dir">下一页 →</span><span class="name">接真实模型</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
+
+</body>
+</html>

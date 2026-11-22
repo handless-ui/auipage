@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adapter 与 Runtime · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="三个适配器与两个运行时的接口、挂载规则和原生 DOM 示例。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="on">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="on">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>参考</span><span class="sep">/</span><span>Adapter 与 Runtime</span></div>
+<h1><em>Package 13</em>Adapter 与 Runtime</h1>
+<p class="lede">两条接缝的全部接口：Adapter 负责数据，Runtime 负责渲染。框架只规定方法，缺省时为空函数；你可以 <code>new</code> 一个基类传实现，也可以写子类。</p>
+<div class="badges"><span class="badge">3 Adapter</span><span class="badge">2 Runtime</span><span class="badge">可继承</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>挂载规则</h2></div>
+  <div class="prose">
+  <p>框架按实例的 <code>name</code> 属性去掉 <code>Adapter</code> / <code>Runtime</code> 后缀后挂载。基类已内置默认 <code>name</code>（默认为构造器名），子类可覆盖以改变挂载位置；实例上的 <code>aui</code> 反向指向所属 <code>AuiPage</code>。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>实例</th><th>挂载到</th></tr></thead>
+  <tbody>
+    <tr><td><code>ChatTransportAdapter</code></td><td><code>page.adapter.ChatTransport</code></td></tr>
+    <tr><td><code>MessageHistoryAdapter</code></td><td><code>page.adapter.MessageHistory</code></td></tr>
+    <tr><td><code>ThreadListAdapter</code></td><td><code>page.adapter.ThreadList</code></td></tr>
+    <tr><td><code>ThreadListRuntime</code></td><td><code>page.runtime.ThreadList</code></td></tr>
+    <tr><td><code>ChatContentRuntime</code></td><td><code>page.runtime.ChatContent</code></td></tr>
+  </tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>ChatTransportAdapter</h2></div>
+  <div class="prose">
+  <p>对接模型对话接口，<code>sendMessage</code> 时调用一次。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>new ChatTransportAdapter({
+    // 返回异步生成器，逐个 yield 消息片段；返回假值则本轮中止
+    run: (params: {
+        messages: ChatMessage[],   // 本轮新消息（当前只有一条）
+        context: {
+            history: HistoryMessageGroup[],       // 已入库的历史消息组
+            tools: Array&lt;{ description: object }&gt; // 注册的工具描述
+        }
+    }) =&gt; AsyncGenerator&lt;MessagePart&gt; | void,
+
+    // 页面 → 服务端回传通道，目前只回传前端工具结果
+    response: (name: "tool-result", data: { id: string, status: string, result: any }) =&gt; any
+});</pre></div>
+</div>
+  <p style="margin-top:14px">yield 的片段分两类：<code>{ type: "text" | "thinking" | "loading", text }</code> 与 <code>{ type: "tool-call", status, id, name, caller, args, result? }</code>。</p>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">adapter/chatTransport.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { ChatTransportAdapter, generator } from "@auipage/core";
+import { Agent } from "@auipage/agent";
+
+const agent = new Agent({
+    model: { model: "gpt-4o-mini", apiKey: "sk-...", baseURL: "https://api.openai.com/v1" },
+    stream: true
+});
+
+const chatTransport = new ChatTransportAdapter({
+    run: ({ messages, context }) =&gt; generator((next, done, error) =&gt; {
+        // 需要历史时，把 context.history 里的消息组合进来
+        agent.generate(messages,
+            text  =&gt; next({ type: "text", text }),
+            think =&gt; next({ type: "thinking", text: think })
+        ).then(done, error);
+    }),
+
+    response: (name, data) =&gt; fetch("/api/chat/" + name, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    })
+});</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>MessageHistoryAdapter</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>new MessageHistoryAdapter({
+    load:   (threadId: string) =&gt; HistoryMessageGroup[] | Promise&lt;...&gt; | void,
+    append: (threadId: string, group: HistoryMessageGroup) =&gt; any
+});</pre></div>
+</div>
+  <p style="margin-top:14px"><code>load</code> 返回假值时跳过历史加载；<code>append</code> 不实现则消息只留在内存。</p>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">adapter/messageHistory.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const messageHistory = new MessageHistoryAdapter({
+    load: (threadId) =&gt; {
+        const raw = localStorage.getItem("history:" + threadId);
+        return raw ? JSON.parse(raw) : [];
+    },
+    append: (threadId, group) =&gt; {
+        const key = "history:" + threadId;
+        const list = JSON.parse(localStorage.getItem(key) || "[]");
+        list.push(group);
+        localStorage.setItem(key, JSON.stringify(list));
+    }
+});</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>ThreadListAdapter</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>new ThreadListAdapter({
+    list:      () =&gt; Thread[] | Promise&lt;Thread[]&gt;,
+    new:       (firstMessage: HistoryMessageGroup) =&gt; Thread | undefined | Promise&lt;...&gt;,
+    delete:    (threadId: string) =&gt; any,
+    archive:   (threadId: string) =&gt; any,
+    unarchive: (threadId: string) =&gt; any
+});</pre></div>
+</div>
+  <p style="margin-top:14px"><code>new</code> 返回假值会中止本轮对话（不渲染会话、不写历史）；正常返回的对象至少含 <code>threadId</code>。</p>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">adapter/threadList.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const threadList = new ThreadListAdapter({
+    list:      () =&gt; fetch("/api/threads").then(r =&gt; r.json()),
+    new:       firstMessage =&gt; fetch("/api/threads", {
+                   method: "POST",
+                   headers: { "Content-Type": "application/json" },
+                   body: JSON.stringify(firstMessage)
+               }).then(r =&gt; r.json()),
+    delete:    threadId =&gt; fetch(`/api/threads/${threadId}`, { method: "DELETE" }),
+    archive:   threadId =&gt; fetch(`/api/threads/${threadId}/archive`, { method: "POST" }),
+    unarchive: threadId =&gt; fetch(`/api/threads/${threadId}/unarchive`, { method: "POST" })
+});</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>ThreadListRuntime</h2></div>
+  <div class="prose">
+  <p>会话列表（侧边栏）的渲染，共 6 个回调：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>new ThreadListRuntime({
+    init:      (threads: Thread[]) =&gt; void,
+    active:    (threadId: string | undefined) =&gt; void,
+    append:    (thread: Thread) =&gt; void,
+    delete:    (threadId: string) =&gt; void,
+    archive:   (threadId: string) =&gt; void,
+    unarchive: (threadId: string) =&gt; void
+});</pre></div>
+</div>
+  <div class="table-wrap" style="margin-top:14px"><table class="spec">
+  <thead><tr><th>回调</th><th>时机</th></tr></thead>
+  <tbody>
+    <tr><td><code>init</code></td><td><code>AuiPage</code> 构造后，传入 <code>ThreadList.list()</code> 的结果</td></tr>
+    <tr><td><code>active</code></td><td>切换会话；<code>undefined</code> 表示新建会话</td></tr>
+    <tr><td><code>append</code></td><td>首轮对话创建新会话后</td></tr>
+    <tr><td><code>delete</code> / <code>archive</code> / <code>unarchive</code></td><td>对应 adapter 方法成功后</td></tr>
+  </tbody>
+</table></div>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">runtime/threadList.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const listEl = document.querySelector("#thread-list");
+const nodes = new Map();   // threadId -&gt; element
+
+const threadListUI = new ThreadListRuntime({
+    init: threads =&gt; {
+        listEl.innerHTML = "";
+        threads.forEach(renderOne);
+    },
+    active: threadId =&gt; {
+        for (const [id, node] of nodes) {
+            node.classList.toggle("active", id === threadId);
+        }
+    },
+    append: renderOne,
+    delete: threadId =&gt; {
+        nodes.get(threadId)?.remove();
+        nodes.delete(threadId);
+    },
+    archive:   id =&gt; nodes.get(id)?.classList.add("archived"),
+    unarchive: id =&gt; nodes.get(id)?.classList.remove("archived")
+});
+
+function renderOne(thread) {
+    const el = document.createElement("div");
+    el.textContent = thread.title || thread.threadId;
+    el.onclick = () =&gt; threadListUI.aui.activeThread(thread.threadId);
+    listEl.appendChild(el);
+    nodes.set(thread.threadId, el);
+}</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">06</span><h2>ChatContentRuntime</h2></div>
+  <div class="prose">
+  <p>对话内容的渲染，只有两个回调，但 <code>append</code> 的返回值语义需要特别注意：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>new ChatContentRuntime({
+    init:   (messages: ChatMessage[]) =&gt; void,   // 已拍平的消息片段数组
+    append: (role: string, part: MessagePart) =&gt;
+        ((text: string) =&gt; void) | ((data: ToolCallPart) =&gt; any) | void
+});</pre></div>
+</div>
+  <p style="margin-top:14px"><code>init</code> 在切换会话时触发（新建会话传 <code>[]</code>），业务侧需重建整个对话区域。</p>
+  <div class="table-wrap" style="margin-top:12px"><table class="spec">
+  <thead><tr><th>片段</th><th>append 的返回值</th><th>后续怎么用</th></tr></thead>
+  <tbody>
+    <tr><td><code>text</code> / <code>thinking</code> / <code>loading</code></td><td>更新函数 <code>(text) =&gt; void</code></td><td>后续增量通过它推送；返回 <code>undefined</code> 表示只建节点不追加</td></tr>
+    <tr><td><code>tool-call</code>（pending）</td><td>结束回调</td><td>后端工具在 <code>success / error</code> 时调一次；前端工具有 <code>render</code> 时调两次</td></tr>
+  </tbody>
+</table></div>
+  <div class="note" style="margin-top:14px">
+    文本更新函数只在当前分段内有效，不要跨分段复用；工具结束回调按 <code>id</code> 缓存到 <code>success / error</code> 为止。
+  </div>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">runtime/chatContent.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const chatEl = document.querySelector("#chat-content");
+
+const chatUI = new ChatContentRuntime({
+    init: messages =&gt; {
+        chatEl.innerHTML = "";
+        messages.forEach(({ role, content }) =&gt;
+            content.forEach(part =&gt; renderPart(role, part))
+        );
+    },
+    append: (role, part) =&gt; {
+        const node = renderPart(role, part);
+
+        if (part.type === "text" || part.type === "thinking" || part.type === "loading") {
+            return text =&gt; {                 // 后续增量只更新这一个节点
+                node.textContent += text;
+                chatEl.scrollTop = chatEl.scrollHeight;
+            };
+        }
+
+        if (part.type === "tool-call") {
+            return finalPart =&gt; updateCard(node, finalPart);   // 更新卡片状态
+        }
+    }
+});</pre></div>
+</div>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../packages/core-auipage.html"><span class="dir">← 上一页</span><span class="name">AuiPage</span></a>
+<a class="next" href="../packages/core-utils.html"><span class="dir">下一页 →</span><span class="name">defineTool 与 generator</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
+
+</body>
+</html>

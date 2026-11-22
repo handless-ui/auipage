@@ -30,6 +30,9 @@ importers:
       '@oipage/cli':
         specifier: 0.3.0
         version: 0.3.0
+      '@oipage/shader':
+        specifier: 0.1.0
+        version: 0.1.0
       '@oipage/testjs':
         specifier: ^0.1.1
         version: 0.1.1
@@ -92,6 +95,9 @@ packages:
   '@oipage/cli@0.3.0':
     resolution: {integrity: sha512-S77nysA0/bsiCfct3nkCbFy2GzCcASInBRBbvfp9VuKvErenUGZC82DzySX/fuMlMQv8e7k3kpNEjA1bXWN54A==}
     hasBin: true
+
+  '@oipage/shader@0.1.0':
+    resolution: {integrity: sha512-LI6Xpfk2Uki7KgoPu02ahocxV9LrnVuc1t72Ld8W716NDA29P+TT69WrZFyEexVxXqdViCk3/gkO6cC2aBy9Mg==}
 
   '@oipage/testjs@0.1.1':
     resolution: {integrity: sha512-6m0yja6nwe40N5qiznVsGfezXhL1r+2C76c/Kbh4RUi7hYtMwWmPAYFGt+5LkL7vSPj6YyfG4t4CbLBM+S2lpw==}
@@ -259,6 +265,8 @@ snapshots:
       vislite: 1.11.0
       xhtml-to-json: 0.2.1
       zipaper: 0.4.0
+
+  '@oipage/shader@0.1.0': {}
 
   '@oipage/testjs@0.1.1':
     dependencies:

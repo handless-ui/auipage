@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>接真实模型 · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="把上一章的假回复换成真实模型：手写 chat/completions 解析，再用 @auipage/model 对比。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="on">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="on">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>教程</span><span class="sep">/</span><span>接真实模型</span></div>
+<h1><em>Guide 04</em>接真实模型</h1>
+<p class="lede">上一章的回复是写死的。这一章把它换成任意 OpenAI 兼容服务，先自己解析，再决定要不要装 <code>@auipage/model</code>。</p>
+<div class="badges"><span class="badge hi">OpenAI 兼容</span><span class="badge">SSE</span><span class="badge">stream</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>手写版：只多一段解析</h2></div>
+  <div class="prose">
+  <p>协议没有变，还是 SSE，只是事件里的 JSON 变成了 <code>choices[0].delta</code>。把上一章的
+  <code>reply</code> 换成一次真实请求：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">server.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const baseURL = "http://localhost:11434/v1";   // 任意 OpenAI 兼容服务
+const apiKey = "ollama";
+const modelName = "qwen3.5";
+
+const res = await fetch(baseURL + "/chat/completions", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + apiKey
+    },
+    body: JSON.stringify({
+        model: modelName,
+        messages,
+        stream: true
+    })
+});
+
+const reader = res.body.getReader();
+const decoder = new TextDecoder();
+let buffer = "";
+let content = "";
+
+while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop();                       // 最后一行可能不完整
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+
+        const payload = trimmed.slice(5).trim();
+        if (payload === "[DONE]") continue;
+
+        const delta = JSON.parse(payload).choices[0].delta;
+
+        if (delta.reasoning_content) {          // 有的模型会推思考
+            console.log("[思考]", delta.reasoning_content);
+        }
+        if (delta.content) {
+            content += delta.content;
+            process.stdout.write(delta.content);
+        }
+    }
+}</pre></div>
+</div>
+  <p style="margin-top:14px">能出字了。但它只处理了“纯文本回复”——模型一旦调用工具，
+  <code>delta.tool_calls</code> 是按 <code>index</code> 分片到达的，<code>arguments</code> 还是半个 JSON，这段代码会直接漏掉。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>装包版：同一件事，三行收尾</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">model-demo.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { Model } from "@auipage/model";
+
+const model = new Model({
+    model: "qwen3.5",
+    apiKey: "ollama",
+    baseURL: "http://localhost:11434/v1"
+});
+
+const { content, tool_calls } = await model.completions(
+    { messages, stream: true },
+    delta =&gt; process.stdout.write(delta),          // 正文增量
+    think =&gt; console.log("[思考]", think)            // 推理增量
+);
+</pre></div>
+</div>
+  <p style="margin-top:14px">安装：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">terminal</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>npm install --save @auipage/model</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>它到底替你做了什么</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>细节</th><th>手写要处理</th><th><code>@auipage/model</code></th></tr></thead>
+  <tbody>
+    <tr><td>请求拼装</td><td>URL 拼接、鉴权头、<code>tools</code> 映射</td><td>构造时给三个字段，其余自动</td></tr>
+    <tr><td>SSE 切分</td><td><code>data:</code> 前缀、空行、跨 chunk 拼接</td><td>内置</td></tr>
+    <tr><td>正文累积</td><td>自己维护 <code>content += delta.content</code></td><td>返回完整 <code>content</code></td></tr>
+    <tr><td>推理过程</td><td><code>reasoning_content</code> / <code>reasoning</code> 两种字段名</td><td><code>thinkback</code> 统一收口</td></tr>
+    <tr><td><code>&lt;think&gt;</code> 标签</td><td>从正文里剥离，处理标签被切断的情况</td><td>自动剥离并冲刷残留</td></tr>
+    <tr><td>工具调用</td><td>按 <code>index</code> 归并，拼完 <code>arguments</code> 再 <code>parse</code></td><td>返回已拼好的 <code>tool_calls</code></td></tr>
+    <tr><td>非流式</td><td>两种响应结构分别取值</td><td>同一套回调，结束时触发一次</td></tr>
+  </tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th></tr></thead>
+  <tbody>
+    <tr><td>只接一家模型、功能简单</td><td>官方 SDK（<code>openai</code>、<code>@deepseek/sdk</code>）</td></tr>
+    <tr><td>已经在用 Vercel AI SDK</td><td><code>@ai-sdk/openai</code> + <code>streamText</code></td></tr>
+    <tr><td>只要纯文本、不需要工具</td><td>上一节的手写版就够</td></tr>
+    <tr><td>想完全掌控每个字节</td><td>原生 <code>fetch</code> + 自己解析</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px"><b>什么时候它才值得：</b>你既要流式、又要工具调用，还希望零依赖、能随时换兼容服务。
+  如果只需要文本，手写那一版反而更透明。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../guide/zero-dep.html"><span class="dir">← 上一页</span><span class="name">一个包都不用</span></a>
+<a class="next" href="../guide/tool.html"><span class="dir">下一页 →</span><span class="name">让模型做事</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
+
+</body>
+</html>

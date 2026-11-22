@@ -1,0 +1,106 @@
+<!--meta {"title": "换界面 · auipage 文档", "desc": "同一套 AuiPage 逻辑，换成原生 DOM、React 或 Vue 渲染；运行时只负责把状态画出来。", "section": "guide", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>教程</span><span class="sep">/</span><span>换界面</span></div>
+<h1><em>Guide 07</em>换界面</h1>
+<p class="lede">流程只有一份，界面可以有很多种。这一章把上一章的 DOM 运行时换掉，看看哪些代码会动、哪些不会。</p>
+<div class="badges"><span class="badge hi">Runtime</span><span class="badge">DOM</span><span class="badge">React / Vue</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>会动与不会动</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>换 UI 框架时</th><th>是否要改</th><th>原因</th></tr></thead>
+  <tbody>
+    <tr><td><code>AuiPage</code> 的装配与调用</td><td>不改</td><td>它只认接口，不认渲染</td></tr>
+    <tr><td>三个 Adapter</td><td>不改</td><td>数据侧与界面无关</td></tr>
+    <tr><td><code>ChatContentRuntime</code></td><td>重写</td><td><code>append</code> 里创建节点、返回更新函数</td></tr>
+    <tr><td><code>ThreadListRuntime</code></td><td>重写</td><td>侧边栏的列表与激活态</td></tr>
+    <tr><td>工具卡片</td><td>重写</td><td>它属于 <code>ChatContentRuntime</code> 的渲染范围</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px">换句话说：<b>状态机不动，只换“把状态画出来”的那一层</b>。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>原生 DOM 的两个约定</h2></div>
+  <div class="prose">
+  <p>看起来只是 <code>appendChild</code>，其实有两个返回值的约定必须遵守，否则流式增量会整段重绘：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">runtime/chatContent.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const chatUI = new ChatContentRuntime({
+    init: messages =&gt; {
+        chatEl.innerHTML = "";
+        messages.forEach(({ role, content }) =&gt;
+            content.forEach(part =&gt; renderPart(role, part))
+        );
+    },
+    append: (role, part) =&gt; {
+        const node = renderPart(role, part);
+
+        // 约定一：文本类片段返回“更新函数”，后续增量只改这个节点
+        if (part.type === "text" || part.type === "thinking" || part.type === "loading") {
+            return text =&gt; {
+                node.textContent += text;
+                chatEl.scrollTop = chatEl.scrollHeight;
+            };
+        }
+
+        // 约定二：tool-call 的 pending 片段返回“结束回调”，按 id 缓存到 success / error
+        if (part.type === "tool-call") {
+            return finalPart =&gt; updateCard(node, finalPart);
+        }
+    }
+});</pre></div>
+</div>
+  <div class="note" style="margin-top:14px">
+    <b>前端工具会回调两次</b>：第一次带 <code>render</code>，由你在界面上做交互并返回界面结果；
+    第二次用界面结果做最终渲染。回传给模型的是 <code>render</code> 的返回值。
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>React / Vue：直接用现成实现</h2></div>
+  <div class="prose">
+  <p>两个兄弟仓库就是这两个运行时的完整实现，装配方式与上一章完全一样，只是不再手写 DOM：</p>
+  <div class="cards">
+      <div class="card">
+        <span class="tag">React</span>
+        <h3><a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">@auipage/react</a></h3>
+        <p><code>ChatContent</code> + <code>ThreadList</code> 两个组件，
+        render-prop 把每个片段交给你，样式与结构完全自定义。</p>
+      </div>
+      <div class="card">
+        <span class="tag">Vue</span>
+        <h3><a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">@auipage/vue</a></h3>
+        <p>同结构、同接口，用作用域插槽渲染片段；
+        与 React 版共用同一份 <code>AuiPage</code> 流程。</p>
+      </div>
+      <div class="card">
+        <span class="tag">自研</span>
+        <h3>自己的组件库</h3>
+        <p>继承两个 Runtime 基类，按约定实现钩子即可；
+        框架按 <code>name</code> 挂载，不要求特定生命周期。</p>
+      </div>
+  </div>
+  <p style="margin-top:14px">如果只是固定用一个框架、一个页面，直接用这两个库比从零实现 Runtime 省事得多。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>什么时候别换</h2></div>
+  <div class="prose">
+  <p>运行时的意义是“同一套逻辑多处复用”。如果出现下面这些情况，抽象反而是负担：</p>
+  <ul>
+    <li>只有一个页面，且短期不会换框架——直接写组件更直接；</li>
+    <li>UI 需求非常定制（富文本编辑器、画布），Runtime 的钩子会成为约束；</li>
+    <li>团队没有维护两套 Runtime 的成本，固定一个框架更省心。</li>
+  </ul>
+  <p>框架给的是“可替换”，不是“必须替换”。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="{{base}}guide/core.html"><span class="dir">← 上一页</span><span class="name">装框架</span></a>
+<a class="next" href="{{base}}packages/fetch.html"><span class="dir">下一页 →</span><span class="name">API 参考</span></a>
+  </nav>

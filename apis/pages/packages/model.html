@@ -1,6 +1,6 @@
 <!--meta {"title": "@auipage/model · auipage 文档", "desc": "OpenAI 风格 chat/completions 封装：实例、签名与工具调用。", "section": "packages", "demos": false}-->
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/model</span></div>
-<h1><em>Package 05</em>@auipage/model</h1>
+<h1><em>Package 09</em>@auipage/model</h1>
 <p class="lede">OpenAI 风格 <code>chat/completions</code> 的流式封装：请求拼装、SSE 增量解析、工具调用切片拼接，同协议的其他服务（DeepSeek 等）直接换 <code>baseURL</code> 即可。</p>
 <div class="badges"><span class="badge">model</span><span class="badge">0.1.0</span><span class="badge">OpenAI 协议</span></div></div>
 <div class="pkgbar">
@@ -77,6 +77,22 @@ const model = new Model({
 </div>
   <p style="margin-top:14px">注意 <code>tools</code> 传的是"带 <code>description</code> 的对象数组"，
   模型要的不是裸 schema —— 这是本包与 <code>agent</code> 之间的小约定。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th><th>代价</th></tr></thead>
+  <tbody>
+    <tr><td>只接一家模型、功能简单</td><td>官方 SDK（<code>openai</code>、<code>@deepseek/sdk</code>）</td><td>多一个依赖，维护由官方负责</td></tr>
+    <tr><td>已经用 Vercel AI SDK</td><td><code>@ai-sdk/openai</code> + <code>streamText</code></td><td>抽象层更厚，生态更全</td></tr>
+    <tr><td>只要纯文本</td><td>原生 <code>fetch</code> + 自己解析</td><td>要处理 SSE 与增量累积</td></tr>
+    <tr><td>只要非流式</td><td>原生 <code>fetch</code> 一次 POST</td><td>没有增量回调，但代码最短</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px">适合“想零依赖、又要一个能直接跑的 OpenAI 兼容客户端”。已经在用官方 SDK 的项目，没有必要为了统一而换掉。</p>
 </div>
 </section>
 

@@ -1,6 +1,6 @@
 <!--meta {"title": "@auipage/agent · auipage 文档", "desc": "Agent 对话循环、工具编排与 CreateTool 前后端桥接。", "section": "packages", "demos": false}-->
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/agent</span></div>
-<h1><em>Package 06</em>@auipage/agent</h1>
+<h1><em>Package 10</em>@auipage/agent</h1>
 <p class="lede">智能体对话循环：在 <code>@auipage/model</code> 之上处理多轮工具调用（模型要调工具 → 执行 → 结果回灌 → 继续生成），并提供 <code>CreateTool</code> 把服务端工具调用桥接到浏览器。</p>
 <div class="badges"><span class="badge">agent</span><span class="badge">0.1.0</span><span class="badge">CreateTool</span></div></div>
 <div class="pkgbar">
@@ -69,7 +69,7 @@ const ms = new MessageStream(
 const ct = new CreateTool(ms);
 
 const tools = [
-<span class="c">    // 后端工具：带 execute，在服务端执行</span>
+    // 后端工具：带 execute，在服务端执行
     ct.create({
         description: { /* name: "readPlain" */ },
         execute({ filepath }) {
@@ -77,7 +77,7 @@ const tools = [
         }
     }),
 
-<span class="c">    // 前端工具：不带 execute，调用挂起，等页面回传结果</span>
+    // 前端工具：不带 execute，调用挂起，等页面回传结果
     ct.create({
         description: { /* name: "showPlain" */ }
     })
@@ -100,6 +100,22 @@ const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
   差异只在"谁来执行、结果怎么回来"。</p>
   <p><code>CreateTool</code> 把这个差异收敛成一个 <code>execute</code> 的有无，
   于是模型侧看到的是同一份工具列表，页面侧收到的只是"需要你执行"的事件。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th><th>代价</th></tr></thead>
+  <tbody>
+    <tr><td>工具全在服务端</td><td>OpenAI Agents SDK、LangChain、Vercel AI SDK</td><td>生态更大，抽象更重</td></tr>
+    <tr><td>只有一两个工具</td><td>自己写 <code>while</code> 循环</td><td>要处理 <code>tool_calls</code> 回灌与终止条件</td></tr>
+    <tr><td>不需要工具</td><td>直接用 <code>@auipage/model</code> 或官方 SDK</td><td>少一层封装</td></tr>
+    <tr><td>工具必须在浏览器执行</td><td>自己做 SSE 下发 + 结果回传 + 挂起唤醒</td><td>等于重写 <code>CreateTool</code>，容易漏状态</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px">它最独特的价值是<b>前后端工具桥接</b>。如果工具都在服务端，别的 Agent 框架同样好用。</p>
 </div>
 </section>
 

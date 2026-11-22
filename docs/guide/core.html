@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>装框架 · auipage 文档</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="把前几章散落的流式拼接、工具状态、会话历史收进 Adapter + Runtime，由 AuiPage 统一驱动。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="on">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="on">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>教程</span><span class="sep">/</span><span>装框架</span></div>
+<h1><em>Guide 06</em>装框架</h1>
+<p class="lede">代码开始散在每个事件回调里时，把它们收进两个接口：Adapter 管数据，Runtime 管界面。<code>AuiPage</code> 只负责在正确的时候调用它们。</p>
+<div class="badges"><span class="badge hi">AuiPage</span><span class="badge">3 Adapter</span><span class="badge">2 Runtime</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>场景：三件事开始互相纠缠</h2></div>
+  <div class="prose">
+  <p>走到这一步，页面代码里通常已经混了三类逻辑：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>逻辑</th><th>散在哪</th><th>加一个功能时的连锁反应</th></tr></thead>
+  <tbody>
+    <tr><td>流式拼接</td><td>每个 <code>onData</code> 回调里都有 <code>+=</code></td><td>加“停止生成”要改所有回调</td></tr>
+    <tr><td>工具状态</td><td>卡片节点自己记 <code>pending / success</code></td><td>换个 UI 就得重写一遍状态机</td></tr>
+    <tr><td>会话与历史</td><td>手动维护 <code>currentThreadId</code>、切会话时清空</td><td>加“归档”要同时改列表、消息区和存储</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px"><code>AuiPage</code> 把这堆流程收成固定顺序，业务侧只实现接口。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>两条接缝</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>接缝</th><th>实现什么</th><th>换掉它会怎样</th></tr></thead>
+  <tbody>
+    <tr><td><code>ChatTransportAdapter</code></td><td><code>run({ messages, context })</code> 返回 <code>AsyncGenerator</code></td><td>换模型服务、换 API 协议、甚至换成假数据</td></tr>
+    <tr><td><code>MessageHistoryAdapter</code></td><td><code>load(threadId)</code> / <code>append(threadId, group)</code></td><td>从 localStorage 换成数据库或 REST</td></tr>
+    <tr><td><code>ThreadListAdapter</code></td><td><code>list / new / delete / archive / unarchive</code></td><td>换会话存储方式</td></tr>
+    <tr><td><code>ChatContentRuntime</code></td><td><code>init / append</code></td><td>从 DOM 换成 React / Vue / 小程序</td></tr>
+    <tr><td><code>ThreadListRuntime</code></td><td><code>init / active / append / delete / archive / unarchive</code></td><td>换侧边栏的渲染方式</td></tr>
+  </tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>装配：从 console 开始</h2></div>
+  <div class="prose">
+  <p>先不碰 DOM，用四个 <code>console.log</code> 看清流程。装好依赖后，这段可以直接 <code>node demo.js</code>：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">demo.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import {
+    AuiPage,
+    ChatTransportAdapter, MessageHistoryAdapter, ThreadListAdapter,
+    ThreadListRuntime, ChatContentRuntime
+} from "@auipage/core";
+
+const page = new AuiPage({
+    adapter: {
+        ChatTransport: new ChatTransportAdapter({
+            async *run({ messages }) {
+                for (const ch of "你好，我是 auipage。") {
+                    yield { type: "text", text: ch };
+                }
+            }
+        }),
+        MessageHistory: new MessageHistoryAdapter({
+            load: async () =&gt; [],
+            append: async () =&gt; {}
+        }),
+        ThreadList: new ThreadListAdapter({
+            list: async () =&gt; [],
+            new:  async () =&gt; ({ threadId: "t1", title: "新会话" })
+        })
+    },
+    runtime: {
+        ThreadList: new ThreadListRuntime({
+            init: threads =&gt; console.log("会话列表：", threads)
+        }),
+        ChatContent: new ChatContentRuntime({
+            append: (role, part) =&gt; {
+                if (part.type === "text") {
+                    let buf = part.text;
+                    return text =&gt; console.log(buf += text);
+                }
+            }
+        })
+    }
+});
+
+await page.sendMessage({
+    role: "user",
+    content: [{ type: "text", text: "你好" }]
+});</pre></div>
+</div>
+  <p style="margin-top:14px">你只做了一件事：告诉框架“流从哪来、历史存哪、界面怎么画”。
+  流式拼接、首轮结束才建会话、历史入库的时机，全部由 <code>AuiPage</code> 按固定顺序调用。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>把前几章接进来</h2></div>
+  <div class="prose">
+  <p><b>对话：</b>上一章的 Agent 包成一个生成器，<code>run</code> 直接返回它。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">adapter/chatTransport.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { ChatTransportAdapter, generator } from "@auipage/core";
+
+const chatTransport = new ChatTransportAdapter({
+    run: ({ messages, context }) =&gt; generator((next, done, error) =&gt; {
+        agent.generate(
+            messages,
+            text  =&gt; next({ type: "text", text }),
+            think =&gt; next({ type: "thinking", text: think })
+        ).then(done, error);
+    })
+});</pre></div>
+</div>
+  <p style="margin-top:16px"><b>历史：</b><code>append</code> 收到的是“一轮消息组”，换存储只改这一个方法。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">adapter/messageHistory.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const messageHistory = new MessageHistoryAdapter({
+    load: (threadId) =&gt; {
+        const raw = localStorage.getItem("history:" + threadId);
+        return raw ? JSON.parse(raw) : [];
+    },
+    append: (threadId, group) =&gt; {
+        const key = "history:" + threadId;
+        const list = JSON.parse(localStorage.getItem(key) || "[]");
+        list.push(group);
+        localStorage.setItem(key, JSON.stringify(list));
+    }
+});</pre></div>
+</div>
+  <p style="margin-top:16px"><b>界面：</b>文本片段返回一个更新函数，后续增量只碰这个节点；工具片段返回结束回调。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">runtime/chatContent.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const chatUI = new ChatContentRuntime({
+    init: () =&gt; { chatEl.innerHTML = ""; },
+    append: (role, part) =&gt; {
+        const node = renderPart(role, part);
+        if (part.type === "text" || part.type === "thinking") {
+            return text =&gt; { node.textContent += text; };   // 只更新这一个节点
+        }
+        // tool-call：返回结束回调，用于更新卡片状态
+    }
+});</pre></div>
+</div>
+  <p style="margin-top:14px">完整时序（工具两次回调、执行中切会话、任务生命周期事件）见
+  <a href="../packages/core.html">core 参考</a>。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>四种常见组合</h2></div>
+  <div class="prose">
+  <p>没有“标准全家桶”。按项目形态挑一种即可，后面想加再补：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>组合</th><th>适合什么项目</th><th>页面侧</th></tr></thead>
+  <tbody>
+    <tr><td><code>model</code></td><td>脚本、CLI、批处理，只要模型输出</td><td>不需要</td></tr>
+    <tr><td><code>model</code> + <code>agent</code></td><td>服务端跑工具循环，前端自己画</td><td>自己处理 SSE 与渲染</td></tr>
+    <tr><td><code>core</code> + <code>agent</code></td><td>完整智能体网页：会话、历史、工具卡片</td><td>两个 Runtime</td></tr>
+    <tr><td><code>core</code> + 自己的 transport</td><td>已有后端协议，或要用假数据做 UI</td><td>两个 Runtime</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px">注意 <code>core</code> 与 <code>agent</code> 不是绑定关系：<code>ChatTransportAdapter.run</code> 里放什么都行，
+  包括一个只 yield 固定文本的生成器。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">06</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th></tr></thead>
+  <tbody>
+    <tr><td>只做一个 React 聊天页</td><td><code>assistant-ui</code>、Vercel AI SDK 的 <code>useChat</code></td></tr>
+    <tr><td>不需要会话列表和历史</td><td>自己维护一个消息数组 + 渲染循环</td></tr>
+    <tr><td>只有一个页面、一个框架</td><td>现成聊天 UI 库更省事</td></tr>
+    <tr><td>要跨 DOM / React / Vue 复用同一套流程</td><td>这时候 Adapter + Runtime 才划算</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px"><b>判断标准：</b>如果你预计会换一次 UI 框架，或者服务端要同时喂 Web 和桌面端，
+  把流程抽出来就是值得的；否则不必为了“架构感”提前抽象。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="../guide/tool.html"><span class="dir">← 上一页</span><span class="name">让模型做事</span></a>
+<a class="next" href="../guide/ui.html"><span class="dir">下一页 →</span><span class="name">换界面</span></a>
+  </nav>
+</main>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
+
+</body>
+</html>

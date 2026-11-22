@@ -30,6 +30,7 @@
   "homepage": "https://github.com/handless-ui/auipage#readme",
   "devDependencies": {
     "@oipage/cli": "0.3.0",
+    "@oipage/shader": "0.1.0",
     "@oipage/testjs": "^0.1.1",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-node-resolve": "^15.2.3",

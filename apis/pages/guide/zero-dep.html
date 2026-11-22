@@ -1,0 +1,166 @@
+<!--meta {"title": "一个包都不用 · auipage 文档", "desc": "不安装任何依赖，用原生 fetch 手写一个流式对话页，先看清这条链路到底在做什么。", "section": "guide", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>教程</span><span class="sep">/</span><span>一个包都不用</span></div>
+<h1><em>Guide 03</em>一个包都不用</h1>
+<p class="lede">先不装任何依赖：一个输入框、一个发送按钮、一段原生 <code>fetch</code>。把它跑通，你就知道后面每个包到底替你省了什么。</p>
+<div class="badges"><span class="badge hi">0 依赖</span><span class="badge">原生 fetch</span><span class="badge">SSE</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>今天要做的东西</h2></div>
+  <div class="prose">
+  <p>一个最朴素的智能体页面：输入一句话，服务端逐字把回复推回来，页面实时显示。</p>
+  <p>它由两个文件组成，都不需要 <code>npm install</code>：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>文件</th><th>干什么</th></tr></thead>
+  <tbody><tr><td><code>server.js</code></td><td>Node 内置 <code>http</code> 起接口，把回复拆成 SSE 事件逐条写回</td></tr><tr><td><code>index.html</code></td><td>页面用原生 <code>fetch</code> 读流，把事件拼成文字</td></tr></tbody>
+</table></div>
+  <div class="note" style="margin-top:14px">
+    <b>为什么拆成两个进程？</b> 模型的 key 和调用逻辑必须留在服务端，浏览器只拿 SSE 事件。
+    这一层分离，后面的所有包都沿用。
+  </div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>服务端：把回复拆成事件</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">server.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import http from "node:http";
+
+http.createServer((req, res) =&gt; {
+    // 跨域，方便页面从别的端口访问
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+    if (req.method === "OPTIONS") return res.end();
+
+    if (req.method !== "POST" || req.url !== "/api/chat") {
+        res.writeHead(404);
+        return res.end();
+    }
+
+    let body = "";
+    req.on("data", chunk =&gt; body += chunk);
+    req.on("end", () =&gt; {
+        const { messages } = JSON.parse(body);
+
+        res.writeHead(200, {
+            "Content-Type": "text/event-stream;charset=utf-8",
+            "Cache-Control": "no-cache"
+        });
+
+        // 假装这是模型回复，逐字推送
+        const reply = "你说的是：" + messages.at(-1).content;
+        let i = 0;
+
+        const timer = setInterval(() =&gt; {
+            if (i &gt;= reply.length) {
+                clearInterval(timer);
+                res.write("data: [DONE]\n\n");
+                res.end();
+                return;
+            }
+            res.write("data: " + JSON.stringify({
+                type: "text",
+                text: reply[i++]
+            }) + "\n\n");
+        }, 50);
+    });
+}).listen(3000, () =&gt; console.log("http://127.0.0.1:3000"));</pre></div>
+</div>
+  <p style="margin-top:14px">要点只有一个：<b>每条消息以 <code>data: </code> 开头，以空行结束</b>。
+  SSE 协议就这么简单，浏览器会自动帮你按事件切分——但原生 <code>fetch</code> 不会。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>页面：一句话发出去，逐字接住</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">index.html</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>&lt;!DOCTYPE html&gt;
+&lt;meta charset="UTF-8"&gt;
+&lt;input id="q" placeholder="说点什么"&gt;
+&lt;button id="send"&gt;发送&lt;/button&gt;
+&lt;div id="out"&gt;&lt;/div&gt;
+
+&lt;script&gt;
+const out = document.querySelector("#out");
+
+document.querySelector("#send").onclick = async () =&gt; {
+    out.textContent = "";
+
+    const res = await fetch("http://127.0.0.1:3000/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            messages: [{ role: "user", content: document.querySelector("#q").value }]
+        })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // 按空行切成完整事件；最后一段可能还没收完，留到下一轮
+        const events = buffer.split("\n\n");
+        buffer = events.pop();
+
+        for (const event of events) {
+            const line = event.split("\n").find(l =&gt; l.startsWith("data:"));
+            if (!line) continue;
+
+            const payload = line.slice(5).trim();
+            if (payload === "[DONE]") return;
+
+            const data = JSON.parse(payload);
+            if (data.type === "text") out.textContent += data.text;
+        }
+    }
+};
+&lt;/script&gt;</pre></div>
+</div>
+  <p style="margin-top:14px">跑起来：<code>node server.js</code>，再用任意静态服务器打开 <code>index.html</code>
+  （例如 <code>npx serve .</code>），输入一句话就能看到逐字输出。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>你已经踩到的坑</h2></div>
+  <div class="prose">
+  <p>这段代码能跑，但把真实模型接上来之后，下面每一条都会变成 bug：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>坑</th><th>为什么会发生</th><th>谁替你处理</th></tr></thead>
+  <tbody>
+    <tr><td>事件被切在半个 chunk 上</td><td>网络传输不按事件边界分片，<code>data:</code> 可能被截成两半</td><td><code>@auipage/fetch</code> 的缓冲切分</td></tr>
+    <tr><td>服务端用 CRLF 换行</td><td><code>\r\n\r\n</code> 不是 <code>\n\n</code>，按后者切会整段粘住</td><td><code>@auipage/fetch</code> 兼容两种</td></tr>
+    <tr><td><code>[DONE]</code> 不是 JSON</td><td>直接把每条 <code>data:</code> 丢给 <code>JSON.parse</code> 会抛错</td><td>上层封装先行判断</td></tr>
+    <tr><td>非 2xx 不抛错</td><td>原生 <code>fetch</code> 只把状态放进 <code>res.status</code></td><td>用 <code>res.ok</code> 自己判断</td></tr>
+    <tr><td>Node 里没有 <code>reader</code></td><td><code>res.body.getReader()</code> 只在浏览器存在</td><td><code>@auipage/fetch</code> 自动换 <code>http</code></td></tr>
+    <tr><td>事件不止文本</td><td>思考增量、工具调用、工具结果都要走同一条流</td><td><code>AuiPage</code> 按类型分发</td></tr>
+  </tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>这一步，你完全可以自己做</h2></div>
+  <div class="prose">
+  <p>上面两个文件加起来不到 80 行，<b>没有任何一个 auipage 包参与</b>。如果你的需求只有“发一句话、收一段流式文本”，
+  到这里就可以结束了，不需要往下看。</p>
+  <p>继续往下，是为了解决这段代码做不到的三件事：接真实模型、让模型调工具、管理多个会话。
+  每一章都会同时给出“装包版”和“自己写版”，你可以只挑需要的部分。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="{{base}}guide/start.html"><span class="dir">← 上一页</span><span class="name">跑起示例</span></a>
+<a class="next" href="{{base}}guide/model.html"><span class="dir">下一页 →</span><span class="name">接真实模型</span></a>
+  </nav>

@@ -7,7 +7,7 @@
 <title>@auipage/model · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="OpenAI 风格 chat/completions 封装：实例、签名与工具调用。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=2af1fb36">
+<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -17,13 +17,9 @@
     </a>
     <nav class="rail-nav" aria-label="主导航">
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
-      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
-      <a href="../packages/types.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
     </nav>
-    <div class="rail-foot">
-      <a class="rail-gh" href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener" title="GitHub 仓库"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 10l4 6M13 4l4 6-4 6"/></svg></a>
-      <span class="rail-ver">v0.1.0</span>
-    </div>
   </aside>
 
 <div class="mobiletop">
@@ -39,30 +35,33 @@
       <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
       <nav class="rail-nav" aria-label="主导航">
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
-      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
-      <a href="../packages/types.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
     </nav>
     </div>
     <div class="drawer-tree">
       <div class="drawer-tree-title">文档目录</div>
       <aside class="tree">
-    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 快速开始</a>
-    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="on">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="">07 · @auipage/core</a>
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="on">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
   </aside>
+
     </div>
   </div>
 
 <div class="stage">
 <div class="shell">
 <aside class="tree">
-    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 快速开始</a>
-    <div class="group">包（自底向上）</div><a href="../packages/types.html" class="">03 · @auipage/types</a><a href="../packages/fetch.html" class="">04 · @auipage/fetch</a><a href="../packages/model.html" class="on">05 · @auipage/model</a><a href="../packages/agent.html" class="">06 · @auipage/agent</a><a href="../packages/core.html" class="">07 · @auipage/core</a>
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="on">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
   </aside>
 
 
 <main class="article">
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/model</span></div>
-<h1><em>Package 05</em>@auipage/model</h1>
+<h1><em>Package 09</em>@auipage/model</h1>
 <p class="lede">OpenAI 风格 <code>chat/completions</code> 的流式封装：请求拼装、SSE 增量解析、工具调用切片拼接，同协议的其他服务（DeepSeek 等）直接换 <code>baseURL</code> 即可。</p>
 <div class="badges"><span class="badge">model</span><span class="badge">0.1.0</span><span class="badge">OpenAI 协议</span></div></div>
 <div class="pkgbar">
@@ -142,6 +141,22 @@ const model = new Model({
 </div>
 </section>
 
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th><th>代价</th></tr></thead>
+  <tbody>
+    <tr><td>只接一家模型、功能简单</td><td>官方 SDK（<code>openai</code>、<code>@deepseek/sdk</code>）</td><td>多一个依赖，维护由官方负责</td></tr>
+    <tr><td>已经用 Vercel AI SDK</td><td><code>@ai-sdk/openai</code> + <code>streamText</code></td><td>抽象层更厚，生态更全</td></tr>
+    <tr><td>只要纯文本</td><td>原生 <code>fetch</code> + 自己解析</td><td>要处理 SSE 与增量累积</td></tr>
+    <tr><td>只要非流式</td><td>原生 <code>fetch</code> 一次 POST</td><td>没有增量回调，但代码最短</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px">适合“想零依赖、又要一个能直接跑的 OpenAI 兼容客户端”。已经在用官方 SDK 的项目，没有必要为了统一而换掉。</p>
+</div>
+</section>
+
 <nav class="pager">
 <a href="../packages/fetch.html"><span class="dir">← 上一页</span><span class="name">@auipage/fetch</span></a>
 <a class="next" href="../packages/agent.html"><span class="dir">下一页 →</span><span class="name">@auipage/agent</span></a>
@@ -150,36 +165,46 @@ const model = new Model({
 
 </div>
 </div>
-<footer class="foot">
+<footer class="foot" id="site-foot">
     <div class="foot-inner">
-      <div class="col">
-        <h4>开始</h4>
-        <a href="../index.html">总览</a>
-        <a href="../guide/start.html">快速开始</a>
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
       </div>
-      <div class="col">
-        <h4>包</h4>
-        <a href="../packages/types.html">@auipage/types</a>
-        <a href="../packages/fetch.html">@auipage/fetch</a>
-        <a href="../packages/model.html">@auipage/model</a>
-        <a href="../packages/agent.html">@auipage/agent</a>
-        <a href="../packages/core.html">@auipage/core</a>
-      </div>
-      <div class="col">
-        <h4>生态</h4>
-        <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
-        <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
-        <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
-      </div>
-      <div class="sign">
-        <b>auipage</b> — 智能体网页应用开发框架<br>
-        MIT License · Copyright (c) <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/js/docs.js?v=2af1fb36"></script>
+<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="../assets/js/docs.js?v=5aba8735"></script>
 
 </body>
 </html>

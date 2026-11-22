@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>auipage · 智能体网页应用开发框架</title>
 <link rel="icon" href="./assets/img/logo.png">
-<meta name="description" content="auipage 用适配器 + 运行时把大模型对话、流式输出、工具调用、会话历史管理串成一条链路。">
-<link rel="stylesheet" href="./assets/css/docs.css?v=2af1fb36">
+<meta name="description" content="不绑定模型、不绑定 UI 框架的智能体网页开发框架。五章教程从零写起，每个包都可以换成你自己的实现。">
+<link rel="stylesheet" href="./assets/css/docs.css?v=5aba8735">
 </head>
 <body class="home">
 <a class="skip" href="#main">跳到正文</a>
@@ -17,13 +17,9 @@
     </a>
     <nav class="rail-nav" aria-label="主导航">
       <a href="./index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
-      <a href="./guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
-      <a href="./packages/types.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+      <a href="./guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="./packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
     </nav>
-    <div class="rail-foot">
-      <a class="rail-gh" href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener" title="GitHub 仓库"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4 3 10l4 6M13 4l4 6-4 6"/></svg></a>
-      <span class="rail-ver">v0.1.0</span>
-    </div>
   </aside>
 
 <div class="mobiletop">
@@ -39,24 +35,27 @@
       <a class="rail-brand" href="./index.html"><img class="rail-mark" src="./assets/img/logo.png" alt="auipage" width="36" height="36"></a>
       <nav class="rail-nav" aria-label="主导航">
       <a href="./index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
-      <a href="./guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>开始</em></a>
-      <a href="./packages/types.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>包</em></a>
+      <a href="./guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="./packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
     </nav>
     </div>
     <div class="drawer-tree">
       <div class="drawer-tree-title">文档目录</div>
       <aside class="tree">
-    <div class="group">开始</div><a href="./index.html" class="on">01 · 总览</a><a href="./guide/start.html" class="">02 · 快速开始</a>
-    <div class="group">包（自底向上）</div><a href="./packages/types.html" class="">03 · @auipage/types</a><a href="./packages/fetch.html" class="">04 · @auipage/fetch</a><a href="./packages/model.html" class="">05 · @auipage/model</a><a href="./packages/agent.html" class="">06 · @auipage/agent</a><a href="./packages/core.html" class="">07 · @auipage/core</a>
+    <div class="group">开始</div><a href="./index.html" class="on">01 · 总览</a><a href="./guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="./guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="./guide/model.html" class="">04 · 接真实模型</a><a href="./guide/tool.html" class="">05 · 让模型做事</a><a href="./guide/core.html" class="">06 · 装框架</a><a href="./guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="./packages/fetch.html" class="">08 · @auipage/fetch</a><a href="./packages/model.html" class="">09 · @auipage/model</a><a href="./packages/agent.html" class="">10 · @auipage/agent</a><a href="./packages/core.html" class="">11 · @auipage/core</a><a href="./packages/core-auipage.html" class="">12 · AuiPage</a><a href="./packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="./packages/core-utils.html" class="">14 · defineTool 与 generator</a>
   </aside>
+
     </div>
   </div>
 
 <div class="stage">
 <div class="shell shell-home">
 <aside class="tree">
-    <div class="group">开始</div><a href="./index.html" class="on">01 · 总览</a><a href="./guide/start.html" class="">02 · 快速开始</a>
-    <div class="group">包（自底向上）</div><a href="./packages/types.html" class="">03 · @auipage/types</a><a href="./packages/fetch.html" class="">04 · @auipage/fetch</a><a href="./packages/model.html" class="">05 · @auipage/model</a><a href="./packages/agent.html" class="">06 · @auipage/agent</a><a href="./packages/core.html" class="">07 · @auipage/core</a>
+    <div class="group">开始</div><a href="./index.html" class="on">01 · 总览</a><a href="./guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="./guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="./guide/model.html" class="">04 · 接真实模型</a><a href="./guide/tool.html" class="">05 · 让模型做事</a><a href="./guide/core.html" class="">06 · 装框架</a><a href="./guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="./packages/fetch.html" class="">08 · @auipage/fetch</a><a href="./packages/model.html" class="">09 · @auipage/model</a><a href="./packages/agent.html" class="">10 · @auipage/agent</a><a href="./packages/core.html" class="">11 · @auipage/core</a><a href="./packages/core-auipage.html" class="">12 · AuiPage</a><a href="./packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="./packages/core-utils.html" class="">14 · defineTool 与 generator</a>
   </aside>
 
 <div class="article">
@@ -65,32 +64,51 @@
   <div class="hero-inner">
     <div>
       <div class="kicker">agent web app framework</div>
-      <h1>把对话、流式、工具调用<br><span>串成一条链路</span>。</h1>
+      <h1>让网页长出，<br><span>会做事的智能体</span>。</h1>
       <p class="lede">
-        auipage 是智能体网页应用的开发框架：用「适配器 + 运行时」把大模型对话、流式输出、
-        工具调用、会话与历史管理串成一条链路。业务侧只对接模型与存储、只管 UI 渲染，
-        不用处理流式拼接和前后端工具桥接。
+        auipage 是一个智能体网页开发框架：把对话循环、工具调用、流式状态和会话历史收进一套可替换的流程；
+        你只写界面和业务。
       </p>
       <div class="hero-actions">
-        <a class="btn" href="./guide/start.html">五分钟跑起来</a>
-        <a class="btn btn-ghost" href="./packages/core.html">看核心层</a>
+        <a class="btn" href="./guide/zero-dep.html">从零开始</a>
+        <a class="btn btn-ghost" href="./guide/start.html">跑起示例</a>
       </div>
     </div>
-    <div class="topo">
-      <h2>包依赖（自底向上）</h2>
-      <div class="topo-row"><div class="pkg"><b>types</b><span>类型协议</span></div></div>
-      <div class="topo-row"><div class="arrow">↓</div></div>
-      <div class="topo-row"><div class="pkg"><b>fetch</b><span>跨端流式请求</span></div></div>
-      <div class="topo-row"><div class="arrow">↓</div></div>
-      <div class="topo-row"><div class="pkg"><b>model</b><span>chat/completions</span></div></div>
-      <div class="topo-row"><div class="arrow">↓</div></div>
-      <div class="topo-row"><div class="pkg"><b>agent</b><span>对话循环 · 工具编排</span></div></div>
-      <div class="topo-row"><div class="arrow">↓</div></div>
-      <div class="topo-row"><div class="pkg"><b>core</b><span>AuiPage + Adapter + Runtime</span></div></div>
+    <div class="topo hero-map">
+      <div class="topo-kicker">one request / the whole flow</div>
+      <h2>一次请求，怎么走</h2>
+      <div class="flowmap">
+        <div class="fm-node fm-ui">
+          <span class="fm-tag">界面 · runtime</span>
+          <b>对话 + 历史列表</b>
+          <em>流式输出 · 工具卡 · ThreadList</em>
+        </div>
+        <div class="fm-arrow fm-right"><i>→</i><span>输入<br>事件</span></div>
+        <div class="fm-node fm-core">
+          <span class="fm-tag">core · agent</span>
+          <b>AuiPage</b>
+          <em>会话 · 历史 · 流式拼接 · 工具循环</em>
+        </div>
+
+        <div class="fm-arrow fm-up"><i>↑</i><span>SSE<br>回传</span></div>
+        <div class="fm-loop"><b>LOOP</b><span>一轮请求</span></div>
+        <div class="fm-arrow fm-down"><i>↓</i><span>请求<br>落库</span></div>
+
+        <div class="fm-node fm-ext">
+          <span class="fm-tag">外部 · 可换</span>
+          <b>模型 / 存储</b>
+          <em>OpenAI 兼容 · DB · 远端</em>
+        </div>
+        <div class="fm-arrow fm-left"><i>←</i><span>调用<br>读写</span></div>
+        <div class="fm-node fm-adapter">
+          <span class="fm-tag">接缝 · 你的实现</span>
+          <b>Adapter</b>
+          <em>Chat / MessageHistory</em>
+        </div>
+      </div>
       <div class="topo-foot">
-        core 只依赖 types，<br>
-        通过适配器与 agent 协作 —— <br>
-        换模型、换存储、换 UI 都不动核心。
+        真正只有一份的，是 AuiPage 的状态流转；<br>
+        其余三段都能拆掉，换成你自己的实现。
       </div>
     </div>
   </div>
@@ -98,35 +116,122 @@
 
 <div class="wrap">
   <section class="section">
-    <div class="section-head"><span class="no">01</span><h2>两层接缝</h2><span class="hint">适配器管数据，运行时管界面</span></div>
-    <div class="cards">
-      <div class="card">
-        <span class="tag">Adapter</span>
-        <h3>适配器：接你的后端</h3>
-        <p>对话怎么发、历史存哪、会话列表怎么读，全由三个适配器决定。
-          换模型服务、换数据库，改的是适配器，核心与界面一行不动。</p>
+    <div class="section-head"><span class="no">01</span><h2>没有一个包是必须的</h2><span class="hint">先用最少的依赖把事情做成</span></div>
+<div class="pkgmap">
+      <div class="pkgmap-head">
+        <div class="pkgmap-title"><span class="pkgmap-kicker">WIRING</span><b>四个包的真实关系</b></div>
+        <div class="pkgmap-legend"><span><i class="lg-solid"></i>依赖</span><span><i class="lg-dash"></i>可替换</span></div>
       </div>
-      <div class="card">
-        <span class="tag">Runtime</span>
-        <h3>运行时：接你的界面</h3>
-        <p>会话列表与会话内容各有一个运行时基类，把状态变化翻译成渲染调用。
-          React / Vue / 原生 DOM 都是同一套运行时接口的不同实现。</p>
+      <p class="pkgmap-lede">上半段是模型调用链，下半段是页面状态主干。core 不依赖任何模型包，只负责把两边接起来。</p>
+
+      <div class="pkgmap-band">
+        <div class="band-head"><span class="band-no">01</span><b>模型侧 · 调用链</b><em>箭头指向被依赖的包</em></div>
+        <div class="pkg-chain">
+          <article class="pkg-node">
+            <div class="pkg-node-head">
+              <span class="pkg-role">LOOP</span>
+              <a href="./packages/agent.html"><code>@auipage/agent</code></a>
+            </div>
+            <p>多轮工具循环，前后端工具桥接。</p>
+            <div class="pkg-swap"><b>换成</b><span>自己写 <code>while</code> 循环 · 其他 Agent 框架</span></div>
+          </article>
+
+          <div class="pkg-link"><span>依赖</span><i></i></div>
+
+          <article class="pkg-node">
+            <div class="pkg-node-head">
+              <span class="pkg-role">MODEL</span>
+              <a href="./packages/model.html"><code>@auipage/model</code></a>
+            </div>
+            <p>OpenAI 兼容请求，增量解析与工具调用切片拼接。</p>
+            <div class="pkg-swap"><b>换成</b><span>官方 SDK · Vercel AI SDK · 手写解析</span></div>
+          </article>
+
+          <div class="pkg-link"><span>依赖</span><i></i></div>
+
+          <article class="pkg-node">
+            <div class="pkg-node-head">
+              <span class="pkg-role">TRANSPORT</span>
+              <a href="./packages/fetch.html"><code>@auipage/fetch</code></a>
+            </div>
+            <p>浏览器 / Node 同一份流式 fetch，SSE 自动切事件。</p>
+            <div class="pkg-swap"><b>换成</b><span>原生 fetch + ReadableStream · axios · undici</span></div>
+          </article>
+        </div>
+        <p class="pkg-branch"><b>也可以跳过 agent：</b>直接基于 <code>@auipage/model</code> 写自己的循环、记忆和审批，再把输出接进同一个 ChatTransportAdapter。</p>
       </div>
-      <div class="card">
-        <span class="tag">Tool</span>
-        <h3>工具：前后端同一套描述</h3>
-        <p><code>CreateTool</code> 把服务端工具调用桥接到页面：带 <code>execute</code> 的在服务端跑，
-          不带的下发到浏览器执行，结果回灌模型继续生成。</p>
+
+      <div class="pkgmap-bridge">
+        <div class="bridge-copy">
+          <span class="bridge-kicker">接入 core · 不是被 core 依赖</span>
+          <p>模型侧只负责产出流。谁来产出都行，core 不关心。</p>
+          <div class="bridge-chips"><span>agent.generate()</span><span>你的 Agent · 基于 model</span></div>
+        </div>
+        <div class="bridge-arrow"><i></i><span>包成流</span></div>
+        <div class="bridge-adapter">
+          <span>core 的接缝</span>
+          <b>ChatTransportAdapter</b>
+          <em>输入异步流，输出消息片段</em>
+        </div>
+      </div>
+
+      <div class="pkgmap-band core-band">
+        <div class="band-head"><span class="band-no">02</span><b>页面侧 · 状态主干</b><em>core 把三段串成一条流程</em></div>
+        <div class="core-flow">
+          <div class="core-side">
+            <span class="core-side-label">Adapter · 数据</span>
+            <div class="core-chip">ChatTransportAdapter</div>
+            <div class="core-chip">MessageHistoryAdapter</div>
+            <div class="core-chip">ThreadListAdapter</div>
+          </div>
+
+          <div class="core-arrow"><i></i><span>数据</span></div>
+
+          <div class="core-hub">
+            <span class="core-kicker">@auipage/core</span>
+            <b>AuiPage</b>
+            <div class="core-tags"><span>会话</span><span>历史</span><span>流式拼接</span><span>工具状态</span></div>
+            <em>状态流转只写一份</em>
+          </div>
+
+          <div class="core-arrow"><i></i><span>状态</span></div>
+
+          <div class="core-side">
+            <span class="core-side-label">Runtime · 界面</span>
+            <div class="core-chip">ThreadListRuntime</div>
+            <div class="core-chip">ChatContentRuntime</div>
+          </div>
+        </div>
+        <div class="core-foot">
+          <p><b>core 自己不做两件事：</b>不调用模型，不渲染 UI；它只把 Adapter 的数据变成 Runtime 的状态。</p>
+          <span class="core-alt">换成 · assistant-ui / 自己的状态机</span>
+        </div>
       </div>
     </div>
   </section>
 
   <section class="section">
-    <div class="section-head"><span class="no">02</span><h2>五个包</h2></div>
-    <div class="table-wrap"><table class="spec">
-  <thead><tr><th>包</th><th>作用</th></tr></thead>
-  <tbody><tr><td><a href="./packages/types.html"><code>@auipage/types</code></a></td><td>跨包共用的类型协议：模型配置、消息、工具、流式事件。零运行时代码。</td></tr><tr><td><a href="./packages/fetch.html"><code>@auipage/fetch</code></a></td><td>跨端流式 fetch：Node 走 <code>http</code>，浏览器走原生 fetch，SSE 自动按事件解析。</td></tr><tr><td><a href="./packages/model.html"><code>@auipage/model</code></a></td><td>OpenAI 风格 <code>chat/completions</code>：请求拼装、SSE 增量解析、工具调用切片拼接。</td></tr><tr><td><a href="./packages/agent.html"><code>@auipage/agent</code></a></td><td>对话循环：多轮工具调用编排、思维链回调、<code>CreateTool</code> 前后端桥接。</td></tr><tr><td><a href="./packages/core.html"><code>@auipage/core</code></a></td><td>核心层：<code>AuiPage</code> + 三个 Adapter + 两个 Runtime + <code>defineTool</code> / <code>generator</code>。</td></tr></tbody>
-</table></div>
+    <div class="section-head"><span class="no">02</span><h2>两条接缝</h2><span class="hint">适配器管数据，运行时管界面</span></div>
+    <div class="cards">
+      <div class="card">
+        <span class="tag">Adapter</span>
+        <h3>数据侧：接你的后端</h3>
+        <p>对话怎么发、历史存哪、会话列表怎么读，全由三个适配器决定。
+          换模型服务、换数据库，改的是适配器，界面一行不动。</p>
+      </div>
+      <div class="card">
+        <span class="tag">Runtime</span>
+        <h3>界面侧：接你的 UI</h3>
+        <p>会话列表与会话内容各有一个运行时基类，把状态变化翻译成渲染调用。
+          React / Vue / 原生 DOM 都是同一套接口的不同实现。</p>
+      </div>
+      <div class="card">
+        <span class="tag">Tool</span>
+        <h3>工具：前后端同一套描述</h3>
+        <p>带 <code>execute</code> 的工具在服务端执行，不带的下发到浏览器，
+          结果回灌模型继续生成。<code>CreateTool</code> 负责这条往返。</p>
+      </div>
+    </div>
   </section>
 
   <section class="section">
@@ -136,10 +241,11 @@
   <div class="code-body"><pre>用户输入
    │
    ├─ ChatTransportAdapter.run()      发起一轮对话，返回 AsyncGenerator
-   │      ▲
-   │      │  Agent.generate()          模型请求 → 工具调用 → 结果回灌 → 继续生成
-   │      │      ├─ Model.completions()   SSE 增量、推理过程、tool_calls
-   │      │      └─ fetch()              跨端流式读取 + SSE 事件切分
+   │      ▲  这里可以放任何东西：Agent、官方 SDK、甚至一个假的流
+   │      │
+   │      └─ Agent.generate()          模型请求 → 工具调用 → 结果回灌 → 继续生成
+   │             ├─ Model.completions()  SSE 增量、推理过程、tool_calls
+   │             └─ fetch()             跨端流式读取 + SSE 事件切分
    │
    ├─ 片段逐条 yield 给 AuiPage
    │      ├─ text / thinking    → ChatContentRuntime 增量拼接
@@ -149,41 +255,105 @@
    └─ MessageHistoryAdapter.append()   整组消息落库</pre></div>
 </div>
   </section>
+
+  <section class="section" id="learning-path">
+    <div class="section-head"><span class="no">04</span><h2>学习路径</h2><span class="hint">每章都能单独跑，也能随时停下</span></div>
+    <div class="path-grid">
+      <a class="path-card" href="./guide/start.html">
+        <div class="path-top"><span class="path-no">01</span><span class="path-go">→</span></div>
+        <h3>跑起示例</h3>
+        <p>跑通仓库里的完整示例，看到流式回复和工具卡片。</p>
+        <div class="path-meta"><span class="path-pkg">无需安装包</span><span class="path-alt">直接跑仓库示例</span></div>
+      </a>
+      <a class="path-card" href="./guide/zero-dep.html">
+        <div class="path-top"><span class="path-no">02</span><span class="path-go">→</span></div>
+        <h3>一个包都不用</h3>
+        <p>手写一个流式对话页：输入框、发送、逐字输出。</p>
+        <div class="path-meta"><span class="path-pkg">原生 fetch</span><span class="path-alt">就是零依赖版本</span></div>
+      </a>
+      <a class="path-card" href="./guide/model.html">
+        <div class="path-top"><span class="path-no">03</span><span class="path-go">→</span></div>
+        <h3>接真实模型</h3>
+        <p>接上 OpenAI 兼容服务，拿到正文、思考和工具调用。</p>
+        <div class="path-meta"><span class="path-pkg">@auipage/model</span><span class="path-alt">官方 SDK 或自己解析</span></div>
+      </a>
+      <a class="path-card" href="./guide/tool.html">
+        <div class="path-top"><span class="path-no">04</span><span class="path-go">→</span></div>
+        <h3>让模型做事</h3>
+        <p>做一个能查天气、能弹窗确认的智能体。</p>
+        <div class="path-meta"><span class="path-pkg">@auipage/agent</span><span class="path-alt">自己写工具循环</span></div>
+      </a>
+      <a class="path-card" href="./guide/core.html">
+        <div class="path-top"><span class="path-no">05</span><span class="path-go">→</span></div>
+        <h3>装框架</h3>
+        <p>把散件收进 Adapter + Runtime，换存储只改一处。</p>
+        <div class="path-meta"><span class="path-pkg">@auipage/core</span><span class="path-alt">自己写状态机</span></div>
+      </a>
+      <a class="path-card" href="./guide/ui.html">
+        <div class="path-top"><span class="path-no">06</span><span class="path-go">→</span></div>
+        <h3>换界面</h3>
+        <p>同一份逻辑，换成 DOM / React / Vue 渲染。</p>
+        <div class="path-meta"><span class="path-pkg">组件库或 Runtime</span><span class="path-alt">固定一个 UI 框架</span></div>
+      </a>
+    </div>
+
+    <a class="path-api" href="./packages/fetch.html">
+      <span class="path-api-tag">API 参考</span>
+      <span class="path-api-main">查签名、事件与边界条件</span>
+      <span class="path-api-note">四个包的完整接口</span>
+      <i>↗</i>
+    </a>
+
+    <div class="path-rule">
+      <span>HOW TO READ</span>
+      <p><b>每个包都写了“可以换成什么”。</b>你不必为了用其中一个包，把四个都装上。</p>
+    </div>
+  </section>
 </div>
 </main>
 </div>
 </div>
 </div>
-<footer class="foot">
+<footer class="foot" id="site-foot">
     <div class="foot-inner">
-      <div class="col">
-        <h4>开始</h4>
-        <a href="./index.html">总览</a>
-        <a href="./guide/start.html">快速开始</a>
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
       </div>
-      <div class="col">
-        <h4>包</h4>
-        <a href="./packages/types.html">@auipage/types</a>
-        <a href="./packages/fetch.html">@auipage/fetch</a>
-        <a href="./packages/model.html">@auipage/model</a>
-        <a href="./packages/agent.html">@auipage/agent</a>
-        <a href="./packages/core.html">@auipage/core</a>
-      </div>
-      <div class="col">
-        <h4>生态</h4>
-        <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
-        <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
-        <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
-      </div>
-      <div class="sign">
-        <b>auipage</b> — 智能体网页应用开发框架<br>
-        MIT License · Copyright (c) <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="./index.html">总览</a>
+          <a href="./guide/start.html">跑起示例</a>
+          <a href="./guide/zero-dep.html">一个包都不用</a>
+          <a href="./guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="./packages/fetch.html">@auipage/fetch</a>
+          <a href="./packages/model.html">@auipage/model</a>
+          <a href="./packages/agent.html">@auipage/agent</a>
+          <a href="./packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.1.0</span>
       </div>
     </div>
   </footer>
 
-<script src="./assets/js/docs.js?v=2af1fb36"></script>
+<script src="./assets/vendor/shader.min.js?v=5aba8735"></script>
+<script src="./assets/js/docs.js?v=5aba8735"></script>
 
 </body>
 </html>

@@ -1,0 +1,196 @@
+<!--meta {"title": "让模型做事 · auipage 文档", "desc": "从零实现一次工具调用循环，再把工具搬到浏览器执行，对比 @auipage/agent 的 CreateTool 桥接。", "section": "guide", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>教程</span><span class="sep">/</span><span>让模型做事</span></div>
+<h1><em>Guide 05</em>让模型做事</h1>
+<p class="lede">问一句“南京今天天气怎么样”，模型自己决定调哪个工具、传什么参数。这章先手写这个循环，再看 <code>@auipage/agent</code> 省掉了什么。</p>
+<div class="badges"><span class="badge hi">tool_calls</span><span class="badge">多轮循环</span><span class="badge">前后端桥接</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>场景：一个查天气的工具</h2></div>
+  <div class="prose">
+  <p>工具本质上是一个带 JSON Schema 的函数描述。模型看到描述后，可能返回“我要调 <code>getWeather</code>，
+  参数是 <code>{ city: "南京" }</code>”，然后停下等你执行。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">getWeather.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>export const getWeather = {
+    description: {
+        type: "function",
+        function: {
+            name: "getWeather",
+            description: "查询指定城市的天气",
+            parameters: {
+                type: "object",
+                properties: { city: { type: "string", description: "城市名称" } },
+                required: ["city"]
+            }
+        }
+    },
+    execute({ city }) {
+        return city + " 今天晴，25°C";
+    }
+};</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>手写版：循环到底怎么写</h2></div>
+  <div class="prose">
+  <p>关键只有三步：<b>把工具声明带上 → 收到 <code>tool_calls</code> 就执行 → 把结果作为 <code>tool</code> 消息塞回去再请求</b>。
+  重复到模型不再调工具为止。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">loop.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const registry = { getWeather };
+
+async function chat(messages) {
+    while (true) {
+        const { content, tool_calls } = await model.completions(
+            { messages, tools: [getWeather], stream: true },
+            delta =&gt; process.stdout.write(delta)
+        );
+
+        // 没有工具调用，这一轮就是最终回复
+        if (!tool_calls.length) return content;
+
+        // 1. 模型这一轮的“我要调工具”也要进历史
+        messages.push({ role: "assistant", content, tool_calls });
+
+        // 2. 逐个执行，再把结果作为 tool 消息回灌
+        for (const call of tool_calls) {
+            const fn = registry[call.function.name];
+            const args = JSON.parse(call.function.arguments);
+            const result = await fn.execute(args);
+
+            messages.push({
+                role: "tool",
+                tool_call_id: call.id,
+                content: String(result)
+            });
+        }
+
+        // 3. 回到 while 开头，带着工具结果再请求一次
+    }
+}</pre></div>
+</div>
+  <p style="margin-top:14px">这段代码已经能跑，但要自己保证：模型名和工具名对得上、<code>arguments</code> 解析失败要兜底、
+  工具抛错要变成 <code>tool</code> 消息而不是整轮崩掉、循环要有上限。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>装包版：循环交给 Agent</h2></div>
+  <div class="prose">
+  <div class="code">
+  <div class="code-head"><span class="file">agent-demo.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { Agent } from "@auipage/agent";
+import { getWeather } from "./getWeather.js";
+
+const agent = new Agent({
+    model: { model: "qwen3.5", apiKey: "ollama", baseURL: "http://localhost:11434/v1" },
+    systemPrompt: "你可以使用 getWeather 查询天气。",
+    tools: [getWeather]
+});
+
+const answer = await agent.generate(
+    [{ role: "user", content: "南京今天天气怎么样？" }],
+    text  =&gt; process.stdout.write(text),   // 正文增量
+    think =&gt; console.log("[思考]", think)   // 推理增量
+);</pre></div>
+</div>
+  <p style="margin-top:14px">安装：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">terminal</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>npm install --save @auipage/agent</pre></div>
+</div>
+  <p style="margin-top:14px">它做了你刚才手写的那三步，另外补了：工具执行出错时把错误作为结果回灌而不是中断、
+  推理过程回调、以及整轮只有工具调用时的返回值约定。</p>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>工具搬到浏览器执行</h2></div>
+  <div class="prose">
+  <p>有些工具必须在页面上跑：展示文件、弹窗确认、读当前 DOM。做法是把“执行”从服务端挪到浏览器，
+  服务端只负责挂起和唤醒。</p>
+  <p><b>服务端：</b>用 <code>MessageStream</code> + <code>CreateTool</code> 包装工具。带 <code>execute</code> 的仍在服务端跑，
+  不带的下发页面：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">server.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { CreateTool } from "@auipage/agent";
+import { MessageStream } from "@auipage/core";
+
+const ms = new MessageStream(
+    data =&gt; res.write("data: " + JSON.stringify(data) + "\n\n"),
+    () =&gt; res.end()
+);
+const ct = new CreateTool(ms);
+
+const tools = [
+    ct.create(readPlain),     // 带 execute：服务端执行
+    ct.create(showPlain)      // 不带 execute：挂起，等页面回传
+];
+
+// 页面把结果 POST 回来时，唤醒挂起的那次调用
+if (globalThis[data.id]) {
+    globalThis[data.id](data.result);
+    delete globalThis[data.id];
+}</pre></div>
+</div>
+  <p style="margin-top:16px"><b>页面：</b>用 <code>defineTool</code> 注册同名工具，<code>render</code> 里做 UI 交互，
+  它的返回值才是回传给模型的最终结果：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">page.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { defineTool, AuiPage } from "@auipage/core";
+
+const showPlain = defineTool({
+    name: "showPlain",
+    description: "在页面上展示一段文本",
+    parameters: {
+        type: "object",
+        properties: { content: { type: "string" } },
+        required: ["content"]
+    },
+    execute(args) {
+        return args.content;          // 拿到原始内容
+    },
+    render({ result }) {
+        alert(result);                // 页面交互
+        return "用户已看到";           // 这个返回值回灌给模型
+    }
+});
+
+const page = new AuiPage({
+    adapter: { /* 三个适配器 */ },
+    runtime: { /* 两个运行时 */ },
+    tools: [showPlain]
+});</pre></div>
+</div>
+  <p style="margin-top:14px">流里的事件长这样，页面对 <code>caller</code> 分流即可：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">sse</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>{ "type": "tool-call", "status": "pending", "id": "c1", "name": "showPlain", "caller": "frontend", "args": { ... } }
+{ "type": "tool-call", "status": "success", "id": "c1", "name": "readPlain",  "caller": "backend",  "args": { ... }, "result": "..." }</pre></div>
+</div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>这个包不是必须的</h2></div>
+  <div class="prose">
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的情况</th><th>更合适的选择</th></tr></thead>
+  <tbody>
+    <tr><td>工具全在服务端</td><td>OpenAI Agents SDK、LangChain、Vercel AI SDK</td></tr>
+    <tr><td>只有一两个工具</td><td>本章第二节的 <code>while</code> 循环</td></tr>
+    <tr><td>根本不需要工具</td><td>只用 <code>@auipage/model</code> 或官方 SDK</td></tr>
+    <tr><td>必须让浏览器执行工具</td><td>那就得自己做 SSE 下发 + 结果回传 + 挂起唤醒</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:14px"><b>它最有价值的地方</b>不是“多轮循环”（那个 20 行能写），而是
+  <b>同一份工具描述，服务端和浏览器各执行一半</b>。如果工具都在服务端，别的框架同样好用。</p>
+</div>
+</section>
+
+<nav class="pager">
+<a href="{{base}}guide/model.html"><span class="dir">← 上一页</span><span class="name">接真实模型</span></a>
+<a class="next" href="{{base}}guide/core.html"><span class="dir">下一页 →</span><span class="name">装框架</span></a>
+  </nav>

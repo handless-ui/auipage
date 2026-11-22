@@ -1,28 +1,37 @@
-<footer class="foot">
+<footer class="foot" id="site-foot">
     <div class="foot-inner">
-      <div class="col">
-        <h4>开始</h4>
-        <a href="{{base}}index.html">总览</a>
-        <a href="{{base}}guide/start.html">快速开始</a>
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
       </div>
-      <div class="col">
-        <h4>包</h4>
-        <a href="{{base}}packages/types.html">@auipage/types</a>
-        <a href="{{base}}packages/fetch.html">@auipage/fetch</a>
-        <a href="{{base}}packages/model.html">@auipage/model</a>
-        <a href="{{base}}packages/agent.html">@auipage/agent</a>
-        <a href="{{base}}packages/core.html">@auipage/core</a>
-      </div>
-      <div class="col">
-        <h4>生态</h4>
-        <a href="{{repo}}" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
-        <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
-        <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
-      </div>
-      <div class="sign">
-        <b>auipage</b> — 智能体网页应用开发框架<br>
-        {{license}} License · Copyright (c) <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="{{base}}index.html">总览</a>
+          <a href="{{base}}guide/start.html">跑起示例</a>
+          <a href="{{base}}guide/zero-dep.html">一个包都不用</a>
+          <a href="{{base}}guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="{{base}}packages/fetch.html">@auipage/fetch</a>
+          <a href="{{base}}packages/model.html">@auipage/model</a>
+          <a href="{{base}}packages/agent.html">@auipage/agent</a>
+          <a href="{{base}}packages/core.html">@auipage/core</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="{{repo}}" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>{{license}} License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v{{version}}</span>
       </div>
     </div>
   </footer>

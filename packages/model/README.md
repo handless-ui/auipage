@@ -1,6 +1,6 @@
-# [@auipage/model](https://github.com/handless-ui/auipage/packages/model/README.md)
+# [@auipage/model](https://github.com/handless-ui/auipage)
 
-OpenAI 风格 `chat/completions` 的流式封装：负责请求拼装、SSE 增量解析、工具调用切片拼接，兼容同协议的其他模型服务（DeepSeek 等）。
+OpenAI 风格 `chat/completions` 的零依赖封装：请求拼装、SSE 增量解析、`tool_calls` 切片拼接、`<think>` 标签剥离，一次给你收好。
 
 <p>
     <a href="https://zxl20070701.github.io/toolbox/#/npm-download?packages=@auipage/model&interval=7">
@@ -14,77 +14,67 @@ OpenAI 风格 `chat/completions` 的流式封装：负责请求拼装、SSE 增�
     </a>
 </p>
 
-<img src="https://nodei.co/npm/@auipage/model.png?downloads=true&amp;downloadRank=true&amp;stars=true" alt="NPM">
+## 它解决什么
 
-## 安装
+直接对着 `chat/completions` 写流式解析，会卡在这几件事上：
 
-```
-npm install --save @auipage/model
-```
+- `data:` 事件要逐条切，`[DONE]` 要单独认；
+- `delta.content` 是增量，得自己累积才能拿到完整文本；
+- `tool_calls` 按 `index` 分片到达，`arguments` 是半个 JSON，要拼完再 `parse`；
+- DeepSeek 这类模型的 `reasoning_content` 和 `<think>` 标签要单独处理。
 
-## 创建实例
+这些都不该由业务代码反复实现。
+
+## 30 秒例子
 
 ```javascript
 import { Model } from "@auipage/model";
 
 const model = new Model({
-    model: "deepseek-chat",                    // 模型名
-    apiKey: "your-api-key",
-    baseURL: "https://api.deepseek.com/v1"     // 请求时拼接 /chat/completions
+    model: "qwen3.5",
+    apiKey: "ollama",                              // 本地 ollama 不校验
+    baseURL: "http://localhost:11434/v1"           // 请求时拼 /chat/completions
 });
-```
 
-## completions
-
-```typescript
-model.completions(
+const { content, tool_calls } = await model.completions(
     {
-        messages: ChatMessage[],   // OpenAI 格式消息
-        tools?: Tool[],            // 可选，默认 []；自动取每项的 description 作为 tools 提交
-        stream?: boolean           // 默认 false
+        messages: [{ role: "user", content: "用一句话介绍 JavaScript" }],
+        stream: true
     },
-    logback?,    // (delta: string) => void，正文增量回调
-    thinkback?   // (reasoning: string) => void，推理过程回调
-): Promise<{ content: string, tool_calls: ModelToolCall[] }>
+    delta => process.stdout.write(delta),          // 正文增量
+    think => process.stdout.write("[思考] " + think) // 推理增量
+);
+
+console.log("\n完整文本：", content);
+console.log("工具调用：", tool_calls);
 ```
 
-- `thinkback` 接收 `delta.reasoning` / `delta.reasoning_content`；正文中的 `<think>...</think>` 标签会被剥除，剩余内容并入 `content`。
-- `stream: false` 时两个回调仍会调用，只是在响应结束后各触发一次。
-- 返回的 `tool_calls` 已按 `id` 切片、拼好 `function.arguments`。
+换成 DeepSeek、OpenAI 或任何兼容服务，只改构造参数里的三个字段。
 
-## 示例
+安装：
 
-```javascript
-model.completions({
-    messages: [
-        { role: "system", content: "你是一个助手。" },
-        { role: "user", content: "查一下南京今天的天气" }
-    ],
-    tools: [
-        {
-            description: {
-                type: "function",
-                function: {
-                    name: "getWeather",
-                    description: "查询指定城市的天气",
-                    parameters: {
-                        type: "object",
-                        properties: { city: { type: "string" } },
-                        required: ["city"]
-                    }
-                }
-            }
-        }
-    ],
-    stream: true
-}, (chunk) => {
-    process.stdout.write(chunk);       // 正文增量
-}, (reasoning) => {
-    console.log("[think]", reasoning); // 推理增量
-}).then(({ content, tool_calls }) => {
-    console.log(content, tool_calls);
-});
+```bash
+npm install --save @auipage/model
 ```
+
+## 这个包不是必须的
+
+| 你的情况 | 可以换成 | 会失去什么 |
+| --- | --- | --- |
+| 只接一家模型，功能简单 | 官方 SDK（`openai`、`@deepseek/sdk`） | 多一个依赖，但维护由官方负责 |
+| 已经用 Vercel AI SDK | `@ai-sdk/openai` + `streamText` | 生态更全，但抽象层更厚 |
+| 想完全掌控 | 原生 `fetch` + 自己解析 SSE | 上面四件脏活得自己写 |
+| 只用非流式 | 原生 `fetch` 一次 POST | 没有增量回调，但代码最短 |
+
+它适合“**想零依赖、又要一个能直接跑的 OpenAI 兼容客户端**”的场景。如果你已经在用某家的官方 SDK，没有必要为了统一而换掉。
+
+## 它在哪一环
+
+```
+fetch ← model ← agent
+```
+
+`@auipage/agent` 在它之上做工具循环。完整签名与返回结构见 [model 参考](https://handless-ui.github.io/auipage/packages/model.html)。
 
 ## 版权
 

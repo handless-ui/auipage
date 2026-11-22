@@ -77,6 +77,23 @@ function stripTags(html) {
     .trim();
 }
 
+/** 把运行时依赖的第三方脚本拷进站点，保证 docs/ 单独发布也能用 */
+function syncVendor() {
+  const pairs = [
+    ['node_modules/@oipage/shader/dist/shader.min.js', 'assets/vendor/shader.min.js'],
+  ];
+  for (const [from, to] of pairs) {
+    const src = path.join(ROOT, from);
+    if (!exists(src)) {
+      console.warn(`  ! 找不到 ${from}，跳过拷贝（先执行 npm install）`);
+      continue;
+    }
+    const dest = path.join(OUT, to);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+  }
+}
+
 /** 资源指纹：css / js 一改，所有页面的 ?v= 自动跟着变，省掉手改版本号 */
 function assetVersion() {
   const dir = path.join(OUT, 'assets');
@@ -304,6 +321,8 @@ function build() {
   const pagesDir = path.join(SRC, 'pages');
   const layoutsDir = path.join(SRC, 'layouts');
   const files = walkHtml(pagesDir);
+
+  syncVendor();
   const assetVer = assetVersion();
   const generated = [];
 

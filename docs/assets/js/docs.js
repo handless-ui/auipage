@@ -93,3 +93,62 @@
         document.body.classList.add("home");
     }
 }());
+
+/* ------------------------------------------------------------ 代码着色（@oipage/shader） */
+
+(function () {
+    var Shader = window.Shader;
+    if (!Shader) return;
+
+    /* 浅底代码面板：深色文字保住对比度，蓝绿紫只落在关键字、字符串与函数名上 */
+    var LIGHT = {
+        text: "#1c2740", annotation: "#78869c", insign: "#5f6f86",
+        key: "#0b5ed7", string: "#087a52", funName: "#155fc4", execName: "#0f766e",
+        node: "#155fc4", attrKey: "#9a5b00", attrValue: "#087a52", selector: "#155fc4",
+        number: "#b45309", keyword: "#7135d6", command: "#155fc4", option: "#9a5b00",
+        argument: "#087a52", variable: "#a21caf"
+    };
+
+    var BY_EXT = {
+        js: "javascript", mjs: "javascript", cjs: "javascript", jsx: "javascript",
+        ts: "javascript", tsx: "javascript", vue: "html", svelte: "html",
+        html: "html", htm: "html", css: "css", json: "json",
+        py: "python", sh: "shell", bash: "shell"
+    };
+
+    var BY_NAME = { terminal: "shell", shell: "shell", bash: "shell", sse: "json" };
+
+    function pickLang(name) {
+        if (!name) return "";
+        var base = name.split("/").pop().toLowerCase();
+        if (BY_NAME[base]) return BY_NAME[base];
+        var dot = base.lastIndexOf(".");
+        if (dot < 0) return "";
+        return BY_EXT[base.slice(dot + 1)] || "";
+    }
+
+    var blocks = document.querySelectorAll(".code .code-body pre");
+    if (!blocks.length) return;
+
+    for (var i = 0; i < blocks.length; i++) {
+        var pre = blocks[i];
+        var box = pre.closest(".code");
+        var label = box && box.querySelector(".code-head .file");
+        var lang = pickLang(label ? label.textContent.trim() : "");
+        if (!lang) continue;
+
+        // 原始源码只留纯文本，重复着色时从这里恢复
+        pre._code = pre.textContent;
+        pre.setAttribute("tag", lang);
+    }
+
+    function paint() {
+        var root = document.querySelector("main") || document.body;
+        for (var j = 0; j < blocks.length; j++) {
+            if (blocks[j]._code !== undefined) blocks[j].textContent = blocks[j]._code;
+        }
+        Shader.shader(root, { colors: LIGHT });
+    }
+
+    paint();
+}());
