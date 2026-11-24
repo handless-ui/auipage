@@ -1,14 +1,14 @@
 // 浏览器环境适配器：基于原生 fetch + ReadableStream
 // adapter 协议：(options, { onData, onEnd, onError, onResponse }) => void
 function browserAdapter(options, { onData, onEnd, onError, onResponse }) {
-  const { url, method = 'GET', headers = {}, body } = options;
+  const { url, method = 'GET', headers = {}, body, signal } = options;
 
   if (typeof fetch !== 'function') {
     onError(new Error('Global fetch is not available in this environment'));
     return;
   }
 
-  fetch(url, { method, headers, body })
+  fetch(url, { method, headers, body, signal })
     .then(async (res) => {
       if (typeof onResponse === 'function') {
         onResponse({

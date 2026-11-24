@@ -1,6 +1,8 @@
+import { Model } from "@auipage/model";
 import parseString from "@auipage/model/src/parseString.js";
 import parseReasoning from "@auipage/model/src/reasoning.js";
 import handleChoices from "@auipage/model/src/streamHandler.js";
+import { withServer, withTimeout } from "./helper.js";
 
 export default function ({ describe, it, expect }) {
 
@@ -55,6 +57,30 @@ export default function ({ describe, it, expect }) {
             }
             expect(caught).not.toBeNull();
             expect(caught.message).toBe("rate limit");
+        });
+
+        it("空字符串返回空数组", () => {
+            expect(parseString("")).toEqual([]);
+            expect(parseString("   ")).toEqual([]);
+        });
+
+        it("缩进的多行 JSON（非流式响应体）也能解析", () => {
+            const obj = { choices: [{ message: { content: "hi" } }] };
+            const result = parseString(JSON.stringify(obj, null, 2));
+            expect(result).toEqual(obj);
+        });
+
+        it("NDJSON（一行一条 JSON）返回数组", () => {
+            const a = { choices: [{ delta: { content: "a" } }] };
+            const b = { choices: [{ delta: { content: "b" } }] };
+            const result = parseString(JSON.stringify(a) + "\n" + JSON.stringify(b));
+            expect(result).toEqual([a, b]);
+        });
+
+        it("最后一条事件后紧跟 'data: [DONE]' 也能解析", () => {
+            const a = { choices: [{ delta: { content: "a" } }] };
+            const value = "data: " + JSON.stringify(a) + "\n\ndata: [DONE]";
+            expect(parseString(value)).toEqual(a);
         });
     });
 
@@ -153,6 +179,142 @@ export default function ({ describe, it, expect }) {
             expect(state.content).toBe("A");
             expect(state.tool_calls).toEqual([{ id: "x", function: { name: "n", arguments: "1" } }]);
             expect(logs).toEqual(["A"]);
+        });
+
+        it("首片缺 id 时不再 TypeError，按 index 建槽位并累加", () => {
+            const state = { content: "", tool_calls: [] };
+
+            handleChoices(
+                [{ delta: { tool_calls: [{ index: 0, function: { name: "f", arguments: "{\"a\":" } }] } }],
+                {},
+                state
+            );
+            expect(state.tool_calls.length).toBe(1);
+            expect(state.tool_calls[0].function.name).toBe("f");
+            expect(state.tool_calls[0].function.arguments).toBe("{\"a\":");
+
+            handleChoices(
+                [{ delta: { tool_calls: [{ index: 0, function: { arguments: "1}" } }] } }],
+                {},
+                state
+            );
+            expect(state.tool_calls[0].function.arguments).toBe("{\"a\":1}");
+        });
+
+        it("并行两个调用按 index 归并，不串味", () => {
+            const state = { content: "", tool_calls: [] };
+
+            handleChoices([{
+                delta: {
+                    tool_calls: [
+                        { index: 0, id: "a", function: { name: "f", arguments: "{\"x\":" } },
+                        { index: 1, id: "b", function: { name: "g", arguments: "{\"y\":" } }
+                    ]
+                }
+            }], {}, state);
+
+            // 分片乱序到达：先 index=1 再 index=0
+            handleChoices([{
+                delta: {
+                    tool_calls: [
+                        { index: 1, function: { arguments: "1}" } },
+                        { index: 0, function: { arguments: "2}" } }
+                    ]
+                }
+            }], {}, state);
+
+            expect(state.tool_calls.length).toBe(2);
+            expect(state.tool_calls[0].function.arguments).toBe("{\"x\":2}");
+            expect(state.tool_calls[1].function.arguments).toBe("{\"y\":1}");
+        });
+
+        it("同一 id 重复下发时复用槽位，不重复入数组", () => {
+            const state = { content: "", tool_calls: [] };
+
+            handleChoices(
+                [{ delta: { tool_calls: [{ id: "a", function: { name: "f", arguments: "{\"a\":" } }] } }],
+                {},
+                state
+            );
+            handleChoices(
+                [{ delta: { tool_calls: [{ id: "a", function: { arguments: "1}" } }] } }],
+                {},
+                state
+            );
+
+            expect(state.tool_calls.length).toBe(1);
+            expect(state.tool_calls[0].function.arguments).toBe("{\"a\":1}");
+        });
+    });
+
+    // ----------------------- completions -----------------------
+    describe("completions", () => {
+        function makeModel(port) {
+            return new Model({
+                baseURL: "http://127.0.0.1:" + port + "/v1",
+                apiKey: "test",
+                model: "test-model"
+            });
+        }
+
+        it("非流式：缩进 JSON 响应体能拿到 content", () => {
+            const body = JSON.stringify({
+                choices: [{ message: { role: "assistant", content: "你好" } }]
+            }, null, 2);
+
+            return withServer((req, res) => {
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(body);
+            }, (port) => withTimeout(makeModel(port).completions({ messages: [] })))
+                .then((result) => {
+                    expect(result.content).toBe("你好");
+                    expect(result.tool_calls).toEqual([]);
+                });
+        });
+
+        it("非流式 401：reject 且带状态码与错误信息（不再卡死/杀进程）", () => {
+            return withServer((req, res) => {
+                res.writeHead(401, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: { message: "invalid key" } }));
+            }, (port) => withTimeout(makeModel(port).completions({ messages: [] })))
+                .then(
+                    () => { throw new Error("应 reject"); },
+                    (err) => {
+                        expect(err instanceof Error).toBe(true);
+                        expect(err.message.includes("HTTP 401")).toBe(true);
+                        expect(err.message.includes("invalid key")).toBe(true);
+                    }
+                );
+        });
+
+        it("流式 401：同样 reject", () => {
+            return withServer((req, res) => {
+                res.writeHead(401, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: { message: "invalid key" } }));
+            }, (port) => withTimeout(makeModel(port).completions({ messages: [], stream: true })))
+                .then(
+                    () => { throw new Error("应 reject"); },
+                    (err) => {
+                        expect(err.message.includes("HTTP 401")).toBe(true);
+                    }
+                );
+        });
+
+        it("流式 200：SSE 分片累加 content 并回调 logback", () => {
+            const logs = [];
+
+            return withServer((req, res) => {
+                res.writeHead(200, { "Content-Type": "text/event-stream" });
+                res.write("data: " + JSON.stringify({ choices: [{ delta: { content: "你" } }] }) + "\n\n");
+                res.write("data: " + JSON.stringify({ choices: [{ delta: { content: "好" } }] }) + "\n\n");
+                res.end();
+            }, (port) => withTimeout(makeModel(port).completions(
+                { messages: [], stream: true },
+                (t) => logs.push(t)
+            ))).then((result) => {
+                expect(result.content).toBe("你好");
+                expect(logs).toEqual(["你", "好"]);
+            });
         });
     });
 

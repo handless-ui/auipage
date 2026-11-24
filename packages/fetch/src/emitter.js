@@ -28,9 +28,8 @@ class Emitter {
       try {
         fn.apply(null, args);
       } catch (e) {
-        // 单个监听器异常不影响其它监听器
-        // 用 queueMicrotask 抛到全局，避免污染 emit 调用栈
-        queueMicrotask(() => { throw e; });
+        // 单个监听器异常不影响其它监听器，也不再冒泡成进程级异常
+        console.error(e);
       }
     }
     return true;

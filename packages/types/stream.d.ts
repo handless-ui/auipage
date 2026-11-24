@@ -31,7 +31,8 @@ export interface TextStreamEvent {
  * 工具调用事件，字段随调用进度逐步补齐。
  *
  * - pending：调用开始。前端工具由页面执行并回传结果，后端工具等待后续事件；
- * - success / error：调用结束，携带 result（异常时 result 为错误对象）。
+ * - success / error：调用结束，携带 result。是否成功以 status 为准：
+ *   status 为 "error" 时 result 可能是错误对象，经 SSE 序列化后通常为空对象。
  */
 export interface ToolCallEvent {
     type: "tool-call";

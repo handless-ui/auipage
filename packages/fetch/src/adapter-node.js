@@ -9,7 +9,7 @@ async function nodeAdapter(options, { onData, onEnd, onError, onResponse }) {
     import('url')
   ]);
 
-  const { url, method = 'GET', headers = {}, body } = options;
+  const { url, method = 'GET', headers = {}, body, signal } = options;
 
   let parsed;
   try {
@@ -46,6 +46,17 @@ async function nodeAdapter(options, { onData, onEnd, onError, onResponse }) {
   });
 
   req.on('error', (err) => onError(err));
+
+  // 取消 / 超时：直接中断底层请求，错误从 req 的 error 事件返回
+  if (signal) {
+    if (signal.aborted) {
+      onError(new Error('请求已取消'));
+      return;
+    }
+    signal.addEventListener('abort', () => {
+      req.destroy(new Error('请求已取消'));
+    });
+  }
 
   if (body != null) {
     req.write(body);

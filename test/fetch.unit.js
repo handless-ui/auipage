@@ -74,32 +74,29 @@ export default function ({ describe, it, expect }) {
             expect(calls).toEqual([1, 2, 2]);
         });
 
-        it("listener 抛错不影响其它 listener（queueMicrotask 抛出）", () => {
+        it("listener 抛错不影响其它 listener（console.error 上报）", () => {
             const e = new E();
             const calls = [];
+            const logged = [];
 
-            // 源码用 queueMicrotask(()=>{throw e}) 重新抛出，Node 中走 uncaughtException
-            const handler = (err) => {
-                calls.push(["boom", err.message]);
-            };
-            process.once("uncaughtException", handler);
+            // 源码把 listener 异常交给 console.error，不再抛到 uncaughtException
+            const originError = console.error;
+            console.error = (...args) => logged.push(args);
 
-            e.on("x", () => calls.push("before"));
-            e.on("x", () => { throw new Error("boom"); });
-            e.on("x", () => calls.push("after"));
+            try {
+                e.on("x", () => calls.push("before"));
+                e.on("x", () => { throw new Error("boom"); });
+                e.on("x", () => calls.push("after"));
 
-            e.emit("x");
+                e.emit("x");
+            } finally {
+                console.error = originError;
+            }
 
-            // 同步阶段：before、after 已被加入（抛错的 listener 被 try/catch 抓住转 queueMicrotask）
+            // 抛错的 listener 被隔离，前后监听照常执行
             expect(calls).toEqual(["before", "after"]);
-
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    // 异步阶段：错误被抛到 uncaughtException
-                    expect(calls).toEqual(["before", "after", ["boom", "boom"]]);
-                    resolve();
-                }, 20);
-            });
+            expect(logged.length).toBe(1);
+            expect(logged[0][0].message).toBe("boom");
         });
     });
 
@@ -240,7 +237,36 @@ export default function ({ describe, it, expect }) {
         });
     });
 
+    describe("Response 工具方法", () => {
+        it("header(name) 兼容普通对象与 Headers", () => {
+            const r = new Response();
+
+            r.headers = { "content-type": "text/plain" };
+            expect(r.header("content-type")).toBe("text/plain");
+            expect(r.header("missing")).toBeUndefined();
+
+            r.headers = new Headers({ "content-type": "text/event-stream" });
+            expect(r.header("content-type")).toBe("text/event-stream");
+        });
+
+        it("cancel() 调用注入的 _cancel", () => {
+            const r = new Response();
+            let cancelled = 0;
+            r._cancel = () => { cancelled++; };
+
+            expect(r.cancel()).toBe(r);
+            expect(cancelled).toBe(1);
+        });
+    });
+
     describe("createFetch", () => {
+        // 真实适配器都是异步投递事件的；这里用 0ms 定时器模拟，保证消费方先注册监听
+        function asyncAdapter(emit) {
+            return (options, hooks) => {
+                setTimeout(() => emit(options, hooks), 0);
+            };
+        }
+
         it("options.url 缺失 → Promise reject", () => {
             const fetch = createFetch(() => { });
             const p = fetch({});
@@ -250,25 +276,26 @@ export default function ({ describe, it, expect }) {
             );
         });
 
-        it("正常路径：onResponse/onData/onEnd 触发后消费者按序收到 data/end, status 同步", () => {
-            const fakeAdapter = (options, { onResponse, onData, onEnd }) => {
+        it("正常路径：data/end 按序到达，status 同步", () => {
+            const fetch = createFetch(asyncAdapter((options, { onResponse, onData, onEnd }) => {
                 onResponse({ status: 200, headers: { "content-type": "text/plain" } });
                 onData("a");
                 onData("b");
                 onEnd();
-            };
-            const fetch = createFetch(fakeAdapter);
+            }));
 
             return fetch({ url: "x://x" }).then((res) => {
-                expect(res.status).toBe(200);
-                expect(res.ok).toBe(true);
-                expect(res.headers["content-type"]).toBe("text/plain");
-                expect(res._sseMode).toBe(false);
+                // 响应头到达前 status 为 0，断言要放在事件回调里
+                expect(res.status).toBe(0);
 
                 const got = [];
                 return new Promise((resolve, reject) => {
                     res.on("data", (v) => got.push(v));
                     res.on("end", () => {
+                        expect(res.status).toBe(200);
+                        expect(res.ok).toBe(true);
+                        expect(res.header("content-type")).toBe("text/plain");
+                        expect(res._sseMode).toBe(false);
                         expect(got).toEqual(["a", "b"]);
                         resolve();
                     });
@@ -278,20 +305,18 @@ export default function ({ describe, it, expect }) {
         });
 
         it("SSE content-type 触发 _sseMode=true", () => {
-            const fakeAdapter = (options, { onResponse, onData, onEnd }) => {
+            const fetch = createFetch(asyncAdapter((options, { onResponse, onData, onEnd }) => {
                 onResponse({ status: 200, headers: { "content-type": "text/event-stream" } });
                 onData("data: hi\n\n");
                 onEnd();
-            };
-            const fetch = createFetch(fakeAdapter);
+            }));
 
             return fetch({ url: "x://x" }).then((res) => {
-                expect(res._sseMode).toBe(true);
-
                 return new Promise((resolve, reject) => {
                     const got = [];
                     res.on("data", (v) => got.push(v));
                     res.on("end", () => {
+                        expect(res._sseMode).toBe(true);
                         expect(got).toEqual(["hi"]);
                         resolve();
                     });
@@ -300,29 +325,110 @@ export default function ({ describe, it, expect }) {
             });
         });
 
-        it("非 200 状态码 ok=false", () => {
-            const fakeAdapter = (options, { onResponse, onData, onEnd }) => {
-                onResponse({ status: 500, headers: {} });
+        it("非 2xx：ok=false + http-error 事件，错误体仍能读到", () => {
+            const fetch = createFetch(asyncAdapter((options, { onResponse, onData, onEnd }) => {
+                onResponse({ status: 500, headers: { "content-type": "application/json" } });
+                onData('{"error":"boom"}');
                 onEnd();
-            };
-            const fetch = createFetch(fakeAdapter);
+            }));
 
             return fetch({ url: "x://x" }).then((res) => {
-                expect(res.status).toBe(500);
-                expect(res.ok).toBe(false);
+                const metas = [];
+                const got = [];
+                return new Promise((resolve, reject) => {
+                    res.on("http-error", (meta) => metas.push(meta));
+                    res.on("data", (v) => got.push(v));
+                    res.on("end", () => {
+                        expect(metas.length).toBe(1);
+                        expect(metas[0].status).toBe(500);
+                        expect(res.status).toBe(500);
+                        expect(res.ok).toBe(false);
+                        expect(got).toEqual(['{"error":"boom"}']);
+                        resolve();
+                    });
+                    res.on("error", reject);
+                });
             });
         });
 
-        it("adapter onError → Promise reject 且 Response 触发 error 事件", () => {
-            const fakeAdapter = (options, { onError }) => {
+        it("adapter onError → Promise reject；Response 侧 error 事件被 _done 屏蔽", () => {
+            const fetch = createFetch((options, { onError }) => {
                 onError(new Error("net down"));
-            };
-            const fetch = createFetch(fakeAdapter);
+            });
 
             return fetch({ url: "x://x" }).then(
                 () => { throw new Error("应 reject"); },
                 (err) => { expect(err.message).toBe("net down"); }
             );
+        });
+
+        it("adapter 返回 Promise 拒绝 → 走 error 事件（Promise 已 resolve）", () => {
+            const fetch = createFetch(() => Promise.reject(new Error("adapter down")));
+
+            return fetch({ url: "x://x" }).then((res) => new Promise((resolve, reject) => {
+                res.on("error", (err) => {
+                    expect(err.message).toBe("adapter down");
+                    resolve();
+                });
+                // 该用例只关心 error 事件
+                setTimeout(() => reject(new Error("未触发 error 事件")), 500);
+            }));
+        });
+
+        it("timeout：到点通过 error 事件返回超时", () => {
+            const fetch = createFetch(() => { /* 永不投递 */ });
+
+            return fetch({ url: "x://x", timeout: 30 }).then((res) => new Promise((resolve, reject) => {
+                res.on("error", (err) => {
+                    expect(err.message).toContain("超时");
+                    expect(res._done).toBe(true);
+                    resolve();
+                });
+                setTimeout(() => reject(new Error("未触发超时")), 500);
+            }));
+        });
+
+        it("外部 signal abort → reject 已取消", () => {
+            const fetch = createFetch(asyncAdapter(() => { }));
+            const ctrl = new AbortController();
+            const p = fetch({ url: "x://x", signal: ctrl.signal });
+
+            ctrl.abort();
+
+            return p.then(
+                () => { throw new Error("应 reject"); },
+                (err) => { expect(err.message).toContain("已取消"); }
+            );
+        });
+
+        it("普通对象 body 被序列化为 JSON 字符串", () => {
+            let captured = null;
+            const fetch = createFetch(asyncAdapter((options, { onEnd }) => {
+                captured = options.body;
+                onEnd();
+            }));
+
+            return fetch({ url: "x://x", method: "POST", body: { a: 1 } })
+                .then((res) => new Promise((resolve) => res.on("end", resolve)))
+                .then(() => {
+                    expect(typeof captured).toBe("string");
+                    expect(captured).toBe(JSON.stringify({ a: 1 }));
+                });
+        });
+
+        it("cancel() 会中断底层请求", () => {
+            let signal = null;
+            const fetch = createFetch(asyncAdapter((options) => { signal = options.signal; }));
+
+            return fetch({ url: "x://x" }).then((res) => {
+                return new Promise((resolve) => setTimeout(resolve, 5)).then(() => {
+                    expect(signal).toBeDefined();
+                    expect(signal.aborted).toBe(false);
+
+                    res.cancel();
+                    expect(signal.aborted).toBe(true);
+                });
+            });
         });
     });
 

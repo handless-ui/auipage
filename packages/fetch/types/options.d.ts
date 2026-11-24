@@ -5,7 +5,7 @@
 /** 请求头：浏览器 Headers 对象或普通键值对 */
 export type FetchHeaders = Headers | Record<string, string>;
 
-/** 请求体（字符串最常用；对象通常由调用方自行 JSON.stringify） */
+/** 请求体（普通对象会自动 JSON 序列化） */
 export type FetchBody =
     | string
     | ArrayBufferView
@@ -21,4 +21,8 @@ export interface FetchOptions {
     headers?: FetchHeaders;
     /** 请求体 */
     body?: FetchBody;
+    /** 超时毫秒数；到点自动中断请求并以 error 事件返回，0 / 缺省表示不限制 */
+    timeout?: number;
+    /** 外部取消信号；abort 后以 error 事件返回 */
+    signal?: AbortSignal | null;
 }

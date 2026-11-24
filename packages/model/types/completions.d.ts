@@ -14,6 +14,10 @@ export interface CompletionsParams {
     tools?: Array<{ description: ToolDescription }>;
     /** 是否流式请求，默认 false */
     stream?: boolean;
+    /** 请求超时毫秒数，缺省表示不限制 */
+    timeout?: number;
+    /** 外部取消信号 */
+    signal?: AbortSignal | null;
 }
 
 /**
