@@ -20,6 +20,8 @@ export interface AgentOptions {
     tools?: AgentTool[];
     /** 是否开启流式输出，默认 false */
     stream?: boolean;
+    /** 工具调用循环上限，默认 0（不限制）；超过上限以 error reject */
+    maxSteps?: number;
 }
 
 export declare class Agent {
@@ -30,6 +32,8 @@ export declare class Agent {
     tools: AgentTool[];
     systemPrompt: string;
     stream: boolean;
+    /** 工具调用循环上限，0 表示不限制 */
+    maxSteps: number;
 
     /**
      * 执行对话循环：模型请求 → 工具调用 → 结果回传 → 继续请求，直至拿到最终文本。

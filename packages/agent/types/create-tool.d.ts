@@ -23,6 +23,12 @@ export interface CreateToolInput {
     execute?: ToolExecutor;
 }
 
+/** ct.create 的可选配置 */
+export interface CreateToolOptions {
+    /** 前端工具等待页面回传的超时毫秒数，0 / 缺省表示不限制；超时以 error reject */
+    timeout?: number;
+}
+
 export declare class CreateTool {
     constructor(ms: MessageSender);
 
@@ -31,8 +37,8 @@ export declare class CreateTool {
 
     /**
      * 包装一个工具为标准 AgentTool：
-     * - 有 execute：执行前后通过消息流推送 pending / success / error；
-     * - 无 execute：只推送 pending，随后挂起，等待 globalThis[id](result) 唤醒。
+     * - 有 execute：执行前后通过消息流推送 pending / success / error；失败时抛错由 callFuns 转成文本；
+     * - 无 execute：只推送 pending，随后挂起，等待 globalThis[id](result, status?) 唤醒。
      */
-    create(input: CreateToolInput): AgentTool;
+    create(input: CreateToolInput, options?: CreateToolOptions): AgentTool;
 }

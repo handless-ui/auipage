@@ -257,7 +257,7 @@ export default function ({ describe, it, expect }) {
             });
         });
 
-        it("execute reject：ms.send 收到 pending → error+result(err)", () => {
+        it("execute reject：ms.send 收到 pending → error+result(err)，并继续抛错", () => {
             const sent = [];
             const ms = { send: (info) => sent.push(info) };
             const ct = new CreateTool(ms);
@@ -266,15 +266,17 @@ export default function ({ describe, it, expect }) {
                 execute: async () => { throw new Error("kapow"); }
             });
 
-            return t.execute({}).then((res) => {
-                // expect.toBeInstanceOf 在 @oipage/testjs 上不存在，改用 instanceof 手动断言
-                expect(res instanceof Error).toBe(true);
-                expect(res.message).toBe("kapow");
-                // 同上：toolInfo 引用被原地更新
-                expect(sent[0]).toBe(sent[1]);
-                expect(sent[0].status).toBe("error");
-                expect(sent[0].result).toBe(res);
-            });
+            // 事件里的 result 保持错误对象（SSE 序列化后是 {}），但执行本身抛错交给 callFuns 转文本
+            return t.execute({}).then(
+                () => { throw new Error("应 reject"); },
+                (res) => {
+                    expect(res instanceof Error).toBe(true);
+                    expect(res.message).toBe("kapow");
+                    expect(sent[0]).toBe(sent[1]);
+                    expect(sent[0].status).toBe("error");
+                    expect(sent[0].result).toBe(res);
+                }
+            );
         });
     });
 

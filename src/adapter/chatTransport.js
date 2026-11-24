@@ -1,4 +1,4 @@
-import { ChatTransportAdapter, generator } from "@auipage/core";
+import { ChatTransportAdapter, generator, toModelMessages } from "@auipage/core";
 import { fetch } from "@auipage/fetch";
 import { $remote } from "./tool.js";
 
@@ -6,14 +6,15 @@ import { $remote } from "./tool.js";
 export default new ChatTransportAdapter({
 
     /**
-     * @param messages - 聊天消息历史数组
-     * @param context - 比如context.tools可用的工具对象集合等
+     * @param messages - 本次发送的页面消息数组
+     * @param context - 比如 context.history（本会话历史）、context.tools（可用工具）等
      */
     // https://zxl20070701.github.io/notebook/index.html#/program/language/javascript/grammar/iterator-generator
     async *run({ messages, context }) {
 
-        // 开启一场新的对话以后，虽然还是原来的对话界面，但历史消息应该进行预处理，而不是直接使用原始消息
-        // console.log("本对话的历史消息", context.history);
+        // 页面消息是富片段，需先转成模型消息，否则多轮对话没有上下文
+        const history = toModelMessages(context.history);
+        const current = toModelMessages(messages);
 
         // 显示思考状态
         yield { type: "loading", text: "思考中..." };
@@ -26,7 +27,7 @@ export default new ChatTransportAdapter({
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    messages,
+                    messages: history.concat(current),
                     tools: context.tools
                 })
             }).then(res => {

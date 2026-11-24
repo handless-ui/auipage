@@ -49,6 +49,9 @@ export default {
                             ...data.tools.map((tool) => ct.create(tool))
                         ],
                         systemPrompt: "如果可以，请尽力用showPlain工具显示文本文件内容",
+
+                        // 工具调用循环上限
+                        maxSteps: 8,
                     }).generate(data.messages, void 0, function thinkback(text) {
                         ms.send({
                             type: "thinking",
@@ -58,6 +61,13 @@ export default {
                         ms.send({
                             type: "text",
                             text: result,
+                        });
+                        ms.end();
+                    }).catch(function (error) {
+                        // 出错也要结束 SSE，否则页面一直等到超时
+                        ms.send({
+                            type: "text",
+                            text: "请求失败：" + (error && error.message ? error.message : error),
                         });
                         ms.end();
                     });
@@ -73,7 +83,7 @@ export default {
                 req.on('end', () => {
                     const data = JSON.parse(postData);
                     if (globalThis[data.id]) {
-                        globalThis[data.id](data.result);
+                        globalThis[data.id](data.result, data.status);
                         delete globalThis[data.id];
                     }
 
