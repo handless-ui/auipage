@@ -71,6 +71,7 @@ export type {
 export { default as defineTool } from "./define-tool.js";
 
 /* ---------- 消息与会话 ---------- */
+export { default as toModelMessages } from "./to-model-messages.js";
 export type {
     TextContentType,
     TextContentPart,

@@ -12,3 +12,6 @@ v0.2.0:
       - 优化改造:
         1、请求支持 timeout 与 signal，可主动取消
         2、非 2xx 响应新增 http-error 事件，不再只有 ok=false
+        3、流式生成器取消后清空挂起队列，不再堆积残留
+      - 新增功能:
+        1、新增 toModelMessages，把页面消息转成模型入参

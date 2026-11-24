@@ -10,3 +10,5 @@ export { default as ChatContentRuntime } from "./ChatContentRuntime.js";
 export { default as defineTool } from "./defineTool.js";
 export { default as generator } from "./generator.js";
 export { default as MessageStream } from "./MessageStream.js";
+
+export { default as toModelMessages } from "./tools/toModelMessages.js";
