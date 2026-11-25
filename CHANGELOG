@@ -21,3 +21,9 @@ v0.2.0:
       - 新增功能:
         1、Agent 支持 maxSteps（默认 0，不限制）
         2、新增 toModelMessages，把页面消息转成模型入参
+        3、新增 AuiPage.stop()：执行中主动结束，内容保留、消息组标记 stopped，sendMessage 正常 resolve
+        4、新增 AuiPage.cancel()：取消本轮，消息组标记 cancelled，sendMessage 以「已取消」reject
+        5、主动结束与取消的那一轮仍入库，存或丢由业务自行决定
+        6、task:end 增加 by（user / tool），取消时另带 displayed，列出已显示条目供界面撤销
+        7、工具 execute / render 拿到任务控制句柄，可直接 stop() / cancel() 结束整轮
+        8、取消信号经 context.signal 透传，Agent / model 均支持中断

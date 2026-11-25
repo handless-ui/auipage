@@ -12,6 +12,9 @@ function Agent(option) {
 
     // 工具调用循环上限，0 表示不限制
     this.maxSteps = option.maxSteps > 0 ? option.maxSteps : 0;
+
+    // 取消信号，透传给每次模型请求
+    this.signal = option.signal || null;
 }
 
 Agent.prototype.generate = function (messages, logback, thinkback) {

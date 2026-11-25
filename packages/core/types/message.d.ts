@@ -57,4 +57,10 @@ export interface ChatContentMessage {
  */
 export interface HistoryMessageGroup {
     messages: ChatContentMessage[];
+    /**
+     * 该轮的状态，0.2.0 起提供：
+     * complete（正常完成，通常省略）、cancelled（被 AuiPage.stop() 取消）。
+     * append 时据此决定入库、丢弃还是另做标记。
+     */
+    status?: "complete" | "stopped" | "cancelled";
 }

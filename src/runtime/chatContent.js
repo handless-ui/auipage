@@ -1,6 +1,8 @@
 import { ChatContentRuntime } from "@auipage/core";
 
-// 对话内容视图
+// 片段 → 节点：取消时按 task:end 的 displayed 找出本次新增的节点
+const partsMap = new WeakMap();
+
 export default new ChatContentRuntime({
 
     // 初始化历史消息
@@ -31,10 +33,11 @@ export default new ChatContentRuntime({
     // 追加消息
     append(role, content) {
         let rootEl = browserjs("#message-list-id");
+        let el;
 
         // 加载中
         if (content.type === "loading") {
-            browserjs("<div class='must-last'>" + content.text + "</div>").css({
+            el = browserjs("<div class='must-last'>" + content.text + "</div>").css({
                 padding: "10px",
                 color: "gray"
             }).appendTo(rootEl).scrollTop();
@@ -42,7 +45,7 @@ export default new ChatContentRuntime({
 
         // 思考中
         else if (content.type === "thinking") {
-            let thinkingEl = browserjs("<div class='must-last'>" + content.text + "</div>").css({
+            el = browserjs("<div class='must-last'>" + content.text + "</div>").css({
                 maxHeight: "100px",
                 overflow: "auto",
                 borderRadius: "10px",
@@ -51,18 +54,17 @@ export default new ChatContentRuntime({
                 fontSize: "14px"
             }).appendTo(rootEl).scrollTop();
 
+            partsMap.set(content, el[0]);
+
             return function stream(text) {
-                thinkingEl[0].innerHTML += text;
-                thinkingEl.scrollTop();
-
-                thinkingEl[0].scrollTop = thinkingEl[0].scrollHeight;
-            }
-
+                el[0].innerHTML += text;
+                el[0].scrollTop = el[0].scrollHeight;
+            };
         }
 
         // 文本消息
         else if (content.type === "text") {
-            browserjs("<div>" + content.text + "</div>").css({
+            el = browserjs("<div>" + content.text + "</div>").css({
                 padding: "12px 16px",
                 marginBottom: "8px",
                 borderRadius: role === "user" ? "10px 10px 0 10px" : "10px 10px 10px 0",
@@ -76,20 +78,25 @@ export default new ChatContentRuntime({
 
         // 工具
         else if (content.type === "tool-call") {
-
-            console.log(content);
-
             return function stream(data) {
 
-                // 有render的时候，需要render返回值
-                if(data.render){
+                // 有 render 的时候，需要 render 返回值
+                if (data.render) {
                     return data.render(data);
                 }
 
             };
-
         }
 
+        if (el) partsMap.set(content, el[0]);
+    },
+
+    // 取消后按 displayed 移除本次新增的节点；要不要撤销、撤哪几条，由业务自己决定
+    removeByParts(displayed) {
+        (displayed || []).forEach(({ part }) => {
+            const el = partsMap.get(part);
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
     }
 
 });

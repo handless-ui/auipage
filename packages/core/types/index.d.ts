@@ -14,6 +14,7 @@ export {
     type AuiPageRuntimeSet,
     type AuiLifecycleEvent,
     type AuiTaskStatus,
+    type AuiEndBy,
     type TaskLifecyclePayload,
     type TaskEndPayload,
     type TaskStartHandler,

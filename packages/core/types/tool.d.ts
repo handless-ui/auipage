@@ -16,6 +16,12 @@ export interface ToolRenderData {
     result: unknown;
     /** execute 的执行状态 */
     status: ToolCallStatus;
+    /** 当前任务 id（0.2.0 起提供） */
+    taskId?: string;
+    /** 主动结束这一轮：内容保留、标记 stopped、sendMessage resolve（0.2.0 起提供） */
+    stop?: () => boolean;
+    /** 取消这一轮：丢弃界面、标记 cancelled、sendMessage 以 "已取消" reject（0.2.0 起提供） */
+    cancel?: () => boolean;
     [key: string]: unknown;
 }
 

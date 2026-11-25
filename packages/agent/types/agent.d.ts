@@ -22,6 +22,11 @@ export interface AgentOptions {
     stream?: boolean;
     /** 工具调用循环上限，默认 0（不限制）；超过上限以 error reject */
     maxSteps?: number;
+    /**
+     * 取消信号（0.2.0 起提供），会透传给每次模型请求；
+     * abort 后本轮以错误 reject，可配合 AuiPage.stop() 的 context.signal 使用。
+     */
+    signal?: AbortSignal | null;
 }
 
 export declare class Agent {
@@ -34,6 +39,8 @@ export declare class Agent {
     stream: boolean;
     /** 工具调用循环上限，0 表示不限制 */
     maxSteps: number;
+    /** 取消信号，未设置时为 null */
+    signal: AbortSignal | null;
 
     /**
      * 执行对话循环：模型请求 → 工具调用 → 结果回传 → 继续请求，直至拿到最终文本。

@@ -43,6 +43,7 @@ export default async function runConversation(_this, messages, logback, thinkbac
             messages,
             tools: _this.tools,
             stream: _this.stream,
+            signal: _this.signal || void 0,
         }, logback, thinkback);
 
         const hasToolCalls = appendAssistantMessage(messages, result);

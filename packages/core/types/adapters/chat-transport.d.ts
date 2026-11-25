@@ -18,6 +18,11 @@ export interface ChatTransportRunParams {
         history: HistoryMessageGroup[];
         /** AuiPage 构造时注册的工具描述 */
         tools: Array<{ description: ToolDescription }>;
+        /**
+         * 取消信号（0.2.0 起提供）：透传给底层 HTTP / 模型请求，
+         * AuiPage.stop() 时 abort。不接则取消只在页面侧生效，底层请求仍会跑完。
+         */
+        signal?: AbortSignal;
     };
 }
 

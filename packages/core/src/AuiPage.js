@@ -51,6 +51,14 @@ function normalizeContent(content) {
     return [content];
 }
 
+// 取消时等待 next() 落定的兜底上限（毫秒），防止适配器忽略 signal 时页面停在执行中
+const DEFAULT_STOP_TIMEOUT = 5000;
+
+// 被取消的任务：后续分片与工具结果一律丢弃；被 stop 则继续把结果落地
+function isCancelled(task) {
+    return !!(task.endRequest && task.endRequest.status === "cancelled");
+}
+
 function AuiPage(options) {
     options = options || {};
 
@@ -86,6 +94,9 @@ function AuiPage(options) {
     // 当前正在执行的任务句柄（sendMessage 进入执行期时写入）
     this._currentTask = null;
 
+    // 取消时等待 next 落定的兜底时长
+    this._stopTimeout = options.stopTimeout > 0 ? options.stopTimeout : DEFAULT_STOP_TIMEOUT;
+
     // 请求对话列表
     invoke(this.adapter.ThreadList, "list", (threads) => {
         this.runtime.ThreadList?.init(threads);
@@ -118,6 +129,15 @@ AuiPage.prototype.off = function (event, handler) {
     return this;
 };
 
+// 交给界面渲染，同时登记显示条目：取消时据此告诉界面涉及哪几条
+AuiPage.prototype._render = function (task, role, part) {
+    const content = this.runtime.ChatContent;
+    if (!content || typeof content.append !== "function") return;
+
+    task.displayed.push({ index: task.displayed.length, role: role, part: part });
+    return content.append(role, part);
+};
+
 AuiPage.prototype.sendMessage = function (message) {
     let _this = this;
 
@@ -133,13 +153,17 @@ AuiPage.prototype.sendMessage = function (message) {
 
         this.isExecuting = true;
 
+        // 取消通道：signal 交给适配器，由它透传到底层 HTTP / 模型请求
+        const controller = typeof AbortController === "function" ? new AbortController() : null;
+
         let generator;
         try {
             generator = this.adapter.ChatTransport.run({
                 messages: [input],
                 context: {
                     history: this.currentMessages,
-                    tools: this.tools_description
+                    tools: this.tools_description,
+                    signal: controller ? controller.signal : void 0
                 }
             });
         } catch (error) {
@@ -155,13 +179,19 @@ AuiPage.prototype.sendMessage = function (message) {
             return;
         }
 
+        // 结束信号：工具或界面里发起 stop / cancel 时唤醒等待中的流程
+        let signalEnd;
+        const endSignal = new Promise(function (resolve) { signalEnd = resolve; });
+
         // 写入任务上下文，供后续协同使用
         let taskId = String(++this._taskSeq);
-        this._currentTask = {
+        const task = this._currentTask = {
             taskId,
             message: input,
             generator,
+            controller,
             cacheMessages: [input],
+            displayed: [],
             preType: "",
             preText: "",
             textTypes: ["loading", "thinking", "text"],
@@ -169,7 +199,11 @@ AuiPage.prototype.sendMessage = function (message) {
             tool_calls: {},
             resolve,
             reject,
-            ended: false
+            ended: false,
+            endRequest: null,
+            endSignal: { promise: endSignal, resolve: signalEnd },
+            busy: false,
+            nextPending: false
         };
 
         // 任务开始生命周期
@@ -181,37 +215,141 @@ AuiPage.prototype.sendMessage = function (message) {
 
         // 回显用户消息
         for (let i = 0; i < content.length; i++) {
-            this.runtime.ChatContent?.append(input.role, content[i]);
+            this._render(task, input.role, content[i]);
         }
 
-        (function doit() {
-            if (!_this._currentTask || _this._currentTask.ended) return;
+        const finishEnd = () => {
+            const request = task.endRequest;
+            if (task.ended || !request) return;
+            this._finalize(request.status, true, null, request.by, task);
+        };
+
+        const pump = () => {
+            if (task.ended) return;
+            if (task.endRequest) return finishEnd();
 
             let step;
             try {
                 step = generator.next();
             } catch (error) {
-                _this._finalize("error", false, error);
+                this._finalize("error", false, error);
                 return;
             }
 
+            task.nextPending = true;
+
             Promise.resolve(step).then(function (res) {
-                if (!_this._currentTask || _this._currentTask.ended) return;
+                task.nextPending = false;
+
+                // next 未决期间发起过结束请求：此刻已落定，可以安全收尾
+                if (task.endRequest) return finishEnd();
+                if (task.ended) return;
 
                 if (res && res.done) {
                     _this._finalize("complete", true);
                     return;
                 }
 
-                _this._handleChunk(_this._currentTask, res).then(doit, function (error) {
+                task.busy = true;
+                _this._handleChunk(task, res).then(function () {
+                    task.busy = false;
+
+                    if (task.endRequest) return finishEnd();
+                    if (task.ended) return;
+                    pump();
+                }, function (error) {
+                    task.busy = false;
+
+                    if (task.endRequest) return finishEnd();
                     _this._finalize("error", false, error);
                 });
             }, function (error) {
+                task.nextPending = false;
+
+                if (task.endRequest) return finishEnd();
                 _this._finalize("error", false, error);
             });
-        })();
+        };
+
+        pump();
 
     });
+};
+
+/**
+ * 统一结束请求：stopped 当成功收尾，cancelled 当取消。
+ * 有分片或工具正在处理时不立即收尾，等它把手上的结果落完再结束，
+ * 否则这次工具调用会从消息里丢掉。
+ *
+ * @param {"stopped"|"cancelled"} status 结束状态
+ * @param {"user"|"tool"} by 发起方
+ * @param {object} [task] 指定任务；工具侧传入自己所属的任务，避免打到下一轮
+ * @returns {boolean} 当时是否有可结束的任务
+ */
+AuiPage.prototype._requestEnd = function (status, by, task) {
+    task = task || this._currentTask;
+    if (!task || task.ended) return false;
+    if (task.endRequest) return true;
+
+    task.endRequest = { status: status, by: by };
+
+    // 中断底层请求；适配器把 context.signal 透传下去即可立即停止
+    callSafely(function () {
+        if (task.controller) task.controller.abort();
+    });
+
+    // 唤醒可能卡在界面交互里的流程
+    callSafely(task.endSignal.resolve);
+
+    if (task.busy || task.nextPending) {
+        // 等着当前分片落定；兜底超时防止适配器忽略 signal 时页面停在执行中
+        const _this = this;
+        task.stopTimer = setTimeout(function () {
+            _this._finalize(status, true, null, by, task);
+        }, this._stopTimeout);
+        if (task.stopTimer && typeof task.stopTimer.unref === "function") task.stopTimer.unref();
+
+        return true;
+    }
+
+    this._finalize(status, true, null, by, task);
+    return true;
+};
+
+/**
+ * 主动结束当前任务：当作成功收尾——内容保留、入库标记 stopped、sendMessage 正常 resolve。
+ * 与 cancel 的区别只在这份“怎么收下这一轮”的口径，不在谁点的。
+ *
+ * @returns {boolean} 当时是否有正在执行的任务
+ */
+AuiPage.prototype.stop = function () {
+    return this._requestEnd("stopped", "user");
+};
+
+/**
+ * 取消当前任务：中断底层请求，已产出的部分照常入库并标记 cancelled，
+ * task:end 附带 displayed，界面可自行撤销。
+ *
+ * @returns {boolean} 当时是否有正在执行的任务
+ */
+AuiPage.prototype.cancel = function () {
+    return this._requestEnd("cancelled", "user");
+};
+
+/**
+ * 交给工具的任务控制句柄：execute / render 里直接调用 stop() 或 cancel()。
+ *
+ * @param {object} task 任务句柄
+ * @param {object} call 工具调用分片
+ */
+AuiPage.prototype._toolControl = function (task, call) {
+    const _this = this;
+    return {
+        taskId: task.taskId,
+        toolCallId: call.id,
+        stop: function () { return _this._requestEnd("stopped", "tool", task); },
+        cancel: function () { return _this._requestEnd("cancelled", "tool", task); }
+    };
 };
 
 /**
@@ -222,7 +360,7 @@ AuiPage.prototype.sendMessage = function (message) {
  * @param {{value: object, done: boolean}} chunk 生成器返回项
  */
 AuiPage.prototype._handleChunk = async function (task, chunk) {
-    if (!task || task.ended) return;
+    if (!task || task.ended || task.endRequest) return;
 
     const value = (chunk && chunk.value) || {};
     const text = typeof value.text === "string" ? value.text : "";
@@ -245,7 +383,7 @@ AuiPage.prototype._handleChunk = async function (task, chunk) {
         } else {
             task.preText = text;
             task.preType = value.type;
-            task.streamFun = this.runtime.ChatContent?.append("assistant", value);
+            task.streamFun = this._render(task, "assistant", value);
         }
 
     } else {
@@ -264,19 +402,20 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
 
     // 工具开始调用（前端工具 + 后端工具）
     if (call.status === "pending") {
-        const updater = asUpdater(this.runtime.ChatContent?.append("assistant", call));
+        const updater = asUpdater(this._render(task, "assistant", call));
         if (updater) task.tool_calls[call.id] = updater;
 
         // 后端工具由 ChatTransport 自己执行，这里只挂视图
         if (call.caller !== "frontend") return;
 
-        // 前端工具需要自己执行
+        // 前端工具需要自己执行；第二个参数是任务控制句柄，工具里可直接 stop / cancel
         const execute = this.tools_execute[call.name];
+        const control = this._toolControl(task, call);
         let result, status;
 
         if (typeof execute === "function") {
             try {
-                result = await execute(call.args);
+                result = await execute(call.args, control);
                 status = "success";
             } catch (error) {
                 result = error;
@@ -287,19 +426,56 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
             status = "error";
         }
 
+        // 工具执行期间被取消：结果丢弃；被 stop 则继续把这次调用的结果落地
+        if (task.ended || isCancelled(task)) return;
+
         const render = this.tools_render[call.name];
 
         // 需要视图交互获取结果
         if (typeof render === "function" && updater) {
-            let result_ui, status_ui;
+            const pending = Promise.resolve(updater(Object.assign({}, call, {
+                result: result,
+                status: status,
+                render: render,
+                taskId: control.taskId,
+                stop: control.stop,
+                cancel: control.cancel
+            })));
 
-            try {
-                result_ui = await updater(Object.assign({}, call, { result, status, render }));
-                status_ui = "success";
-            } catch (error) {
-                result_ui = error;
-                status_ui = "error";
+            // 界面还挂着等交互时被结束：放弃等待，按 execute 的结果收尾
+            const outcome = await Promise.race([
+                pending.then(function (value) {
+                    return { value: value };
+                }, function (error) {
+                    return { error: error };
+                }),
+                task.endRequest
+                    ? Promise.resolve({ ended: true })
+                    : task.endSignal.promise.then(function () { return { ended: true }; })
+            ]);
+
+            if (task.ended || isCancelled(task)) return;
+
+            if (outcome.ended) {
+                callSafely(updater, Object.assign({}, call, { result: result, status: status }));
+                delete task.tool_calls[call.id];
+
+                task.cacheMessages.push({
+                    role: "assistant",
+                    content: [{
+                        type: "tool-call",
+                        name: call.name,
+                        args: call.args,
+                        result,
+                        status
+                    }]
+                });
+
+                return;
             }
+
+            let result_ui = outcome.error !== void 0 ? outcome.error : outcome.value;
+            let status_ui = outcome.error !== void 0 ? "error" : "success";
 
             callSafely(updater, Object.assign({}, call, { result: result_ui, status: status_ui }));
             delete task.tool_calls[call.id];
@@ -372,17 +548,24 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
 };
 
 /**
- * 收尾当前 sendMessage 任务。统一处理：残留文本归并、入库、isExecuting 复位、
+ * 收尾 sendMessage 任务。统一处理：残留文本归并、入库、isExecuting 复位、
  * 发出 task:end 事件、释放 Promise。
  *
- * @param {"complete"|"error"} status 任务结束原因
- * @param {boolean} isHistory 是否走入库分支（complete 始终 true；error 始终 false）
+ * @param {"complete"|"stopped"|"error"|"cancelled"} status 任务结束原因
+ * @param {boolean} isHistory 是否走入库分支（complete / stopped / cancelled 为 true，error 为 false）
  * @param {Error|string} [err] status === "error" 时附带的错误对象
+ * @param {"user"|"tool"} [by] stopped / cancelled 时的发起方
+ * @param {object} [taskArg] 指定任务；兜底计时器传入，避免落到下一轮
  */
-AuiPage.prototype._finalize = async function (status, isHistory, err) {
-    let task = this._currentTask;
+AuiPage.prototype._finalize = async function (status, isHistory, err, by, taskArg) {
+    let task = taskArg || this._currentTask;
     if (!task || task.ended) return;
     task.ended = true;
+
+    // 清理兜底计时器，并释放还在等结束信号的流程
+    if (task.stopTimer && typeof clearTimeout === "function") clearTimeout(task.stopTimer);
+    task.stopTimer = null;
+    callSafely(task.endSignal.resolve);
 
     // 1. 残留文本归并到 cacheMessages
     if (task.preText) {
@@ -406,6 +589,9 @@ AuiPage.prototype._finalize = async function (status, isHistory, err) {
         try {
             let historyMessages = toHistoryMessages({ messages: task.cacheMessages });
 
+            // 主动结束与取消也入库，只打标记；存或丢由 MessageHistory.append 自己决定
+            if (status === "stopped" || status === "cancelled") historyMessages.status = status;
+
             if (this.currentThreadId === void 0) {
                 let newThread = await this.adapter.ThreadList?.new?.(historyMessages);
 
@@ -423,13 +609,28 @@ AuiPage.prototype._finalize = async function (status, isHistory, err) {
     }
 
     // 4. 复位、emit task:end、释放 Promise
-    this.isExecuting = false;
-    this._currentTask = null;
+    if (this._currentTask === task) {
+        this.isExecuting = false;
+        this._currentTask = null;
+    }
 
     const finalStatus = failure ? "error" : status;
-    this._emit("task:end", { taskId: task.taskId, threadId: this.currentThreadId, message: task.message, status: finalStatus });
+
+    const payload = {
+        taskId: task.taskId,
+        threadId: this.currentThreadId,
+        message: task.message,
+        status: finalStatus
+    };
+
+    // 主动结束 / 取消时说明是谁发起的；取消另附已显示条目，界面据此决定是否撤销
+    if (finalStatus === "stopped" || finalStatus === "cancelled") payload.by = by || "user";
+    if (finalStatus === "cancelled") payload.displayed = task.displayed;
+
+    this._emit("task:end", payload);
 
     if (finalStatus === "error") task.reject(failure || new Error("任务执行失败"));
+    else if (finalStatus === "cancelled") task.reject("已取消");
     else task.resolve();
 };
 

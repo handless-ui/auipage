@@ -29,7 +29,9 @@ export default new ChatTransportAdapter({
                 body: JSON.stringify({
                     messages: history.concat(current),
                     tools: context.tools
-                })
+                }),
+                // 页面点“停止”时由 AuiPage 提供，透传给底层请求以立即中断
+                signal: context.signal
             }).then(res => {
 
                 res.on('data', payload => {

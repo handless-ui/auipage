@@ -12,10 +12,17 @@ export default {
 
                 // 和页面的消息发送对象
                 let ms = new MessageStream(function (data) {
+                    // 页面已断开（用户点了停止）时不再往关闭的连接写
+                    if (res.writableEnded) return;
                     res.write("data: " + JSON.stringify(data) + "\n\n");
                 }, function () {
+                    if (res.writableEnded) return;
                     res.end();
                 });
+
+                // 页面断开就中断本轮模型请求，避免白跑
+                const controller = new AbortController();
+                res.on("close", () => controller.abort());
 
                 let ct = new CreateTool(ms);
 
@@ -52,18 +59,25 @@ export default {
 
                         // 工具调用循环上限
                         maxSteps: 8,
+
+                        // 取消信号：页面断开时中断模型请求
+                        signal: controller.signal,
                     }).generate(data.messages, void 0, function thinkback(text) {
                         ms.send({
                             type: "thinking",
                             text,
                         });
                     }).then(function (result) {
+                        if (controller.signal.aborted) return;
                         ms.send({
                             type: "text",
                             text: result,
                         });
                         ms.end();
                     }).catch(function (error) {
+                        // 主动取消导致的 reject 不必回写
+                        if (controller.signal.aborted) return;
+
                         // 出错也要结束 SSE，否则页面一直等到超时
                         ms.send({
                             type: "text",
