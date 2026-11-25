@@ -1,18 +1,62 @@
 import toHistoryMessages from "./tools/toHistoryMessages.js";
 
+// 挂载适配器/运行时：name 缺失时回退到配置对象的 key，避免直接崩
+function mount(aui, list, suffix) {
+    const result = {};
+    for (const [key, instance] of Object.entries(list || {})) {
+        if (!instance) continue;
+        instance.aui = aui;
+        const name = typeof instance.name === "string" ? instance.name : "";
+        result[name.replace(suffix, "") || key.replace(suffix, "")] = instance;
+    }
+    return result;
+}
+
+// 适配器调用：Promise 就等完成，同步值直接处理，同步返回 undefined 视为未实现
+function invoke(target, method, apply, args) {
+    if (!target || typeof target[method] !== "function") return;
+    let ret;
+    try {
+        ret = target[method].apply(target, args || []);
+    } catch (e) {
+        return;
+    }
+    if (ret === void 0 || ret === null) return;
+    if (typeof ret.then === "function") {
+        ret.then(apply, function () { });
+        return;
+    }
+    if (typeof apply === "function") apply(ret);
+}
+
+// 安全调用：返回值可能为 void / Promise，异常与拒绝都不外泄
+function callSafely(fn, arg) {
+    if (typeof fn !== "function") return;
+    try {
+        const ret = fn(arg);
+        if (ret && typeof ret.then === "function") ret.then(null, function () { });
+    } catch (e) { /* 忽略视图与上报通道异常 */ }
+}
+
+// 视图更新函数：runtime 的 append 允许返回 void（类型契约如此），这里统一兜底
+function asUpdater(ret) {
+    return typeof ret === "function" ? ret : null;
+}
+
+// content 规范化为片段数组：字符串按整段处理，避免逐字符渲染
+function normalizeContent(content) {
+    if (Array.isArray(content)) return content;
+    if (content === void 0 || content === null) return [];
+    if (typeof content === "string") return content === "" ? [] : [{ type: "text", text: content }];
+    return [content];
+}
+
 function AuiPage(options) {
+    options = options || {};
 
     // 连接适配器和运行时视图
-    this.adapter = {};
-    this.runtime = {};
-    for (let instance of Object.values(options.adapter)) {
-        instance.aui = this;
-        this.adapter[instance.name.replace("Adapter", "")] = instance;
-    }
-    for (let instance of Object.values(options.runtime)) {
-        instance.aui = this;
-        this.runtime[instance.name.replace("Runtime", "")] = instance;
-    }
+    this.adapter = mount(this, options.adapter, "Adapter");
+    this.runtime = mount(this, options.runtime, "Runtime");
 
     // 工具注册
     this.tools_execute = {};
@@ -43,12 +87,9 @@ function AuiPage(options) {
     this._currentTask = null;
 
     // 请求对话列表
-    this.adapter.ThreadList.list()?.then((threads) => {
-
-        // 在页面中显示对话列表
-        this.runtime.ThreadList.init(threads);
+    invoke(this.adapter.ThreadList, "list", (threads) => {
+        this.runtime.ThreadList?.init(threads);
     });
-
 }
 
 // 触发生命周期事件；handler 抛错被吞掉，避免影响 sendMessage 主流程
@@ -83,17 +124,32 @@ AuiPage.prototype.sendMessage = function (message) {
     return new Promise((resolve, reject) => {
 
         if (this.isExecuting) return reject("当前正在执行中");
+
+        if (!message || typeof message !== "object") return reject("消息格式不正确");
+
+        // content 规范化：字符串包成单个 text 片段，避免逐字符渲染
+        const content = normalizeContent(message.content);
+        const input = Array.isArray(message.content) ? message : Object.assign({}, message, { content });
+
         this.isExecuting = true;
 
-        let generator = this.adapter.ChatTransport.run({
-            messages: [message],
-            context: {
-                history: this.currentMessages,
-                tools: this.tools_description
-            }
-        });
+        let generator;
+        try {
+            generator = this.adapter.ChatTransport.run({
+                messages: [input],
+                context: {
+                    history: this.currentMessages,
+                    tools: this.tools_description
+                }
+            });
+        } catch (error) {
+            // run() 同步抛错：复位状态，否则页面永久卡在“执行中”
+            this.isExecuting = false;
+            reject(error);
+            return;
+        }
 
-        if (!generator) {
+        if (!generator || typeof generator.next !== "function") {
             this.isExecuting = false;
             reject("ChatTransport.run() 返回空值");
             return;
@@ -103,9 +159,9 @@ AuiPage.prototype.sendMessage = function (message) {
         let taskId = String(++this._taskSeq);
         this._currentTask = {
             taskId,
-            message,
+            message: input,
             generator,
-            cacheMessages: [message],
+            cacheMessages: [input],
             preType: "",
             preText: "",
             textTypes: ["loading", "thinking", "text"],
@@ -120,184 +176,38 @@ AuiPage.prototype.sendMessage = function (message) {
         this._emit("task:start", {
             taskId,
             threadId: this.currentThreadId,
-            message
+            message: input
         });
 
-        let cacheMessages = this._currentTask.cacheMessages;
-        let preType = this._currentTask.preType;
-        let preText = this._currentTask.preText;
-        let textTypes = this._currentTask.textTypes;
-        let streamFun = this._currentTask.streamFun;
-        let tool_calls = this._currentTask.tool_calls;
-
-        for (let i = 0; i < message.content.length; i++) {
-            this.runtime.ChatContent.append(message.role, message.content[i]);
+        // 回显用户消息
+        for (let i = 0; i < content.length; i++) {
+            this.runtime.ChatContent?.append(input.role, content[i]);
         }
 
-        // 同步写入 _currentTask 的小工具
-        let sync = function () {
-            _this._currentTask.preType = preType;
-            _this._currentTask.preText = preText;
-            _this._currentTask.streamFun = streamFun;
-        };
-
         (function doit() {
-            generator?.next().then(async function (res) {
-                if (!res.done) {
+            if (!_this._currentTask || _this._currentTask.ended) return;
 
-                    // 类型变了，或者是一种特殊类型
-                    if (res.value.type != preType || !textTypes.includes(res.value.type)) {
-                        streamFun = void 0;
+            let step;
+            try {
+                step = generator.next();
+            } catch (error) {
+                _this._finalize("error", false, error);
+                return;
+            }
 
-                        if (preText) {
-                            cacheMessages.push({
-                                role: "assistant", content: [{
-                                    type: preType,
-                                    text: preText
-                                }]
-                            });
-                            preText = "";
-                            preType = "";
-                        }
+            Promise.resolve(step).then(function (res) {
+                if (!_this._currentTask || _this._currentTask.ended) return;
 
-                        if (!textTypes.includes(res.value.type)) {
-
-                            // 工具调用
-                            if (res.value.type === "tool-call") {
-
-                                // 工具开始调用（前端工具+后端工具）
-                                if (res.value.status === "pending") {
-                                    tool_calls[res.value.id] = _this.runtime.ChatContent.append("assistant", res.value);
-
-                                    // 对于前端工具，需要自己执行工具调用
-                                    if (res.value.caller === "frontend") {
-                                        let result, status;
-
-                                        try {
-                                            result = await _this.tools_execute[res.value.name](res.value.args);
-                                            status = "success"; // 调用成功
-                                        } catch (error) {
-                                            result = error;
-                                            status = "error"; // 调用失败
-                                        }
-
-                                        let render = _this.tools_render[res.value.name];
-
-                                        // 需要视图交互获取结果
-                                        if (render) {
-                                            let result_ui, status_ui;
-
-                                            try {
-                                                result_ui = await tool_calls[res.value.id]({
-                                                    ...res.value,
-                                                    result,
-                                                    status,
-                                                    render
-                                                });
-                                                status_ui = "success";
-                                            } catch (error) {
-                                                result_ui = error;
-                                                status_ui = "error";
-                                            }
-
-                                            tool_calls[res.value.id]({
-                                                ...res.value,
-                                                result: result_ui,
-                                                status: status_ui
-                                            });
-                                            delete tool_calls[res.value.id];
-
-                                            cacheMessages.push({
-                                                role: "assistant", content: [{
-                                                    type: "tool-call",
-                                                    name: res.value.name,
-                                                    args: res.value.args,
-                                                    result,
-                                                    status,
-                                                    ui: {
-                                                        status: status_ui,
-                                                        result: result_ui
-                                                    }
-                                                }]
-                                            });
-
-                                            _this.adapter.ChatTransport.response("tool-result", {
-                                                id: res.value.id,
-                                                status: status_ui,
-                                                result: result_ui
-                                            });
-                                        }
-
-                                        // 没有render，就相当于纯粹的工具调用
-                                        else {
-                                            tool_calls[res.value.id]({
-                                                ...res.value,
-                                                result,
-                                                status
-                                            });
-                                            delete tool_calls[res.value.id];
-
-                                            cacheMessages.push({
-                                                role: "assistant", content: [{
-                                                    type: "tool-call",
-                                                    name: res.value.name,
-                                                    args: res.value.args,
-                                                    result,
-                                                    status
-                                                }]
-                                            });
-
-                                            _this.adapter.ChatTransport.response("tool-result", {
-                                                id: res.value.id,
-                                                result,
-                                                status
-                                            });
-                                        }
-
-                                    }
-
-                                }
-
-                                // 工具调用结束（后端工具）
-                                else if (res.value.status === "success" || res.value.status === "error") {
-                                    if (tool_calls[res.value.id]) {
-                                        tool_calls[res.value.id](res.value);
-                                        delete tool_calls[res.value.id];
-
-                                        cacheMessages.push({
-                                            role: "assistant", content: [{
-                                                type: "tool-call",
-                                                name: res.value.name,
-                                                args: res.value.args,
-                                                result: res.value.result,
-                                                status: res.value.status
-                                            }]
-                                        });
-                                    }
-                                }
-                            } else {
-                                // console.log("【其他消息】", res.value);
-                            }
-
-                        } else {
-                            preText = res.value.text;
-                            preType = res.value.type;
-                            streamFun = _this.runtime.ChatContent.append("assistant", res.value);
-                        }
-
-                    } else {
-                        preText += res.value.text;
-                        if (streamFun) streamFun(res.value.text);
-                    }
-
-                    sync();
-                    doit();
-                } else {
-                    sync();
+                if (res && res.done) {
                     _this._finalize("complete", true);
+                    return;
                 }
-            }, err => {
-                _this._finalize("error", false, err);
+
+                _this._handleChunk(_this._currentTask, res).then(doit, function (error) {
+                    _this._finalize("error", false, error);
+                });
+            }, function (error) {
+                _this._finalize("error", false, error);
             });
         })();
 
@@ -305,7 +215,164 @@ AuiPage.prototype.sendMessage = function (message) {
 };
 
 /**
- * 收尾当前 sendMessage 任务。统一处理：残留文本归并、是否入库、isExecuting 复位、
+ * 处理单个生成器分片。文本类分片按类型累积并通过 streamFun 流式追加，
+ * 工具调用分片交给 _handleToolCall。
+ *
+ * @param {object} task 当前任务句柄
+ * @param {{value: object, done: boolean}} chunk 生成器返回项
+ */
+AuiPage.prototype._handleChunk = async function (task, chunk) {
+    if (!task || task.ended) return;
+
+    const value = (chunk && chunk.value) || {};
+    const text = typeof value.text === "string" ? value.text : "";
+
+    // 类型变了，或者是一种特殊类型
+    if (value.type != task.preType || !task.textTypes.includes(value.type)) {
+        task.streamFun = void 0;
+
+        if (task.preText) {
+            task.cacheMessages.push({
+                role: "assistant",
+                content: [{ type: task.preType, text: task.preText }]
+            });
+            task.preText = "";
+            task.preType = "";
+        }
+
+        if (!task.textTypes.includes(value.type)) {
+            if (value.type === "tool-call") await this._handleToolCall(task, value);
+        } else {
+            task.preText = text;
+            task.preType = value.type;
+            task.streamFun = this.runtime.ChatContent?.append("assistant", value);
+        }
+
+    } else {
+        task.preText += text;
+        if (task.streamFun) callSafely(task.streamFun, value.text);
+    }
+};
+
+/**
+ * 工具调用分片：pending 时挂上视图并执行前端工具，success/error 时回填后端工具结果。
+ *
+ * @param {object} task 当前任务句柄
+ * @param {object} call 工具调用分片
+ */
+AuiPage.prototype._handleToolCall = async function (task, call) {
+
+    // 工具开始调用（前端工具 + 后端工具）
+    if (call.status === "pending") {
+        const updater = asUpdater(this.runtime.ChatContent?.append("assistant", call));
+        if (updater) task.tool_calls[call.id] = updater;
+
+        // 后端工具由 ChatTransport 自己执行，这里只挂视图
+        if (call.caller !== "frontend") return;
+
+        // 前端工具需要自己执行
+        const execute = this.tools_execute[call.name];
+        let result, status;
+
+        if (typeof execute === "function") {
+            try {
+                result = await execute(call.args);
+                status = "success";
+            } catch (error) {
+                result = error;
+                status = "error";
+            }
+        } else {
+            result = new Error("未注册的工具：" + call.name);
+            status = "error";
+        }
+
+        const render = this.tools_render[call.name];
+
+        // 需要视图交互获取结果
+        if (typeof render === "function" && updater) {
+            let result_ui, status_ui;
+
+            try {
+                result_ui = await updater(Object.assign({}, call, { result, status, render }));
+                status_ui = "success";
+            } catch (error) {
+                result_ui = error;
+                status_ui = "error";
+            }
+
+            callSafely(updater, Object.assign({}, call, { result: result_ui, status: status_ui }));
+            delete task.tool_calls[call.id];
+
+            task.cacheMessages.push({
+                role: "assistant",
+                content: [{
+                    type: "tool-call",
+                    name: call.name,
+                    args: call.args,
+                    result,
+                    status,
+                    ui: { status: status_ui, result: result_ui }
+                }]
+            });
+
+            invoke(this.adapter.ChatTransport, "response", null, ["tool-result", {
+                id: call.id,
+                status: status_ui,
+                result: result_ui
+            }]);
+        }
+
+        // 没有可用的视图入口，就当作纯工具调用
+        else {
+            if (updater) {
+                callSafely(updater, Object.assign({}, call, { result, status }));
+                delete task.tool_calls[call.id];
+            }
+
+            task.cacheMessages.push({
+                role: "assistant",
+                content: [{
+                    type: "tool-call",
+                    name: call.name,
+                    args: call.args,
+                    result,
+                    status
+                }]
+            });
+
+            invoke(this.adapter.ChatTransport, "response", null, ["tool-result", {
+                id: call.id,
+                result,
+                status
+            }]);
+        }
+
+        return;
+    }
+
+    // 工具调用结束（后端工具）
+    if (call.status === "success" || call.status === "error") {
+        if (task.tool_calls[call.id]) {
+            callSafely(task.tool_calls[call.id], call);
+            delete task.tool_calls[call.id];
+
+            task.cacheMessages.push({
+                role: "assistant",
+                content: [{
+                    type: "tool-call",
+                    name: call.name,
+                    args: call.args,
+                    result: call.result,
+                    status: call.status
+                }]
+            });
+        }
+    }
+};
+
+/**
+ * 收尾当前 sendMessage 任务。统一处理：残留文本归并、入库、isExecuting 复位、
  * 发出 task:end 事件、释放 Promise。
  *
  * @param {"complete"|"error"} status 任务结束原因
@@ -317,48 +384,41 @@ AuiPage.prototype._finalize = async function (status, isHistory, err) {
     if (!task || task.ended) return;
     task.ended = true;
 
-    let { taskId, message, cacheMessages, preType, preText, resolve, reject } = task;
-
     // 1. 残留文本归并到 cacheMessages
-    if (preText) {
-        cacheMessages.push({
+    if (task.preText) {
+        task.cacheMessages.push({
             role: "assistant",
-            content: [{ type: preType, text: preText }]
+            content: [{ type: task.preType, text: task.preText }]
         });
         task.preText = "";
         task.preType = "";
     }
 
-    // 2. 入库分支
-    if (isHistory) {
+    // 2. 让生成器停止继续产出（此时 next() 已 settle，可安全调用）
+    if (typeof task.generator.return === "function") {
+        callSafely(function () { return task.generator.return(); });
+    }
+
+    // 3. 入库；失败降级为 error，避免前端误以为消息已保存
+    let failure = status === "error" ? err : null;
+
+    if (isHistory && !failure) {
         try {
-            let historyMessages = toHistoryMessages({ messages: cacheMessages });
+            let historyMessages = toHistoryMessages({ messages: task.cacheMessages });
 
             if (this.currentThreadId === void 0) {
-                let newThread = await this.adapter.ThreadList.new(historyMessages);
+                let newThread = await this.adapter.ThreadList?.new?.(historyMessages);
 
-                if (!newThread) {
-                    // 新建会话失败 → 退化为 error，不入库、不 resolve
-                    this.isExecuting = false;
-                    this._currentTask = null;
-                    this._emit("task:end", { taskId, threadId: this.currentThreadId, message, status: "error" });
-                    reject(new Error("新建会话失败"));
-                    return;
-                }
+                if (!newThread) throw new Error("新建会话失败");
 
-                await this.runtime.ThreadList.append(newThread);
+                await Promise.resolve(this.runtime.ThreadList?.append(newThread));
                 this.activeThread(newThread.threadId, true);
             }
 
             this.currentMessages.push(historyMessages);
-            this.adapter.MessageHistory.append(this.currentThreadId, historyMessages);
+            await this.adapter.MessageHistory?.append?.(this.currentThreadId, historyMessages);
         } catch (e) {
-            // 入库链路本身抛错 → 退化为 error
-            this.isExecuting = false;
-            this._currentTask = null;
-            this._emit("task:end", { taskId, threadId: this.currentThreadId, message, status: "error" });
-            reject(e);
-            return;
+            failure = e;
         }
     }
 
@@ -366,10 +426,11 @@ AuiPage.prototype._finalize = async function (status, isHistory, err) {
     this.isExecuting = false;
     this._currentTask = null;
 
-    this._emit("task:end", { taskId, threadId: this.currentThreadId, message, status });
+    const finalStatus = failure ? "error" : status;
+    this._emit("task:end", { taskId: task.taskId, threadId: this.currentThreadId, message: task.message, status: finalStatus });
 
-    if (status === "error") reject(err);
-    else resolve();
+    if (finalStatus === "error") task.reject(failure || new Error("任务执行失败"));
+    else task.resolve();
 };
 
 AuiPage.prototype.activeThread = function (threadId, __noLoad__) {
@@ -379,47 +440,48 @@ AuiPage.prototype.activeThread = function (threadId, __noLoad__) {
     if (this.isExecuting && !__noLoad__) return;
 
     this.currentThreadId = threadId;
-    this.runtime.ThreadList.active(threadId);
+    this.runtime.ThreadList?.active(threadId);
 
     if (threadId === void 0) {
         this.currentMessages = [];
-        this.runtime.ChatContent.init([]);
-    } else if (!__noLoad__) {
-
-        // 加载历史消息
-        this.adapter.MessageHistory.load(threadId)?.then(messages => {
-            this.currentMessages = messages;
-
-            let plainMessages = [];
-            messages.forEach(item => {
-                plainMessages.push(...item.messages);
-            });
-            this.runtime.ChatContent.init(plainMessages);
-        });
+        this.runtime.ChatContent?.init([]);
+        return;
     }
+
+    if (__noLoad__) return;
+
+    // 加载历史消息
+    invoke(this.adapter.MessageHistory, "load", (messages) => {
+        this.currentMessages = messages;
+
+        let plainMessages = [];
+        messages.forEach(item => {
+            plainMessages.push(...item.messages);
+        });
+        this.runtime.ChatContent?.init(plainMessages);
+    }, [threadId]);
 };
 
 AuiPage.prototype.deleteThread = function (threadId) {
-    this.adapter.ThreadList.delete(threadId)?.then(() => {
-        this.runtime.ThreadList.delete(threadId);
+    invoke(this.adapter.ThreadList, "delete", () => {
+        this.runtime.ThreadList?.delete(threadId);
 
         if (threadId === this.currentThreadId) this.newThread();
-    });
-
+    }, [threadId]);
 };
 
 AuiPage.prototype.archiveThread = function (threadId) {
-    this.adapter.ThreadList.archive(threadId)?.then(() => {
-        this.runtime.ThreadList.archive(threadId);
+    invoke(this.adapter.ThreadList, "archive", () => {
+        this.runtime.ThreadList?.archive(threadId);
 
         if (threadId === this.currentThreadId) this.newThread();
-    });
+    }, [threadId]);
 };
 
 AuiPage.prototype.unarchiveThread = function (threadId) {
-    this.adapter.ThreadList.unarchive(threadId).then(() => {
-        this.runtime.ThreadList.unarchive(threadId);
-    });
+    invoke(this.adapter.ThreadList, "unarchive", () => {
+        this.runtime.ThreadList?.unarchive(threadId);
+    }, [threadId]);
 };
 
 AuiPage.prototype.newThread = function () {
