@@ -2,9 +2,9 @@
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/fetch</span></div>
 <h1><em>Package 08</em>@auipage/fetch</h1>
 <p class="lede">跨端流式 fetch：Node 下走 <code>http</code>/<code>https</code>，浏览器下走原生 fetch + ReadableStream，自动适配；SSE 响应自动按事件缓冲解析。</p>
-<div class="badges"><span class="badge">fetch</span><span class="badge">0.1.0</span><span class="badge">浏览器 + Node</span></div></div>
+<div class="badges"><span class="badge">fetch</span><span class="badge">0.2.0</span><span class="badge">浏览器 + Node</span></div></div>
 <div class="pkgbar">
-  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">版本</span><span class="v">0.2.0</span></div>
   <div><span class="k">依赖</span><span class="v">无运行时依赖</span></div>
   <div><span class="k">位置</span><span class="v">packages/fetch</span></div>
 </div>
@@ -20,7 +20,7 @@ fetch({
     url: "https://example.com/api/chat",
     method: "POST",                                  // 默认 GET
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: "hello" })       // 原样发送，不会自动 stringify
+    body: { message: "hello" }                      // 普通对象自动 JSON 序列化（0.2.0 起）
 })
     .then(res =&gt; {
         res.on("data", chunk =&gt; console.log(chunk));
@@ -29,17 +29,18 @@ fetch({
     })
     .catch(err =&gt; console.error(err));</pre></div>
 </div>
-  <p style="margin-top:14px"><code>res</code> 上还能读到 <code>status</code>、<code>ok</code>（2xx 为 true）、<code>headers</code>。</p>
+  <p style="margin-top:14px"><code>res</code> 上还能读到 <code>status</code>、<code>ok</code>（2xx 为 true）、<code>headers</code>，以及 <code>res.header(name)</code>、<code>res.cancel()</code><span class="ver new">0.2.0 新增</span>。</p>
 </div>
 </section>
 
 <section class="block">
-  <div class="block-head"><span class="idx">02</span><h2>三个事件</h2></div>
+  <div class="block-head"><span class="idx">02</span><h2>四个事件</h2></div>
   <div class="prose">
   <div class="table-wrap"><table class="spec">
   <thead><tr><th>事件</th><th>触发时机</th><th>回调参数</th></tr></thead>
-  <tbody><tr><td><code>data</code></td><td>收到一段数据；SSE 模式下为每个完整事件的 <code>data:</code> 内容</td><td><code>(payload: string)</code></td></tr><tr><td><code>end</code></td><td>响应体读取完毕</td><td><code>()</code></td></tr><tr><td><code>error</code></td><td>网络或读取出错</td><td><code>(err: Error)</code></td></tr></tbody>
+  <tbody><tr><td><code>data</code></td><td>收到一段数据；SSE 模式下为每个完整事件的 <code>data:</code> 内容</td><td><code>(payload: string)</code></td></tr><tr><td><code>end</code></td><td>响应体读取完毕</td><td><code>()</code></td></tr><tr><td><code>error</code></td><td>网络、读取、超时或取消出错</td><td><code>(err: Error)</code></td></tr><tr><td><code>http-error</code><span class="ver new">0.2.0 新增</span></td><td>状态码 ≥ 400，先于错误体播放</td><td><code>({ status, headers })</code></td></tr></tbody>
 </table></div>
+  <p style="margin-top:14px">监听晚于 <code>error</code> 发生也能收到：<code>error</code> 会缓存一次终态并在注册时补发<span class="ver fix">0.2.0 修复</span>。</p>
 </div>
 </section>
 
@@ -60,12 +61,24 @@ fetch({
 </section>
 
 <section class="block">
-  <div class="block-head"><span class="idx">04</span><h2>两个注意点</h2></div>
+  <div class="block-head"><span class="idx">04</span><h2>非 2xx 与取消</h2></div>
   <div class="prose">
   <ul>
-    <li><b>非 2xx 不进 catch</b>：用 <code>res.status</code> / <code>res.ok</code> 判断，这样错误响应体也能照常读取。</li>
-    <li><b>暂不支持超时与取消</b>：需要时用 <code>AbortController</code> 在外层包装，或直接读 <code>end</code> 事件提前收尾。</li>
+    <li><b>非 2xx 不进 catch</b><span class="ver chg">0.2.0 改造</span>：<code>fetch()</code> 仍 resolve，错误响应体照常经 <code>data</code> / <code>end</code> 投递；同时额外发一次 <code>http-error</code>，拿到状态码就能立刻判断失败，不必等 body 读完。</li>
+    <li><b>超时</b><span class="ver new">0.2.0 新增</span>：<code>timeout</code>（毫秒）到点自动中止并触发 <code>error</code>。</li>
+    <li><b>外部取消</b><span class="ver new">0.2.0 新增</span>：传 <code>signal</code>，或在拿到 <code>res</code> 后调用 <code>res.cancel()</code>。</li>
   </ul>
+  <div class="code" style="margin-top:14px">
+  <div class="code-head"><span class="file">client.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>const controller = new AbortController();
+
+fetch({ url, method: "POST", body, timeout: 30000, signal: controller.signal })
+    .then(res =&gt; {
+        res.on("http-error", ({ status }) =&gt; console.warn("HTTP", status));
+        res.on("data", chunk =&gt; console.log(chunk));
+        res.on("error", err =&gt; console.error(err));
+    });</pre></div>
+</div>
 </div>
 </section>
 

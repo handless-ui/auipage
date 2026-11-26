@@ -115,6 +115,14 @@ node apis/build.mjs --check       # 只检查站内死链与孤立页，不动�
 - `docs/assets/js/docs.js` 负责标记语言、调用 `Shader.shader()`，并配了一套与站点一致的浅色配色；
 - 新增语言时，在 `docs.js` 的 `BY_EXT` / `BY_NAME` 里补映射即可，不需要改页面。
 
+## 表格写法
+
+规格表统一用 `<div class="table-wrap"><table class="spec">…</table></div>`：
+
+- 两列表在手机上按 30% / 70% 分配列宽，正文自动换行，不横向滚动；
+- 四列及以上放不下，给表格加 `wide`：`<table class="spec wide">`，手机上改成整表横向滚动，
+  列宽按内容自适应，不会把 `sendMessage` 这种词拆成两行。
+
 ## 生成时还会做什么
 
 - 每个产物顶部插一条「本文件由 apis 生成」的注释横幅。

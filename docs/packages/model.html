@@ -7,7 +7,7 @@
 <title>@auipage/model · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="OpenAI 风格 chat/completions 封装：实例、签名与工具调用。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -63,9 +63,9 @@
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/model</span></div>
 <h1><em>Package 09</em>@auipage/model</h1>
 <p class="lede">OpenAI 风格 <code>chat/completions</code> 的流式封装：请求拼装、SSE 增量解析、工具调用切片拼接，同协议的其他服务（DeepSeek 等）直接换 <code>baseURL</code> 即可。</p>
-<div class="badges"><span class="badge">model</span><span class="badge">0.1.0</span><span class="badge">OpenAI 协议</span></div></div>
+<div class="badges"><span class="badge">model</span><span class="badge">0.2.0</span><span class="badge">OpenAI 协议</span></div></div>
 <div class="pkgbar">
-  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">版本</span><span class="v">0.2.0</span></div>
   <div><span class="k">依赖</span><span class="v">@auipage/fetch</span></div>
   <div><span class="k">位置</span><span class="v">packages/model</span></div>
 </div>
@@ -95,15 +95,18 @@ const model = new Model({
     {
         messages: ChatMessage[],   // OpenAI 格式消息
         tools?: Tool[],            // 可选，默认 []；自动取每项 description 作为 tools 提交
-        stream?: boolean           // 默认 false
+        stream?: boolean,          // 默认 false
+        timeout?: number,          // 可选，毫秒；到点中止并 reject
+        signal?: AbortSignal       // 可选，外部取消
     },
     logback?,                      // (delta: string) =&gt; void     正文增量
     thinkback?                     // (reasoning: string) =&gt; void  推理过程增量
 ): Promise&lt;{ content: string, tool_calls: ModelToolCall[] }&gt;</pre></div>
 </div>
+  <p style="margin-top:14px"><code>timeout</code> 与 <code>signal</code> 是 0.2.0 新增的入参<span class="ver new">0.2.0 新增</span>：到点中止 / 外部取消都会让 <code>completions</code> reject。</p>
   <div class="table-wrap"><table class="spec">
   <thead><tr><th>要点</th><th>说明</th></tr></thead>
-  <tbody><tr><td><code>thinkback</code></td><td>接收 <code>delta.reasoning</code> / <code>delta.reasoning_content</code>；正文里的 <code>&lt;think&gt;...&lt;/think&gt;</code> 会被剥除，剩余内容并入 <code>content</code>。</td></tr><tr><td><code>stream: false</code></td><td>两个回调依然会调用，只是在响应结束后各触发一次。</td></tr><tr><td><code>tool_calls</code></td><td>已按 <code>id</code> 切片、把分片的 <code>function.arguments</code> 拼成完整字符串。</td></tr></tbody>
+  <tbody><tr><td><code>thinkback</code></td><td>接收 <code>delta.reasoning</code> / <code>delta.reasoning_content</code>；正文里的 <code>&lt;think&gt;...&lt;/think&gt;</code> 会被剥除，剩余内容并入 <code>content</code>。</td></tr><tr><td><code>stream: false</code></td><td>两个回调依然会调用，只是在响应结束后各触发一次。</td></tr><tr><td><code>tool_calls</code><span class="ver fix">0.2.0 修复</span></td><td>已把分片的 <code>function.arguments</code> 拼成完整字符串；并行多个调用按 <code>index</code> 归并，不会串味。</td></tr><tr><td>失败<span class="ver fix">0.2.0 修复</span></td><td>4xx / 5xx、非法响应体、超时、取消统一 <b>reject</b> 一个 <code>Error</code>，消息里带 <code>HTTP 401</code> 这类状态与响应体中的错误说明；流式请求在状态码到达时立即 reject，不会先 resolve 一个空结果。</td></tr></tbody>
 </table></div>
 </div>
 </section>
@@ -198,13 +201,13 @@ const model = new Model({
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

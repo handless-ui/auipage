@@ -7,7 +7,7 @@
 <title>换界面 · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="同一套 AuiPage 逻辑，换成原生 DOM、React 或 Vue 渲染；运行时只负责把状态画出来。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -114,6 +114,11 @@
 });</pre></div>
 </div>
   <div class="note" style="margin-top:14px">
+    <b>不返回也算合法</b>：两条约定都是“返回才接管”，<code>append</code> 返回 <code>undefined</code> 时框架只建节点、
+    不再推增量，也不会有工具回调 —— 适合把渲染交给框架自己管的场景（比如 React 侧只 setState）。
+    <p style="margin-top:10px">框架不会替你删节点：<code>page.stop()</code> 结束的这一轮（状态 <code>stopped</code>）内容保留；只有 <code>page.cancel()</code> 触发的 <code>task:end</code> 才带 <code>displayed</code><span class="ver new">0.2.0 新增</span>，列出本轮已 append 的条目，要撤哪几条自己调 <code>remove</code>。</p>
+  </div>
+  <div class="note" style="margin-top:14px">
     <b>前端工具会回调两次</b>：第一次带 <code>render</code>，由你在界面上做交互并返回界面结果；
     第二次用界面结果做最终渲染。回传给模型的是 <code>render</code> 的返回值。
   </div>
@@ -202,13 +207,13 @@
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

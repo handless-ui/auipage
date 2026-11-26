@@ -248,4 +248,36 @@
       <p><b>每个包都写了“可以换成什么”。</b>你不必为了用其中一个包，把四个都装上。</p>
     </div>
   </section>
+
+  <section class="section" id="versions">
+    <div class="section-head"><span class="no">05</span><h2>版本与升级</h2><span class="hint">文档标注每个能力从哪个版本开始</span></div>
+    <div class="table-wrap"><table class="spec">
+    <thead><tr><th>版本</th><th>定位</th><th>变化</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>v0.1.0</code></td>
+        <td>首个公开版</td>
+        <td>四个包 + Adapter / Runtime 分层定型；本文档不加标注的都是这一版就有的能力</td>
+      </tr>
+      <tr>
+        <td><code>v0.2.0</code><span class="ver new">当前</span></td>
+        <td>稳定性与可控性</td>
+        <td>
+          修掉一批会让进程退出、页面卡死、工具参数串味的致命问题；
+          请求侧补齐超时 / 取消 / 非 2xx 处理；
+          新增 <code>maxSteps</code>、<code>toModelMessages</code>，以及执行中的 <code>stop()</code> / <code>cancel()</code>
+        </td>
+      </tr>
+    </tbody>
+    </table></div>
+    <div class="note" style="margin-top:14px">
+      <b>版本怎么看：</b>正文里带 <span class="ver new">0.2.0 新增</span> 的是这一版才有的能力，
+      带 <span class="ver fix">0.2.0 修复</span> 的是这一版修掉的老问题，
+      带 <span class="ver chg">0.2.0 改造</span> 的是行为口径变了的地方 —— 没标注就按 0.1.0 的用法继续用。
+    </div>
+    <div class="note" style="margin-top:14px">
+      <b>升级时注意：</b>五个包版本号同步发布，互相依赖写成 <code>^0.2.0</code>，要一起升；
+      <code>^0.2.0</code> 不覆盖 <code>0.1.x</code>，停留在 0.1.0 的项目不会被动升级。完整条目见仓库根目录的 <code>CHANGELOG</code>。
+    </div>
+  </section>
 </div>

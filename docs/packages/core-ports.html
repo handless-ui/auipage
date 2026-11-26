@@ -7,7 +7,7 @@
 <title>Adapter 与 Runtime · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="三个适配器与两个运行时的接口、挂载规则和原生 DOM 示例。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -62,7 +62,7 @@
 <main class="article">
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>参考</span><span class="sep">/</span><span>Adapter 与 Runtime</span></div>
 <h1><em>Package 13</em>Adapter 与 Runtime</h1>
-<p class="lede">两条接缝的全部接口：Adapter 负责数据，Runtime 负责渲染。框架只规定方法，缺省时为空函数；你可以 <code>new</code> 一个基类传实现，也可以写子类。</p>
+<p class="lede">两条接缝的全部接口：Adapter 负责数据，Runtime 负责渲染。框架只规定方法，缺省的方法不会被调用；返回值可以是 Promise，也可以直接是同步值<span class="ver fix">0.2.0 修复</span>；你可以 <code>new</code> 一个基类传实现，也可以写子类。</p>
 <div class="badges"><span class="badge">3 Adapter</span><span class="badge">2 Runtime</span><span class="badge">可继承</span></div></div>
 
 <section class="block">
@@ -94,7 +94,8 @@
         messages: ChatMessage[],   // 本轮新消息（当前只有一条）
         context: {
             history: HistoryMessageGroup[],       // 已入库的历史消息组
-            tools: Array&lt;{ description: object }&gt; // 注册的工具描述
+            tools: Array&lt;{ description: object }&gt;,// 注册的工具描述
+            signal?: AbortSignal                  // 取消信号（0.2.0 新增）
         }
     }) =&gt; AsyncGenerator&lt;MessagePart&gt; | void,
 
@@ -143,6 +144,7 @@ const chatTransport = new ChatTransportAdapter({
 });</pre></div>
 </div>
   <p style="margin-top:14px"><code>load</code> 返回假值时跳过历史加载；<code>append</code> 不实现则消息只留在内存。</p>
+  <p>入库的组带 <code>status</code><span class="ver new">0.2.0 新增</span>：<code>complete</code> 正常完成，<code>stopped</code> 被 <code>page.stop()</code> 主动结束，<code>cancelled</code> 被 <code>page.cancel()</code> 取消。这两种收尾照样调 <code>append</code>，存不存、怎么标由这里决定：<code>stopped</code> 当正常消息收下，<code>cancelled</code> 最省事的做法是整组丢掉。</p>
   <div class="code" style="margin-top:14px">
   <div class="code-head"><span class="file">adapter/messageHistory.js</span><button data-copy="">复制</button></div>
   <div class="code-body"><pre>const messageHistory = new MessageHistoryAdapter({
@@ -345,13 +347,13 @@ const chatUI = new ChatContentRuntime({
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

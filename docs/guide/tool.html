@@ -7,7 +7,7 @@
 <title>让模型做事 · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="从零实现一次工具调用循环，再把工具搬到浏览器执行，对比 @auipage/agent 的 CreateTool 桥接。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -162,8 +162,11 @@ const answer = await agent.generate(
   <div class="code-head"><span class="file">terminal</span><button data-copy="">复制</button></div>
   <div class="code-body"><pre>npm install --save @auipage/agent</pre></div>
 </div>
-  <p style="margin-top:14px">它做了你刚才手写的那三步，另外补了：工具执行出错时把错误作为结果回灌而不是中断、
-  推理过程回调、以及整轮只有工具调用时的返回值约定。</p>
+  <p style="margin-top:14px">它做了你刚才手写的那三步，另外补了：工具执行出错时按 <code>status: "error"</code> 上报、
+  并转成一段文本回灌给模型（不是中断整轮）、推理过程回调、以及整轮只有工具调用时的返回值约定。
+  担心模型陷入循环时给 <code>new Agent({ maxSteps: 8 })</code><span class="ver new">0.2.0 新增</span>，超过上限会抛出明确错误。
+  页面侧工具还能在 <code>execute(args, control)</code> 里用 <code>control.stop()</code> 主动结束整轮 —— 事情办完了就到此为止，
+  结果照样进历史<span class="ver new">0.2.0 新增</span>。</p>
 </div>
 </section>
 
@@ -292,13 +295,13 @@ const page = new AuiPage({
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

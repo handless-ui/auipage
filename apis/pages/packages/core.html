@@ -2,9 +2,9 @@
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>参考</span><span class="sep">/</span><span>@auipage/core</span></div>
 <h1><em>Package 11</em>@auipage/core</h1>
 <p class="lede">核心层：业务侧实现 Adapter 对接模型与存储，UI 侧实现 Runtime 负责渲染，<code>AuiPage</code> 把两者串起来，统一处理会话、历史、流式对话与入库。</p>
-<div class="badges"><span class="badge">core</span><span class="badge">0.1.0</span><span class="badge">AuiPage</span><span class="badge">Adapter</span><span class="badge">Runtime</span></div></div>
+<div class="badges"><span class="badge">core</span><span class="badge">0.2.0</span><span class="badge">AuiPage</span><span class="badge">Adapter</span><span class="badge">Runtime</span></div></div>
 <div class="pkgbar">
-  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">版本</span><span class="v">0.2.0</span></div>
   <div><span class="k">依赖</span><span class="v">不依赖其他 auipage 包</span></div>
   <div><span class="k">位置</span><span class="v">packages/core</span></div>
 </div>
@@ -51,6 +51,7 @@ const page = new AuiPage({
     <tr><td><code>ChatContentRuntime</code></td><td>运行时基类</td><td>对话内容的 UI 渲染钩子</td></tr>
     <tr><td><code>defineTool</code></td><td>函数</td><td>定义前端工具（<code>name</code> / <code>description</code> / <code>parameters</code> / <code>execute</code> / <code>render</code>）</td></tr>
     <tr><td><code>generator</code></td><td>函数</td><td>把回调式异步流转成 <code>AsyncGenerator</code></td></tr>
+    <tr><td><code>toModelMessages</code><span class="ver new">0.2.0 新增</span></td><td>函数</td><td>把页面消息（含工具调用与结果）转成模型入参，用于拼多轮上下文</td></tr>
     <tr><td><code>MessageStream</code></td><td>构造器</td><td>服务端消息流封装（<code>send</code> / <code>end</code>），配合 <code>CreateTool</code> 推 SSE</td></tr>
   </tbody>
 </table></div>
@@ -65,7 +66,8 @@ const page = new AuiPage({
         <span class="tag">Adapter</span>
         <h3>数据侧：三个接口</h3>
         <p><code>ChatTransport</code> 产出流片段，<code>MessageHistory</code> 读写历史，
-        <code>ThreadList</code> 管理会话。方法缺省时为空函数。</p>
+        <code>ThreadList</code> 管理会话。方法可以返回 Promise，也可以直接返回同步值；
+        没有实现的方法不会被调用<span class="ver fix">0.2.0 修复</span>。</p>
         <p><a href="{{base}}packages/core-ports.html">接口与示例 →</a></p>
       </div>
       <div class="card">

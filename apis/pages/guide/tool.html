@@ -101,8 +101,11 @@ const answer = await agent.generate(
   <div class="code-head"><span class="file">terminal</span><button data-copy="">复制</button></div>
   <div class="code-body"><pre>npm install --save @auipage/agent</pre></div>
 </div>
-  <p style="margin-top:14px">它做了你刚才手写的那三步，另外补了：工具执行出错时把错误作为结果回灌而不是中断、
-  推理过程回调、以及整轮只有工具调用时的返回值约定。</p>
+  <p style="margin-top:14px">它做了你刚才手写的那三步，另外补了：工具执行出错时按 <code>status: "error"</code> 上报、
+  并转成一段文本回灌给模型（不是中断整轮）、推理过程回调、以及整轮只有工具调用时的返回值约定。
+  担心模型陷入循环时给 <code>new Agent({ maxSteps: 8 })</code><span class="ver new">0.2.0 新增</span>，超过上限会抛出明确错误。
+  页面侧工具还能在 <code>execute(args, control)</code> 里用 <code>control.stop()</code> 主动结束整轮 —— 事情办完了就到此为止，
+  结果照样进历史<span class="ver new">0.2.0 新增</span>。</p>
 </div>
 </section>
 

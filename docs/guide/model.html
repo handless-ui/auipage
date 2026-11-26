@@ -7,7 +7,7 @@
 <title>接真实模型 · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="把上一章的假回复换成真实模型：手写 chat/completions 解析，再用 @auipage/model 对比。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -165,10 +165,13 @@ const { content, tool_calls } = await model.completions(
     <tr><td>正文累积</td><td>自己维护 <code>content += delta.content</code></td><td>返回完整 <code>content</code></td></tr>
     <tr><td>推理过程</td><td><code>reasoning_content</code> / <code>reasoning</code> 两种字段名</td><td><code>thinkback</code> 统一收口</td></tr>
     <tr><td><code>&lt;think&gt;</code> 标签</td><td>从正文里剥离，处理标签被切断的情况</td><td>自动剥离并冲刷残留</td></tr>
-    <tr><td>工具调用</td><td>按 <code>index</code> 归并，拼完 <code>arguments</code> 再 <code>parse</code></td><td>返回已拼好的 <code>tool_calls</code></td></tr>
+    <tr><td>工具调用<span class="ver fix">0.2.0 修复</span></td><td>按 <code>index</code> 归并，拼完 <code>arguments</code> 再 <code>parse</code></td><td>返回已拼好的 <code>tool_calls</code></td></tr>
     <tr><td>非流式</td><td>两种响应结构分别取值</td><td>同一套回调，结束时触发一次</td></tr>
+    <tr><td>失败<span class="ver fix">0.2.0 修复</span></td><td>4xx 也要读出错误体，别让 Promise 挂着</td><td>统一 reject 一个带 <code>HTTP 401</code> 与错误说明的 <code>Error</code></td></tr>
   </tbody>
 </table></div>
+  <p style="margin-top:14px">所以调用处只要一个 <code>catch</code>：网络、超时、鉴权失败、非法响应体都从这里出来，不会卡住也不会把进程带崩。</p>
+  <p>中断也有出口<span class="ver new">0.2.0 新增</span>：构造时给 <code>timeout</code> 到点自动中止，或在选项里传 <code>signal</code>，外部 <code>abort()</code> 后本轮 <code>generate</code> 直接 reject —— 配合 <code>AuiPage.stop()</code> / <code>cancel()</code> 就能做“停止生成”。</p>
 </div>
 </section>
 
@@ -230,13 +233,13 @@ const { content, tool_calls } = await model.completions(
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

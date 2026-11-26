@@ -7,7 +7,7 @@
 <title>装框架 · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="把前几章散落的流式拼接、工具状态、会话历史收进 Adapter + Runtime，由 AuiPage 统一驱动。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -170,7 +170,21 @@ const chatTransport = new ChatTransportAdapter({
     })
 });</pre></div>
 </div>
-  <p style="margin-top:16px"><b>历史：</b><code>append</code> 收到的是“一轮消息组”，换存储只改这一个方法。</p>
+  <p style="margin-top:16px"><b>多轮上下文：</b><code>run</code> 收到的 <code>context.history</code> 是页面侧的消息组，模型不能直接吃，
+  用 <code>toModelMessages</code><span class="ver new">0.2.0 新增</span> 转一下再拼本轮消息：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">adapter/chatTransport.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>import { toModelMessages } from "@auipage/core";
+
+run: ({ messages, context }) =&gt; {
+    const history = toModelMessages(context.history);
+    const current = toModelMessages(messages);
+    return agent.generate(history.concat(current), ...);
+};</pre></div>
+</div>
+  <p style="margin-top:16px"><b>历史：</b><code>append</code> 收到的是“一轮消息组”，换存储只改这一个方法。它是被 <code>await</code> 的：
+  抛错或 reject 时本轮会以 <code>task:end { status: "error" }</code> 收尾、<code>sendMessage</code> reject，
+  不会出现“界面显示成功、存储其实没写进去”<span class="ver fix">0.2.0 修复</span>。</p>
   <div class="code">
   <div class="code-head"><span class="file">adapter/messageHistory.js</span><button data-copy="">复制</button></div>
   <div class="code-body"><pre>const messageHistory = new MessageHistoryAdapter({
@@ -281,13 +295,13 @@ const chatTransport = new ChatTransportAdapter({
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

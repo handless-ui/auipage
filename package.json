@@ -11,7 +11,8 @@
     "postinstall": "node ./scripts/postinstall.js && npm run build",
     "build": "node ./scripts/build.js",
     "dev": "node index.js",
-    "test": "node test/index.unit.js"
+    "test": "node test/index.unit.js",
+    "test:spec": "node test/index.spec.js"
   },
   "repository": {
     "type": "git",

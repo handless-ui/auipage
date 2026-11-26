@@ -7,7 +7,7 @@
 <title>AuiPage · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="AuiPage 的构造、实例属性、sendMessage 流程、工具调用时序、会话操作与任务生命周期事件。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -82,7 +82,8 @@ const page = new AuiPage({
         ThreadList:  threadListUI,        // ThreadListRuntime 实例
         ChatContent: chatUI               // ChatContentRuntime 实例
     },
-    tools: []                             // 可选：页面侧工具列表
+    tools: [],                            // 可选：页面侧工具列表
+    stopTimeout: 5000                     // 可选：stop() 兜底收尾时长，默认 5000ms（0.2.0 新增）
 });</pre></div>
 </div>
   <p style="margin-top:14px">实例按 <code>name</code> 属性去后缀挂载：基类构造时内置 <code>name</code>，如 <code>ChatTransportAdapter</code> → <code>page.adapter.ChatTransport</code>。
@@ -113,7 +114,8 @@ const page = new AuiPage({
 <section class="block">
   <div class="block-head"><span class="idx">03</span><h2>sendMessage</h2></div>
   <div class="prose">
-  <p>返回 <code>Promise&lt;void&gt;</code>：上一轮未结束时调用，会以 <code>"当前正在执行中"</code> reject；本轮全部走完（含历史落库）后 resolve。</p>
+  <p>返回 <code>Promise&lt;void&gt;</code>：上一轮未结束时调用，会以 <code>"当前正在执行中"</code> reject；本轮全部走完（含历史落库）后 resolve。
+  <code>content</code> 可以直接给字符串，框架会包成一段 <code>text</code><span class="ver new">0.2.0 新增</span>。</p>
   <div class="code">
   <div class="code-head"><span class="file">flow</span><button data-copy="">复制</button></div>
   <div class="code-body"><pre>1. 把 message.content 逐段交给 runtime.ChatContent.append 渲染
@@ -123,15 +125,20 @@ const page = new AuiPage({
    tool-call 走工具流程，未知类型忽略
 4. 流结束后合并相邻同角色片段；没有当前会话时调 ThreadList.new()
    （返回假值则中止本轮），再 ThreadList.append 并激活新会话
-5. 消息追加到 currentMessages，调 MessageHistory.append() 落库</pre></div>
+5. 消息追加到 currentMessages，await MessageHistory.append() 落库；失败则本轮以 error 收尾</pre></div>
 </div>
+  <p style="margin-top:14px">任一环节抛错（适配器 <code>run</code> 同步抛出、流片段处理失败、入库失败）都会把 <code>isExecuting</code> 复位、
+  发一次 <code>task:end</code>，并让 <code>sendMessage</code> 以该错误 reject —— 不会出现“页面卡在执行中”的中间态<span class="ver fix">0.2.0 修复</span>。</p>
   <div class="code" style="margin-top:14px">
   <div class="code-head"><span class="file">call.js</span><button data-copy="">复制</button></div>
-  <div class="code-body"><pre>page.sendMessage({
-    role: "user",
-    content: [{ type: "text", text: "你好" }]
-}).catch(err =&gt; {
-    // err === "当前正在执行中"：上一轮还没结束
+  <div class="code-body"><pre>// 两种等价写法
+page.sendMessage({ role: "user", content: [{ type: "text", text: "你好" }] });
+page.sendMessage({ role: "user", content: "你好" });
+
+page.sendMessage({ role: "user", content: "你好" }).catch(err =&gt; {
+    // "当前正在执行中"：上一轮还没结束
+    // "已取消"：本轮被 page.cancel() 停下（见「主动结束与取消」）
+    // 其他：适配器、流式处理或入库失败
 });</pre></div>
 </div>
 </div>
@@ -142,14 +149,15 @@ const page = new AuiPage({
   <div class="prose">
   <p>流片段形如 <code>{ id, name, caller, args, status, result? }</code>：</p>
   <ul>
-    <li><b>pending</b>：先调 <code>runtime.ChatContent.append("assistant", part)</code> 创建工具节点，返回值按 <code>id</code> 缓存为结束回调。</li>
-    <li><b>前端工具</b>（<code>caller: "frontend"</code>）：页面执行 <code>tools_execute[name](args)</code>（抛错记为 <code>error</code>）。</li>
+    <li><b>pending</b>：先调 <code>runtime.ChatContent.append("assistant", part)</code> 创建工具节点，<b>返回值若为函数</b>则按 <code>id</code> 缓存为结束回调；返回 <code>undefined</code> 时只更新节点状态，不回调。</li>
+    <li><b>前端工具</b>（<code>caller: "frontend"</code>）：页面执行 <code>tools_execute[name](args, control)</code>（抛错记为 <code>error</code>）；
+      <code>control</code> 是任务控制句柄，工具里可用它 <code>stop()</code> / <code>cancel()</code> 结束整轮<span class="ver new">0.2.0 新增</span>。</li>
   </ul>
   <div class="table-wrap" style="margin-top:12px"><table class="spec">
   <thead><tr><th>前端工具有无 render</th><th>行为</th></tr></thead>
   <tbody>
     <tr><td>无 <code>render</code></td><td>用 <code>{ ...part, result, status }</code> 调一次结束回调，并经 <code>ChatTransport.response("tool-result", { id, status, result })</code> 回传服务端</td></tr>
-    <tr><td>有 <code>render</code></td><td>结束回调调<b>两次</b>：第一次传 <code>{ ...part, result, status, render }</code>，运行时执行 UI 交互并返回 <code>result_ui</code>；第二次传 <code>{ ...part, result: result_ui, status: status_ui }</code> 做最终渲染。回传给模型的是 <code>result_ui</code>，历史同时保留 <code>result</code> 与 <code>ui: { status, result }</code></td></tr>
+    <tr><td>有 <code>render</code></td><td>结束回调调<b>两次</b>：第一次传 <code>{ ...part, result, status, render, stop, cancel }</code>，运行时执行 UI 交互并返回 <code>result_ui</code>（<code>stop</code> / <code>cancel</code> 为 0.2.0 起提供）；第二次传 <code>{ ...part, result: result_ui, status: status_ui }</code> 做最终渲染。回传给模型的是 <code>result_ui</code>，历史同时保留 <code>result</code> 与 <code>ui: { status, result }</code></td></tr>
     <tr><td>后端工具（<code>caller: "backend"</code>）</td><td>页面不执行，等流中后续 <code>success / error</code> 片段（携带 <code>result</code>）到达后调结束回调，无需回传</td></tr>
   </tbody>
 </table></div>
@@ -157,7 +165,76 @@ const page = new AuiPage({
 </section>
 
 <section class="block">
-  <div class="block-head"><span class="idx">05</span><h2>其他方法</h2></div>
+  <div class="block-head"><span class="idx">05</span><h2>主动结束与取消<span class="ver new">0.2.0 新增</span></h2></div>
+  <div class="prose">
+  <p>执行中想收手，有两种收法，打断方式相同、收下这一轮的方式不同：</p>
+  <ul>
+    <li><code>stop()</code>：当<b>成功</b>收尾 —— 已产出的内容保留，入库标记 <code>stopped</code>，<code>sendMessage</code> 正常 resolve。业务上“这件事办完了”用它。</li>
+    <li><code>cancel()</code>：当<b>失败</b>收尾 —— 内容仍是半截，入库标记 <code>cancelled</code>，<code>sendMessage</code> 以 <code>"已取消"</code> reject，界面可据 <code>displayed</code> 撤销。</li>
+  </ul>
+  <div class="code">
+  <div class="code-head"><span class="file">stop.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>page.stop();     // 主动结束：内容保留，sendMessage resolve
+page.cancel();   // 取消：内容可撤销，sendMessage reject("已取消")
+
+// 都返回 boolean：有任务 true，空闲 false
+page.sendMessage({ role: "user", content: "写一份长文" }).catch(err =&gt; {
+    if (err === "已取消") return;   // cancel 才有这条，stop 不会走到 catch
+});
+
+page.on("task:end", ({ status, by, displayed }) =&gt; {
+    // status：complete / stopped / cancelled / error
+    // by：stopped、cancelled 时说明是谁发起的（"user" / "tool"）
+    if (status === "cancelled") {
+        // displayed：本轮已交给 ChatContent.append 的条目，index 即显示顺序
+        // 撤不撤、撤哪几条，由界面自己决定
+        displayed.forEach(({ index, role, part }) =&gt; { /* ... */ });
+    }
+});</pre></div>
+</div>
+  <div class="table-wrap" style="margin-top:14px"><table class="spec wide">
+  <thead><tr><th>status</th><th>何时出现</th><th>入库标记</th><th>sendMessage</th><th>界面</th></tr></thead>
+  <tbody>
+    <tr><td><code>complete</code></td><td>模型流自然结束</td><td><code>complete</code></td><td>resolve</td><td>保留</td></tr>
+    <tr><td><code>stopped</code></td><td><code>stop()</code>，含工具里调用</td><td><code>stopped</code></td><td>resolve</td><td>保留</td></tr>
+    <tr><td><code>cancelled</code></td><td><code>cancel()</code>，含工具里调用</td><td><code>cancelled</code></td><td>reject <code>"已取消"</code></td><td>按 <code>displayed</code> 决定</td></tr>
+    <tr><td><code>error</code></td><td>流式抛错或入库失败</td><td>不写</td><td>reject 错误对象</td><td>保留错误态</td></tr>
+  </tbody>
+</table></div>
+  <p style="margin-top:16px"><b>在工具里结束这一轮</b>：<code>execute</code> 的第二个参数和 <code>render</code> 收到的数据里都有控制句柄，
+  调用它的 <code>stop()</code> / <code>cancel()</code> 即可，<code>by</code> 会记成 <code>"tool"</code>。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">tool.js</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>defineTool({
+    name: "submit",
+    description: "提交订单",
+    parameters: { type: "object", properties: {} },
+    // 第二个参数是任务控制句柄：taskId / toolCallId / stop / cancel
+    execute: (args, control) =&gt; {
+        control.stop();        // 订单提交完，这一轮到此为止，结果照样入库
+        return "已提交";
+    },
+    // render 收到的数据里也有同一个句柄（data.stop / data.cancel）
+    render: (data) =&gt; renderCard(data, data.stop)
+});</pre></div>
+</div>
+  <p style="margin-top:12px">顺序是“先落结果、再收尾”：工具里调 <code>stop()</code> 只会挂个标记，等这次调用的结果渲染完、<code>tool-result</code> 回传完才收尾，
+  所以这次工具调用不会被丢掉。界面还在等用户点击时被结束，则按 <code>execute</code> 的结果收尾，不再等待。</p>
+  <div class="table-wrap" style="margin-top:14px"><table class="spec">
+  <thead><tr><th>要点</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>中断底层请求</td><td><code>run</code> 拿到的 <code>context.signal</code> 会被 abort，适配器把它透传给 HTTP / 模型请求即可立即停下；不接也能收，只是底层请求会跑完</td></tr>
+    <tr><td>入库标记</td><td>stopped / cancelled 都照常写入 <code>MessageHistory.append</code>，消息组带对应的 <code>status</code>；存、丢、或换成自己的标记，由 adapter 自己定</td></tr>
+    <tr><td><code>displayed</code> 结构</td><td><code>[{ index, role, part }]</code>，<code>part</code> 就是交给 <code>append</code> 的那个片段引用，可直接做 <code>WeakMap</code> 的键找回节点（仅 cancelled 提供）</td></tr>
+    <tr><td>兜底收尾</td><td>适配器无视 <code>signal</code> 且分片不再返回时，<code>stopTimeout</code>（默认 5000ms）到点强制收尾，页面不会停在执行中</td></tr>
+    <tr><td>立即可继续</td><td><code>isExecuting</code> 同步复位，收完可以马上发下一条</td></tr>
+  </tbody>
+</table></div>
+</div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">06</span><h2>其他方法</h2></div>
   <div class="prose">
   <div class="table-wrap"><table class="spec">
   <thead><tr><th>方法</th><th>行为</th></tr></thead>
@@ -173,14 +250,14 @@ const page = new AuiPage({
 </section>
 
 <section class="block">
-  <div class="block-head"><span class="idx">06</span><h2>任务生命周期事件</h2></div>
+  <div class="block-head"><span class="idx">07</span><h2>任务生命周期事件</h2></div>
   <div class="prose">
   <p>用于在整轮对话内挂副作用，例如“新任务来了清掉旧推荐问”“自然完成才追加新推荐问”。</p>
   <div class="table-wrap"><table class="spec">
   <thead><tr><th>事件</th><th>触发时机</th></tr></thead>
   <tbody>
     <tr><td><code>task:start</code></td><td><code>sendMessage</code> 通过“执行中”校验后立即触发</td></tr>
-    <tr><td><code>task:end</code></td><td>本轮结束：自然走完或流式出错</td></tr>
+    <tr><td><code>task:end</code></td><td>本轮结束：自然走完、流式出错、主动结束或取消</td></tr>
   </tbody>
 </table></div>
   <div class="code" style="margin-top:14px">
@@ -201,17 +278,28 @@ page.off("task:end", off);   // 不再需要时</pre></div>
     message: ChatContentMessage;   // 本次发送的原始页面消息
 };
 
-// task:end 多一个 status
+// task:end 多一个 status；主动结束 / 取消时再带 by，取消另带 displayed（0.2.0 新增）
 type TaskEndPayload = TaskLifecyclePayload &amp; {
-    status: "complete" | "error";
+    status: "complete" | "stopped" | "cancelled" | "error";
+
+    // 仅 stopped / cancelled 时存在：谁发起的结束
+    by?: "user" | "tool";
+
+    // 仅 status 为 "cancelled" 时存在：本轮已交给 ChatContent.append 的条目
+    displayed?: Array<{
+        index: number;                          // 显示顺序，从 0 开始
+        role: string;                           // 该条目所属消息的角色
+        part: ChatContentPart;                  // 交给 append 的原始片段引用
+    }>;
 };</pre></div>
 </div>
-  <p style="margin-top:14px"><code>complete</code>：流自然走完，入库；<code>error</code>：流式过程抛错，不入库。</p>
+  <p style="margin-top:14px"><code>complete</code>：流自然走完且入库成功；<code>stopped</code>：被 <code>stop()</code> 主动结束，带 <code>by</code><span class="ver new">0.2.0 新增</span>；
+  <code>cancelled</code>：被 <code>cancel()</code> 取消，带 <code>by</code> 与 <code>displayed</code>；<code>error</code>：流式过程抛错或入库失败。</p>
 </div>
 </section>
 
 <section class="block">
-  <div class="block-head"><span class="idx">07</span><h2>消息结构</h2></div>
+  <div class="block-head"><span class="idx">08</span><h2>消息结构</h2></div>
   <div class="prose">
   <div class="code">
   <div class="code-head"><span class="file">types.ts</span><button data-copy="">复制</button></div>
@@ -291,13 +379,13 @@ type Thread = { threadId: string, title?: string };</pre></div>
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

@@ -7,7 +7,7 @@
 <title>@auipage/agent · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="Agent 对话循环、工具编排与 CreateTool 前后端桥接。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -63,9 +63,9 @@
 <div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>包</span><span class="sep">/</span><span>@auipage/agent</span></div>
 <h1><em>Package 10</em>@auipage/agent</h1>
 <p class="lede">智能体对话循环：在 <code>@auipage/model</code> 之上处理多轮工具调用（模型要调工具 → 执行 → 结果回灌 → 继续生成），并提供 <code>CreateTool</code> 把服务端工具调用桥接到浏览器。</p>
-<div class="badges"><span class="badge">agent</span><span class="badge">0.1.0</span><span class="badge">CreateTool</span></div></div>
+<div class="badges"><span class="badge">agent</span><span class="badge">0.2.0</span><span class="badge">CreateTool</span></div></div>
 <div class="pkgbar">
-  <div><span class="k">版本</span><span class="v">0.1.0</span></div>
+  <div><span class="k">版本</span><span class="v">0.2.0</span></div>
   <div><span class="k">依赖</span><span class="v">@auipage/model</span></div>
   <div><span class="k">位置</span><span class="v">packages/agent</span></div>
 </div>
@@ -83,7 +83,8 @@ const agent = new Agent({
         apiKey: "your-api-key",
         baseURL: "https://api.openai.com/v1"
     },
-    systemPrompt: "你是一个简洁、乐于助人的助手。"
+    systemPrompt: "你是一个简洁、乐于助人的助手。",
+    maxSteps: 8                                     // 可选，工具循环上限；0 表示不限制（默认）
 });
 
 const answer = await agent.generate([
@@ -103,12 +104,15 @@ const answer = await agent.generate([
    → 逐个执行（后端 execute / 前端下发）
    → 结果作为 role: "tool" 的消息回灌
    → 再次请求模型
-   → 直到没有新的 tool_calls 为止</pre></div>
+   → 直到没有新的 tool_calls 为止（最多 maxSteps 轮）</pre></div>
 </div>
   <div class="note" style="margin-top:14px">
     <b>业务侧不需要写循环。</b>你要做的是"把工具执行好"，
     以及"把每一段文本/思考增量转给页面"—— 前者是 <code>execute</code>，后者是 <code>CreateTool</code>。
   </div>
+  <p style="margin-top:14px"><code>maxSteps</code><span class="ver new">0.2.0 新增</span> 默认 <code>0</code>，即不限步数；设成正数后超过上限会抛出明确错误，
+  适合给线上对话兜底，防止模型陷入无限工具循环。</p>
+  <p style="margin-top:14px">Agent 也接受 <code>signal</code><span class="ver new">0.2.0 新增</span>：abort 后本轮以错误 reject，配合 <code>AuiPage.stop()</code> 的 <code>context.signal</code> 一起用就能真正中断请求（<code>stop</code> 当成功收尾，<code>cancel</code> 当取消）。</p>
 </div>
 </section>
 
@@ -141,15 +145,21 @@ const tools = [
     // 前端工具：不带 execute，调用挂起，等页面回传结果
     ct.create({
         description: { /* name: "showPlain" */ }
-    })
+    }, { timeout: 60000 })                            // 可选，等页面回传的超时（毫秒）
 ];
 
 const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
 </div>
   <div class="table-wrap"><table class="spec">
   <thead><tr><th>创建方式</th><th>执行位置</th><th>流程</th></tr></thead>
-  <tbody><tr><td><code>ct.create({ description, execute })</code></td><td>服务端</td><td>Agent 直接执行，结果回灌模型</td></tr><tr><td><code>ct.create({ description })</code></td><td>浏览器</td><td>事件推给页面 → 挂起 → 页面回传 → 唤醒继续</td></tr></tbody>
+  <tbody><tr><td><code>ct.create({ description, execute })</code></td><td>服务端</td><td>Agent 直接执行，结果回灌模型</td></tr><tr><td><code>ct.create({ description })</code></td><td>浏览器</td><td>事件推给页面 → 挂起 → 页面回传 → 唤醒继续；默认等 30 秒，可用 <code>{ timeout }</code><span class="ver new">0.2.0 新增</span> 调整</td></tr></tbody>
 </table></div>
+  <div class="note" style="margin-top:14px">
+    <b>失败怎么表现</b><span class="ver fix">0.2.0 修复</span>：工具抛错（后端 execute 抛出、前端回传 <code>status: "error"</code>、等待超时）时，
+    事件里仍然只有 <code>status</code> 表示成败（<code>result</code> 不保证可读），
+    Agent 侧会把它转成一段 <code>运行出错: ...</code> 的文本回灌模型，让模型自己决定要不要重试，
+    整轮对话不会因此中断。
+  </div>
 </div>
 </section>
 
@@ -221,13 +231,13 @@ const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>

@@ -24,6 +24,8 @@ npm run dev
 
 默认接本地 [ollama](https://ollama.com/) 的 `qwen3.5`；不想装 ollama 也能跑，改 `src/apis/chat.js` 里的 `baseURL` / `apiKey` / `model` 三行，接任意 OpenAI 兼容服务即可。
 
+单测 `npm test` 不依赖网络；要连同真实模型跑一遍 `AUIPAGE_OLLAMA=1 npm run test:spec`。
+
 ## 它替你省掉什么
 
 | 你要做的事 | 没有框架时 | auipage 接管 |
@@ -31,6 +33,7 @@ npm run dev
 | 流式回复 | 自己切 SSE、处理跨包片段、把增量拼成一条消息 | `AuiPage` 收片段、拼文本、管理分段 |
 | 工具调用 | 自己解析 `tool_calls`、执行、回灌模型、处理多轮循环 | `Agent` 跑完循环，前端工具经 `CreateTool` 桥接 |
 | 会话与历史 | 自己维护 threadId、消息组、切会话、落库时机 | 三套 Adapter + 两个 Runtime 的固定接缝 |
+| 中途收手 | 自己 abort 请求、清理半截消息、决定这一轮要不要入库 | `stop()` 主动结束（内容保留）、`cancel()` 取消（可撤销），消息组分别标 `stopped` / `cancelled`（0.2.0） |
 
 ## 四个包，可以只用其中一个
 

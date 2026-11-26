@@ -7,7 +7,7 @@
 <title>defineTool 与 generator · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="页面侧工具定义、渲染与回传，以及把回调式异步流转成 AsyncGenerator。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=5aba8735">
+<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -140,7 +140,8 @@ export default defineTool({
     ) =&gt; void
 ): AsyncGenerator&lt;any&gt;</pre></div>
 </div>
-  <p style="margin-top:14px"><code>rawFun</code> 会被立即执行；<code>done()</code> / <code>error()</code> 之后再调 <code>next()</code> 会被忽略。</p>
+  <p style="margin-top:14px"><code>rawFun</code> 会被立即执行；<code>done()</code> / <code>error()</code> 之后再调 <code>next()</code> 会被忽略。
+  消费者提前退出（<code>break</code> / <code>return()</code>）时，后续 <code>next()</code> 同样被丢弃，队列会随之清空，不会一直堆在内存里<span class="ver chg">0.2.0 改造</span>。</p>
 </div>
 </section>
 
@@ -229,13 +230,13 @@ for await (const chunk of stream) {
       <div class="foot-meta">
         <span>MIT License</span>
         <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
-        <span class="foot-ver">v0.1.0</span>
+        <span class="foot-ver">v0.2.0</span>
       </div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=5aba8735"></script>
-<script src="../assets/js/docs.js?v=5aba8735"></script>
+<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
+<script src="../assets/js/docs.js?v=83aa83bc"></script>
 
 </body>
 </html>
