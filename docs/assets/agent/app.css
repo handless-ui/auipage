@@ -22,6 +22,7 @@
 }
 
 .agt-panel {
+    position: relative;
     width: min(1080px, 100%);
     height: min(720px, 100%);
     display: flex;
@@ -67,10 +68,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9px;
-    background: #fff;
-    border: 1px solid #e2e8f2;
-    overflow: hidden;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    overflow: visible;
     color: #2b59ff;
     font: 700 15px/30px "PingFang SC", sans-serif;
     text-align: center;
@@ -131,19 +132,37 @@
     border-radius: 6px;
 }
 
+/* 分组列表：今天 / 昨天 / 日期 / 已归档 */
+.agt-group {
+    margin-top: 4px;
+}
+
+.agt-group-head {
+    padding: 10px 8px 6px;
+    font: 500 11px/1.4 "PingFang SC", sans-serif;
+    color: #98a3b5;
+    letter-spacing: .2px;
+}
+
+.agt-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
 .agt-thread {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    padding: 0 6px 0 8px;
     border-radius: 8px;
-    color: #46556b;
-    transition: background .16s ease;
+    color: #2c3b55;
+    transition: background .15s ease;
 }
 
 .agt-thread:hover {
-    background: #f1f5ff;
-    color: #0b1322;
+    background: #f3f6fd;
 }
 
 .agt-thread.is-active {
@@ -152,145 +171,138 @@
 }
 
 .agt-thread.is-archived {
-    opacity: .6;
+    color: #7d8899;
+}
+
+.agt-thread.is-archived .agt-thread-title {
+    color: #7d8899;
+}
+
+.agt-thread.is-archived.is-active {
+    background: transparent;
 }
 
 .agt-thread.is-leaving {
     opacity: 0;
-    transform: translateX(-6px);
-    transition: opacity .16s ease, transform .16s ease;
+    transition: opacity .16s ease;
+}
+
+.agt-thread-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa6ba;
+}
+
+.agt-thread.is-active .agt-thread-icon {
+    color: #2b59ff;
+}
+
+.agt-thread-icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
 }
 
 .agt-thread-main {
     flex: 1;
     min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 68px 9px 10px;
+    padding: 9px 0;
     border: 0;
-    background: transparent;
+    background: none;
     text-align: left;
-    font: 500 12.5px/1.4 "PingFang SC", sans-serif;
+    font: 500 13px/1.4 "PingFang SC", sans-serif;
     color: inherit;
     cursor: pointer;
 }
 
 .agt-thread-title {
-    flex: 1;
-    min-width: 0;
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.agt-thread-time {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font: 400 10.5px/1 "PingFang SC", sans-serif;
-    color: #9aa6ba;
+.agt-thread-date {
+    flex: none;
+    font: 400 11px/1 "PingFang SC", sans-serif;
+    color: #a3adbd;
 }
 
-.agt-thread-acts {
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: none;
-    align-items: center;
-    gap: 2px;
-    padding: 0 2px 0 10px;
-    border-radius: 8px;
-    background: #f1f5ff;
-}
-
-.agt-thread.is-active .agt-thread-acts {
-    background: #eaf0ff;
-}
-
-.agt-thread.is-archived .agt-thread-acts {
-    display: flex;
-    background: transparent;
-}
-
-.agt-thread.is-archived .agt-thread-time {
-    display: none;
-}
-
-.agt-thread:hover .agt-thread-acts,
-.agt-thread.is-active .agt-thread-acts {
-    display: flex;
-}
-
-.agt-thread-act {
-    padding: 3px 5px;
+.agt-thread-more {
+    width: 22px;
+    height: 22px;
+    flex: none;
     border: 0;
     border-radius: 6px;
     background: transparent;
-    color: #6a7a94;
-    font: 500 11px/1.2 "PingFang SC", sans-serif;
+    color: #9aa6ba;
+    font: 500 15px/1 "PingFang SC", sans-serif;
     cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease;
 }
 
-.agt-thread-act:hover {
-    background: #eaf0ff;
+.agt-thread:hover .agt-thread-more,
+.agt-thread.is-menu .agt-thread-more,
+.agt-thread.is-active .agt-thread-more {
+    opacity: 1;
+}
+
+.agt-thread:hover .agt-thread-date,
+.agt-thread.is-menu .agt-thread-date {
+    display: none;
+}
+
+.agt-thread-more:hover {
+    background: #e6edff;
     color: #2b59ff;
 }
 
-.agt-thread-act.is-danger:hover {
-    background: #fdeeee;
+.agt-thread-menu {
+    position: absolute;
+    right: 4px;
+    top: 32px;
+    z-index: 9;
+    display: none;
+    flex-direction: column;
+    min-width: 96px;
+    padding: 4px;
+    border: 1px solid #e2e9f6;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 10px 26px rgba(10, 22, 48, .16);
+}
+
+.agt-thread.is-menu .agt-thread-menu {
+    display: flex;
+}
+
+.agt-menu-item {
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    text-align: left;
+    font: 500 12px/1.2 "PingFang SC", sans-serif;
+    color: #46556b;
+    cursor: pointer;
+}
+
+.agt-menu-item:hover {
+    background: #f4f7fd;
+    color: #2b59ff;
+}
+
+.agt-menu-item.is-danger {
     color: #c43838;
 }
 
-/* 已归档区：默认折叠 */
-.agt-arch {
-    display: none;
-    margin-top: 8px;
-    padding-top: 6px;
-    border-top: 1px dashed #e6ecf7;
-}
-
-.agt-arch.is-on {
-    display: block;
-}
-
-.agt-arch-head {
-    display: block;
-    width: 100%;
-    padding: 4px 10px;
-    border: 0;
-    background: transparent;
-    text-align: left;
-    font: 500 11px/1.4 "PingFang SC", sans-serif;
-    color: #9aa6ba;
-    cursor: pointer;
-}
-
-.agt-arch-head:hover {
-    color: #2b59ff;
-}
-
-.agt-arch-head::after {
-    content: "▾";
-    margin-left: 4px;
-    display: inline-block;
-    transition: transform .16s ease;
-}
-
-.agt-arch.is-open .agt-arch-head::after {
-    transform: rotate(180deg);
-}
-
-.agt-arch-list {
-    display: none;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.agt-arch.is-open .agt-arch-list {
-    display: flex;
+.agt-menu-item.is-danger:hover {
+    background: #fdeeee;
 }
 
 .agt-side-foot {
@@ -330,8 +342,10 @@
     position: relative;
     flex: 1;
     min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .agt-head {
@@ -485,10 +499,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    background: #fff;
-    border: 1px solid #e2e8f2;
-    overflow: hidden;
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+    overflow: visible;
     color: #2b59ff;
     font: 700 11px/26px "PingFang SC", sans-serif;
     text-align: center;
@@ -533,6 +547,74 @@
     border: 1px solid #e4eaf4;
     border-radius: 4px;
     padding: 1px 5px;
+}
+
+.agt-ask {
+    font-family: var(--mono, Menlo, monospace);
+    font-size: 12px;
+    color: #2b59ff;
+    background: #eef3ff;
+    border: 1px solid #c9d8ff;
+    border-radius: 5px;
+    padding: 1px 6px;
+    margin: 0 1px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.agt-ask:hover {
+    background: #e2ebff;
+    border-color: #a9c2ff;
+}
+
+.agt-ask:active {
+    background: #d6e3ff;
+}
+
+.agt-hits {
+    margin: 10px 0 2px;
+    font: 400 12px/1.7 "PingFang SC", sans-serif;
+    color: #6b7a90;
+}
+
+.agt-hits-toggle {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: #4a5c78;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.agt-hits-toggle::before {
+    content: "▸";
+    font-size: 10px;
+    color: #8a99b4;
+}
+
+.agt-hits-toggle.is-open::before {
+    content: "▾";
+}
+
+.agt-hits ul {
+    margin: 6px 0 0;
+    padding-left: 16px;
+}
+
+.agt-hits li {
+    margin: 2px 0;
+}
+
+.agt-hits a {
+    color: #2b59ff;
+    text-decoration: none;
+}
+
+.agt-hits a:hover {
+    text-decoration: underline;
 }
 
 .agt-text pre {
@@ -826,6 +908,16 @@
         overflow-y: auto;
     }
 
+    /* 手机上常显「更多」，不依赖 hover */
+    .agt-thread-more {
+        opacity: 1;
+    }
+
+    .agt-thread-more:active {
+        background: #e6edff;
+        color: #2b59ff;
+    }
+
     .agt-new {
         width: 100%;
         height: 36px;
@@ -882,10 +974,21 @@
     }
 
     .agt-notice {
+        position: relative;
         margin: 8px 12px 0;
         padding: 8px 10px;
         font-size: 11px;
         line-height: 1.55;
+    }
+
+    .agt-notice-text {
+        padding-right: 46px;
+    }
+
+    .agt-notice-close {
+        position: absolute;
+        top: 5px;
+        right: 6px;
     }
 
     .agt-notice-close {
@@ -904,6 +1007,11 @@
         margin: 4px 12px 0;
         padding: 8px 10px 6px;
         border-radius: 12px;
+    }
+
+    .agt-compose-bar {
+        justify-content: flex-end;
+        margin-top: 6px;
     }
 
     .agt-input {
@@ -1059,50 +1167,73 @@
 /* 设置页：盖住会话区，自己滚动 */
 .agt-settings {
     position: absolute;
-    inset: 52px 0 0;
-    display: none;
-    flex-direction: column;
-    background: #fff;
+    inset: 0;
     z-index: 5;
-    overflow: auto;
-    padding: 0 18px 22px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(9, 16, 32, .42);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
 }
 
 .agt-settings.is-open {
     display: flex;
 }
 
-.agt-set-head {
-    position: sticky;
-    top: 0;
-    z-index: 2;
+.agt-set-dialog {
+    width: min(780px, 100%);
+    max-height: min(640px, 100%);
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 0 10px;
+    flex-direction: column;
     background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 30px 80px rgba(10, 22, 48, .34);
+    overflow: hidden;
+}
+
+.agt-set-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #eef2f8;
 }
 
 .agt-set-title {
     margin: 0;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
 }
 
-.agt-set-back {
-    height: 30px;
-    padding: 0 10px;
-    border: 1px solid #dfe6f3;
+.agt-set-sub {
+    flex: 1;
+    font-size: 11.5px;
+    color: #8694ac;
+}
+
+.agt-set-close {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border: 0;
     border-radius: 8px;
-    background: #fff;
-    color: #3a4a63;
-    font-size: 12.5px;
+    background: transparent;
+    color: #7b899f;
+    font: 400 18px/1 sans-serif;
     cursor: pointer;
 }
 
-.agt-set-back:hover {
-    color: #2b59ff;
-    border-color: #b9c8e8;
+.agt-set-close:hover {
+    background: #f1f4fa;
+    color: #0b1322;
+}
+
+.agt-set-body {
+    min-height: 0;
+    overflow: auto;
+    padding: 16px 20px 18px;
 }
 
 .agt-set-note {
@@ -1379,8 +1510,21 @@
     }
 
     .agt-settings {
-        inset: 48px 0 0;
-        padding: 0 14px 18px;
+        padding: 10px;
+    }
+
+    .agt-set-dialog {
+        width: 100%;
+        max-height: 100%;
+        border-radius: 14px;
+    }
+
+    .agt-set-head {
+        padding: 12px 14px 10px;
+    }
+
+    .agt-set-body {
+        padding: 12px 14px calc(16px + env(safe-area-inset-bottom));
     }
 }
 

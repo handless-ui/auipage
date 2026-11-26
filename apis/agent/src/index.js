@@ -170,6 +170,11 @@ function boot() {
         ui.input.value = text;
         submit();
     };
+    chatScope.onFill = function (text) {
+        ui.input.value = text;
+        ui.input.focus();
+        ui.input.setSelectionRange(text.length, text.length);
+    };
 
     const threads = createThreads(ui.threadList, {
         onSelect: function (threadId) {
@@ -215,7 +220,7 @@ function boot() {
         onChange: function () { paintProviders(); refreshStatus(); },
         onBack: function () { ui.input.focus(); }
     });
-    ui.main.appendChild(settings.root);
+    ui.panel.appendChild(settings.root);
 
     function refreshStatus() {
         const provider = activeProvider(state);

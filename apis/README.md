@@ -202,8 +202,8 @@ apis/agent/
         └── thread.js    ThreadList / MessageHistory 适配器（localStorage + 归档/删除）
 ```
 
-产物有三个文件，都在 `docs/assets/agent/`：`boot.js`（外壳，手写，挂进 `partials/scripts.html`）、
-`app.js`（打包产物）、`app.css`（面板样式）。
+产物都在 `docs/assets/agent/`：`boot.js`（外壳，手写，挂进 `partials/scripts.html`）、
+`app.js`（打包产物）、`app.css`（面板样式）、`index.json`（本地检索索引，`apis/build.mjs` 生成）。
 
 ### 行为约定
 
@@ -213,15 +213,23 @@ apis/agent/
   默认选中内置「本地模型（演示）」，让没配模型的人也能直接体验；换成自己的模型后即真实对话。配置存 `localStorage`
   （键 `auipage.docs.agent.v1.providers`，悬浮球位置在同前缀的 `.pos`）。
 - **跨域**：浏览器直连第三方地址，对方必须允许 CORS，否则请求会被拦。
-  设置页有常驻说明，面板顶部也有提示条；本机 Ollama 可用 `OLLAMA_ORIGINS=* ollama serve` 放行。
+  「设置」是面板内的弹框：宽 780px、手机留 10px 边，点遮罩或右上角 × 关闭；弹框里有常驻说明，面板顶部也有提示条；本机 Ollama 可用 `OLLAMA_ORIGINS=* ollama serve` 放行。
   连不上时点「测试连接」会给出具体结论（跨域被拦 / 密钥被拒 / 404 / 超时）。
 - **演示模型**：内置「本地模型（演示）」，`protocol` 为 `demo`、只读、不可删。
   它的 `completions(params, logback, thinkback)` 与 `Model` 同契约，所以 Agent 的工具循环、
-  CreateTool 的两段式等待、AuiPage 的工具卡片全是真代码，只有 token 来源是预置脚本。
+  CreateTool 的两段式等待、AuiPage 的工具卡片全是真代码，只有 token 来源是本地脚本/检索。
+  脚本没命中的问题会走本地检索：把 23 页正文切成 129 个小节，按中文 bigram + BM25 变体打分，
+  取前 3–5 处原文句子拼成约 350 字的摘录式回答，末尾附可展开的「命中 n 处 · m 篇」清单与原文锚点链接；
+  检索不到就明说，不给编造答案。索引随 `node apis/build.mjs` 自动重建。
   适合没配模型的人先体验；回答带「演示模式 · 不联网」状态条与须知。
-- **会话**：列表与消息历史都持久化（键 `auipage.docs.agent.v1.threads` / `.history`），刷新或重开面板还在；
-  每条会话 hover 出现「归档 / 删除」，归档后收进底部「已归档 · n」折叠区，可恢复或删除；
-  删除当前会话时 AuiPage 会自动开一条新会话。写 `localStorage` 失败（隐私模式/配额）时退化为内存。
+- **可点击建议**：演示回答里用反引号包起来的示例问句会变成可点击的小按钮，点一下把问题填进输入框（不自动发送）。
+- **会话**：列表按日期分组（今天 / 昨天 / M月D日 / 已归档 · n），最近活跃的排在最上面；
+  每行是「文档图标 + 标题 + M/D」，hover 才露出 `⋯` 菜单（归档 / 恢复 / 删除），
+  每发一轮消息都会刷新标题、时间并把该会话顶回「今天」第一位；归档后移入底部「已归档」组，可恢复或删除；
+  删除当前会话时 AuiPage 会自动开一条新会话。列表与消息历史都持久化（键 `auipage.docs.agent.v1.threads` / `.history`），
+  写 `localStorage` 失败（隐私模式/配额）时退化为内存。
+- **手机**：面板铺满全屏（`100dvh`），会话列表收成左侧抽屉（顶栏 `☰` 打开、点遮罩关闭），
+  会话的归档/删除在触屏上常显；输入区按钮放大到 34px，iOS 下 15px 字号避免聚焦缩放。
 - **视觉**：左栏品牌、助手头像、悬浮球统一用站点 logo 图（`assets/img/logo.png`）；
   悬浮球整块 54px 完整显示（含天线），上方提示「点击我，快速试一下」，每隔 6–11 秒轻微动一下（`prefers-reduced-motion` 下关闭）。
 

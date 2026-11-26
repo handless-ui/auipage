@@ -12,6 +12,14 @@
     var root = base + "assets/agent/";
     var SUFFIX = query ? query : "";
     window.__AGH_LOGO__ = base + "assets/img/logo.png";
+    window.__AGH_ROOT__ = root;
+    window.__AGH_DOCS_BASE__ = base;
+    try {
+        var docsUrl = new URL(base, location.href);
+        window.__AGH_PAGE__ = decodeURIComponent(location.pathname.slice(docsUrl.pathname.length));
+    } catch (e) {
+        window.__AGH_PAGE__ = "";
+    }
 
     var POS_KEY = "auipage.docs.agent.v1.pos";
     var HINT_KEY = "auipage.docs.agent.v1.hint";
@@ -361,5 +369,15 @@
     document.body.appendChild(mask);
 
     // 尺寸要等进了 DOM 才准，重新夹一次，保证整块（含上方文案）都在视口里
+    function reclamp() {
+        var x = parseInt(wrap.style.left, 10);
+        var y = parseInt(wrap.style.top, 10);
+        if (typeof x === "number" && typeof y === "number") applyPos(clamp(x, y));
+    }
     applyPos(saved && typeof saved.x === "number" ? clamp(saved.x, saved.y) : defaultPos());
+    // 字体/图片加载后文案宽度会变，再夹两次，避免右侧被裁
+    if (window.requestAnimationFrame) requestAnimationFrame(reclamp);
+    window.addEventListener("load", reclamp);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(reclamp).catch(function () {});
+    setTimeout(reclamp, 500);
 })();

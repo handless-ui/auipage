@@ -25,6 +25,7 @@ import path from 'node:path';
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { buildSearchIndex } from './agent/index-builder.mjs';
 
 const SRC = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(SRC, '..');
@@ -495,6 +496,10 @@ function build() {
     fs.writeFileSync(outFile, html);
     generated.push({ rel, outFile, html });
   }
+
+  // 站内助手的本地检索索引：跟着页面一起生成，页面改了就自动重建
+  const index = buildSearchIndex({ docsDir: OUT });
+  console.log(`检索索引：${index.pages} 页 / ${index.blocks} 节（${(index.bytes / 1024).toFixed(1)} KB）`);
 
   // 死链 + 孤立页面检查
   const targets = new Set(generated.map((g) => g.rel));

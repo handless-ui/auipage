@@ -1065,6 +1065,29 @@ function renderMarkdown(source) {
             closeList();
             continue;
         }
+
+        // 命中清单：结构化标记，由这里拼 HTML；流式没收尾时 JSON 解析失败就先不渲染
+        if (/^%%HITS\s/.test(line.trim())) {
+            let data = null;
+            try {
+                data = JSON.parse(line.trim().slice(6));
+            } catch (e) {
+                data = null;
+            }
+            if (data && Array.isArray(data.items)) {
+                flushPara();
+                closeList();
+                const items = data.items.filter(function (item) {
+                    if (!item || typeof item.href !== "string") return false;
+                    if (/^[a-z][a-z0-9+.-]*:/i.test(item.href)) return /^https?:\/\//i.test(item.href);
+                    return !/^\/\//.test(item.href);
+                }).map(function (item) {
+                    return '<li><a href="' + escapeHtml(item.href) + '">' + escapeHtml(item.label) + "</a></li>";
+                }).join("");
+                html.push('<div class="agt-hits"><button type="button" class="agt-hits-toggle" aria-expanded="false">' + escapeHtml(data.title || "") + '</button><ul hidden>' + items + "</ul></div>");
+            }
+            continue;
+        }
         const heading = line.match(/^(#{1,4})\s+(.+)$/);
         if (heading) {
             flushPara();
@@ -1130,6 +1153,16 @@ const SUGGESTIONS = [
     "工具是怎么被调用的",
     "模型地址连不上怎么办"
 ];
+
+// 回答正文里被反引号包起来、又正好是这些问句时，转成可点击的入口
+const ASKABLE = new Set(SUGGESTIONS.concat([
+    "连不上模型怎么办",
+    "停止和取消有什么区别",
+    "会话历史怎么存",
+    "流式解析怎么做",
+    "零依赖是怎么做到的",
+    "工具是前端跑还是后端跑"
+]));
 
 function createChatView(container, scope) {
     let assistantTurn = null;
@@ -1201,7 +1234,18 @@ function createChatView(container, scope) {
         scrollToEnd();
     }
 
-    function renderThinking(part) {
+    // 流式思考时展开，思考结束（开始正文/工具）后自动收起
+    function closeLiveThinks() {
+        if (!assistantTurn || !assistantTurn.body) return;
+        assistantTurn.body.querySelectorAll('.agt-think[data-live="1"]').forEach(function (box) {
+            box.dataset.live = "";
+            box.open = false;
+            const label = box.querySelector("summary");
+            if (label) label.textContent = "思考过程";
+        });
+    }
+
+    function renderThinking(part, live) {
         const spot = assistantTurn || newTurn("assistant");
         if (loadingEl) {
             loadingEl.remove();
@@ -1209,8 +1253,10 @@ function createChatView(container, scope) {
         }
         assistantTurn = spot;
         const box = el$1("details", "agt-think");
+        if (live) box.dataset.live = "1";
+        box.open = !!live;
         const summary = el$1("summary", "");
-        summary.textContent = "思考过程";
+        summary.textContent = live ? "正在思考…" : "思考过程";
         box.appendChild(summary);
         const pre = el$1("div", "agt-think-body");
         box.appendChild(pre);
@@ -1223,7 +1269,35 @@ function createChatView(container, scope) {
         };
     }
 
+    function decorate(block) {
+        if (!block) return;
+        Array.from(block.querySelectorAll(".agt-hits-toggle")).forEach(function (toggle) {
+            if (toggle.dataset.bound) return;
+            toggle.dataset.bound = "1";
+            toggle.addEventListener("click", function () {
+                const list = toggle.parentNode.querySelector("ul");
+                if (!list) return;
+                list.hidden = !list.hidden;
+                toggle.classList.toggle("is-open", !list.hidden);
+                toggle.setAttribute("aria-expanded", list.hidden ? "false" : "true");
+            });
+        });
+        if (!scope.onFill) return;
+        Array.from(block.querySelectorAll("code")).forEach(function (node) {
+            const text = node.textContent.trim();
+            if (!ASKABLE.has(text)) return;
+            const ask = el$1("button", "agt-ask", text);
+            ask.type = "button";
+            ask.title = "把这句话填进输入框";
+            ask.addEventListener("click", function () {
+                scope.onFill(text);
+            });
+            node.replaceWith(ask);
+        });
+    }
+
     function renderText(part) {
+        closeLiveThinks();
         const spot = assistantTurn || newTurn("assistant");
         assistantTurn = spot;
         if (loadingEl) {
@@ -1236,6 +1310,7 @@ function createChatView(container, scope) {
         let raw = part.text || "";
         let frame = null;
         block.innerHTML = renderMarkdown(raw);
+        decorate(block);
         scrollToEnd();
 
         return function (delta) {
@@ -1244,6 +1319,7 @@ function createChatView(container, scope) {
             frame = setTimeout(function () {
                 frame = null;
                 block.innerHTML = renderMarkdown(raw);
+                decorate(block);
                 scrollToEnd();
             }, 16);
         };
@@ -1261,6 +1337,7 @@ function createChatView(container, scope) {
     }
 
     function renderToolCall(part) {
+        closeLiveThinks();
         const spot = assistantTurn || newTurn("assistant");
         assistantTurn = spot;
         if (loadingEl) {
@@ -1343,7 +1420,7 @@ function createChatView(container, scope) {
                 return;
             }
             if (part.type === "loading") return renderLoading();
-            if (part.type === "thinking") return renderThinking(part);
+            if (part.type === "thinking") return renderThinking(part, true);
             if (part.type === "tool-call") return renderToolCall(part);
             return renderText(part);
         }
@@ -1367,8 +1444,8 @@ function createChatView(container, scope) {
     };
 }
 
-// 会话三件套：Adapter 与 Runtime 之外，多一层本机持久化（localStorage）。
-// 会话列表、归档标记与消息历史都落盘，刷新后还能看到；写失败（隐私模式/配额）就退化成内存。
+// 会话列表：按日期分组（今天 / 昨天 / 具体日期 / 已归档），最近活跃的排在最上面。
+// 列表、归档标记与消息历史都落 localStorage；写失败（隐私模式/配额）就退化成内存。
 
 const THREAD_KEY = "auipage.docs.agent.v1.threads";
 const HISTORY_KEY = "auipage.docs.agent.v1.history";
@@ -1405,11 +1482,62 @@ function write(key, value) {
     }
 }
 
+function dayKey(ts) {
+    const date = new Date(ts || 0);
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function dayLabel(ts) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const day = dayKey(ts);
+    if (day === today) return "今天";
+    if (day === today - 86400000) return "昨天";
+    const date = new Date(day);
+    return (date.getMonth() + 1) + "月" + date.getDate() + "日";
+}
+
+function shortDate(ts) {
+    const date = new Date(ts || 0);
+    return (date.getMonth() + 1) + "/" + date.getDate();
+}
+
+function timeLabel(ts) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return dayKey(ts) === today ? clock(ts) : shortDate(ts);
+}
+
 function clock(ts) {
     if (!ts) return "";
     const date = new Date(ts);
     const pad = function (n) { return n < 10 ? "0" + n : String(n); };
     return pad(date.getHours()) + ":" + pad(date.getMinutes());
+}
+
+function stampOf(item) {
+    return item.updatedAt || item.createdAt || 0;
+}
+
+function pageIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    const body = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    body.setAttribute("d", "M7 3.5h6.4L19 9.1v10.1a1.4 1.4 0 0 1-1.4 1.4h-10A1.4 1.4 0 0 1 6.2 19.2V5.1A1.4 1.4 0 0 1 7.6 3.5Z");
+    body.setAttribute("fill", "none");
+    body.setAttribute("stroke", "currentColor");
+    body.setAttribute("stroke-width", "1.4");
+    body.setAttribute("stroke-linejoin", "round");
+    const fold = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    fold.setAttribute("d", "M13.2 3.9v5.2h5.4");
+    fold.setAttribute("fill", "none");
+    fold.setAttribute("stroke", "currentColor");
+    fold.setAttribute("stroke-width", "1.4");
+    fold.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(body);
+    svg.appendChild(fold);
+    return svg;
 }
 
 function createThreads(container, hooks) {
@@ -1421,20 +1549,10 @@ function createThreads(container, hooks) {
         if (Array.isArray(savedHistory[id])) history.set(id, savedHistory[id].slice(-MAX_GROUPS));
     });
 
-    const items = new Map();
+    const items = new Map();     // threadId -> row
+    const groupMap = new Map();  // dayKey(ts) -> group
     let activeId = null;
-    let archivedCount = 0;
-
-    const archBox = document.createElement("div");
-    archBox.className = "agt-arch";
-    const archHead = document.createElement("button");
-    archHead.type = "button";
-    archHead.className = "agt-arch-head";
-    const archList = document.createElement("div");
-    archList.className = "agt-arch-list";
-    archBox.appendChild(archHead);
-    archBox.appendChild(archList);
-    container.appendChild(archBox);
+    let archGroup = null;
 
     function saveThreads() {
         write(THREAD_KEY, threads.slice(0, MAX_THREADS));
@@ -1446,16 +1564,120 @@ function createThreads(container, hooks) {
         write(HISTORY_KEY, plain);
     }
 
-    function paintArch() {
-        archivedCount = threads.filter((t) => t.archived).length;
-        archHead.textContent = "已归档 · " + archivedCount;
-        archBox.classList.toggle("is-on", archivedCount > 0);
+    /* ---------------------------------------------------------- 分组 */
+
+    function makeGroup(label) {
+        const box = document.createElement("div");
+        box.className = "agt-group";
+        const head = document.createElement("div");
+        head.className = "agt-group-head";
+        head.textContent = label;
+        const list = document.createElement("div");
+        list.className = "agt-group-list";
+        box.appendChild(head);
+        box.appendChild(list);
+        container.appendChild(box);
+        return { box: box, head: head, list: list };
+    }
+
+    function ensureArchGroup() {
+        if (!archGroup) {
+            archGroup = makeGroup("已归档");
+            archGroup.box.classList.add("is-arch");
+            container.appendChild(archGroup.box);
+        }
+        return archGroup;
+    }
+
+    function ensureDayGroup(ts) {
+        const key = dayKey(ts);
+        if (groupMap.has(key)) return groupMap.get(key);
+        const group = makeGroup(dayLabel(ts));
+        group.box.dataset.day = String(key);
+        groupMap.set(key, group);
+
+        // 新日期组要插在「比它更早的日期组」之前、已归档组之前
+        let before = archGroup ? archGroup.box : null;
+        groupMap.forEach(function (other) {
+            if (other === group) return;
+            const day = parseInt(other.box.dataset.day, 10);
+            if (day < key && (!before || before === archGroup.box || parseInt(before.dataset.day || "0", 10) < day)) {
+                before = other.box;
+            }
+        });
+        container.insertBefore(group.box, before);
+        return group;
+    }
+
+    function groupOf(row) {
+        const box = row && row.closest ? row.closest(".agt-group") : null;
+        if (!box) return null;
+        if (archGroup && box === archGroup.box) return archGroup;
+        return groupMap.get(parseInt(box.dataset.day, 10)) || null;
+    }
+
+    function dropEmptyGroup(group) {
+        if (!group) return;
+        if (group === archGroup) {
+            if (!group.list.children.length) {
+                group.box.remove();
+                archGroup = null;
+            }
+            return;
+        }
+        if (group.list.children.length) return;
+        groupMap.delete(parseInt(group.box.dataset.day, 10));
+        group.box.remove();
+    }
+
+    function insertRow(group, row, ts) {
+        let before = null;
+        Array.from(group.list.children).forEach(function (node) {
+            if (before) return;
+            const other = threads.find(function (t) { return t.threadId === node.dataset.id; });
+            if (other && stampOf(other) < ts) before = node;
+        });
+        group.list.insertBefore(row, before);
+    }
+
+    function paintArchHead() {
+        if (!archGroup) return;
+        const count = archGroup.list.children.length;
+        archGroup.head.textContent = count ? "已归档 · " + count : "已归档";
+    }
+
+    /* ---------------------------------------------------------- 行 */
+
+    function closeMenus() {
+        container.querySelectorAll(".agt-thread.is-menu").forEach(function (node) {
+            node.classList.remove("is-menu");
+        });
+    }
+    document.addEventListener("click", closeMenus);
+
+    function menuItem(label, danger, onClick) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "agt-menu-item" + (danger ? " is-danger" : "");
+        button.textContent = label;
+        button.addEventListener("click", function (event) {
+            event.stopPropagation();
+            closeMenus();
+            onClick();
+        });
+        return button;
     }
 
     function makeRow(item) {
         const row = document.createElement("div");
         row.className = "agt-thread";
         row.dataset.id = item.threadId;
+        if (item.archived) row.classList.add("is-archived");
+
+        const mark = document.createElement("span");
+        mark.className = "agt-thread-icon";
+        mark.appendChild(pageIcon());
+        row.appendChild(mark);
 
         const main = document.createElement("button");
         main.type = "button";
@@ -1463,53 +1685,46 @@ function createThreads(container, hooks) {
         const label = document.createElement("span");
         label.className = "agt-thread-title";
         label.textContent = item.title || "新对话";
-        const time = document.createElement("span");
-        time.className = "agt-thread-time";
-        time.textContent = clock(item.createdAt);
         main.appendChild(label);
-        row.appendChild(main);
-        row.appendChild(time);
-
-        const acts = document.createElement("div");
-        acts.className = "agt-thread-acts";
-
-        if (!item.archived) {
-            const archive = document.createElement("button");
-            archive.type = "button";
-            archive.className = "agt-thread-act";
-            archive.title = "归档这条会话";
-            archive.textContent = "归档";
-            archive.addEventListener("click", function () {
-                if (hooks && hooks.onArchive) hooks.onArchive(item.threadId);
-            });
-            acts.appendChild(archive);
-        } else {
-            const back = document.createElement("button");
-            back.type = "button";
-            back.className = "agt-thread-act";
-            back.title = "恢复到会话列表";
-            back.textContent = "恢复";
-            back.addEventListener("click", function () {
-                if (hooks && hooks.onUnarchive) hooks.onUnarchive(item.threadId);
-            });
-            acts.appendChild(back);
-        }
-
-        const del = document.createElement("button");
-        del.type = "button";
-        del.className = "agt-thread-act is-danger";
-        del.title = "删除这条会话";
-        del.textContent = "删除";
-        del.addEventListener("click", function () {
-            if (hooks && hooks.onDelete) hooks.onDelete(item.threadId);
-        });
-        acts.appendChild(del);
-        row.appendChild(acts);
-
         main.addEventListener("click", function () {
             if (item.archived) return;
             if (hooks && hooks.onSelect) hooks.onSelect(item.threadId);
         });
+        row.appendChild(main);
+
+        const date = document.createElement("span");
+        date.className = "agt-thread-date";
+        date.textContent = timeLabel(item.createdAt);
+        row.appendChild(date);
+
+        const more = document.createElement("button");
+        more.type = "button";
+        more.className = "agt-thread-more";
+        more.setAttribute("aria-label", "更多操作");
+        more.textContent = "⋯";
+        more.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const open = row.classList.contains("is-menu");
+            closeMenus();
+            if (!open) row.classList.add("is-menu");
+        });
+        row.appendChild(more);
+
+        const menu = document.createElement("div");
+        menu.className = "agt-thread-menu";
+        if (item.archived) {
+            menu.appendChild(menuItem("恢复", false, function () {
+                if (hooks && hooks.onUnarchive) hooks.onUnarchive(item.threadId);
+            }));
+        } else {
+            menu.appendChild(menuItem("归档", false, function () {
+                if (hooks && hooks.onArchive) hooks.onArchive(item.threadId);
+            }));
+        }
+        menu.appendChild(menuItem("删除", true, function () {
+            if (hooks && hooks.onDelete) hooks.onDelete(item.threadId);
+        }));
+        row.appendChild(menu);
 
         return row;
     }
@@ -1522,108 +1737,109 @@ function createThreads(container, hooks) {
         if (hooks && hooks.onTitle) hooks.onTitle(current ? current.title : "新对话");
     }
 
+    /* ---------------------------------------------------------- Runtime */
+
+    function bumpThread(threadId) {
+        const row = items.get(threadId);
+        const item = threads.find((t) => t.threadId === threadId);
+        if (!row || !item || item.archived) return;
+        const from = groupOf(row);
+        const before = stampOf(item);
+        item.updatedAt = Date.now();
+        row.querySelector(".agt-thread-date").textContent = shortDate(stampOf(item));
+        if (dayKey(before) === dayKey(item.updatedAt)) {
+            insertRow(from, row, stampOf(item));
+        } else {
+            row.remove();
+            dropEmptyGroup(from);
+            insertRow(ensureDayGroup(item.updatedAt), row, stampOf(item));
+        }
+        saveThreads();
+    }
+
     const runtime = new ThreadListRuntime({
-        init: function (list) {
-            container.querySelectorAll(".agt-thread").forEach(function (node) { node.remove(); });
+        init: function () {
+            container.innerHTML = "";
             items.clear();
-            const groups = threads.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-            groups.forEach(function (item) { runtime.append(item); });
-            paintArch();
+            groupMap.clear();
+            archGroup = null;
+            threads.slice().sort(function (a, b) { return stampOf(b) - stampOf(a); }).forEach(function (item) {
+                runtime.append(item);
+            });
             paintActive();
         },
         append: function (item) {
             if (!item || items.has(item.threadId)) return;
             const row = makeRow(item);
-            if (item.archived) archList.appendChild(row);
-            else container.insertBefore(row, archBox);
+            const group = item.archived ? ensureArchGroup() : ensureDayGroup(stampOf(item));
             items.set(item.threadId, row);
-            if (item.archived) row.classList.add("is-archived");
-            paintArch();
+            insertRow(group, row, stampOf(item));
+            paintArchHead();
             paintActive();
-            archHead.classList.toggle("is-empty", !archivedCount);
         },
         active: function (threadId) {
             activeId = threadId;
             paintActive();
         },
+        bump: bumpThread,
         delete: function (threadId) {
             const row = items.get(threadId);
-            if (row) {
-                row.classList.add("is-leaving");
-                setTimeout(function () { row.remove(); }, 160);
-            }
+            const group = row ? groupOf(row) : null;
             items.delete(threadId);
             history.delete(threadId);
-            paintArch();
+            if (row) {
+                row.classList.add("is-leaving");
+                setTimeout(function () {
+                    row.remove();
+                    dropEmptyGroup(group);
+                    paintArchHead();
+                }, 160);
+            }
         },
         archive: function (threadId) {
             const row = items.get(threadId);
-            if (!row) return;
             const item = threads.find((t) => t.threadId === threadId);
-            row.classList.add("is-archived");
-            row.querySelector(".agt-thread-acts").innerHTML = "";
-            archList.appendChild(row);
-            if (item) {
-                const back = document.createElement("button");
-                back.type = "button";
-                back.className = "agt-thread-act";
-                back.textContent = "恢复";
-                back.addEventListener("click", function () {
-                    if (hooks && hooks.onUnarchive) hooks.onUnarchive(threadId);
-                });
-                const del = document.createElement("button");
-                del.type = "button";
-                del.className = "agt-thread-act is-danger";
-                del.textContent = "删除";
-                del.addEventListener("click", function () {
-                    if (hooks && hooks.onDelete) hooks.onDelete(threadId);
-                });
-                row.querySelector(".agt-thread-acts").appendChild(back);
-                row.querySelector(".agt-thread-acts").appendChild(del);
-            }
-            paintArch();
+            if (!row || !item) return;
+            const from = groupOf(row);
+            const group = ensureArchGroup();
+            row.remove();
+            const fresh = makeRow(item);
+            items.set(threadId, fresh);
+            group.list.insertBefore(fresh, group.list.firstChild);
+            dropEmptyGroup(from);
+            paintArchHead();
+            paintActive();
         },
         unarchive: function (threadId) {
             const row = items.get(threadId);
             const item = threads.find((t) => t.threadId === threadId);
             if (!row || !item) return;
-            row.classList.remove("is-archived");
-            container.insertBefore(row, archBox);
-            const acts = row.querySelector(".agt-thread-acts");
-            acts.innerHTML = "";
-            const archive = document.createElement("button");
-            archive.type = "button";
-            archive.className = "agt-thread-act";
-            archive.textContent = "归档";
-            archive.addEventListener("click", function () {
-                if (hooks && hooks.onArchive) hooks.onArchive(threadId);
-            });
-            const del = document.createElement("button");
-            del.type = "button";
-            del.className = "agt-thread-act is-danger";
-            del.textContent = "删除";
-            del.addEventListener("click", function () {
-                if (hooks && hooks.onDelete) hooks.onDelete(threadId);
-            });
-            acts.appendChild(archive);
-            acts.appendChild(del);
-            paintArch();
+            const from = groupOf(row);
+            row.remove();
+            const fresh = makeRow(item);
+            items.set(threadId, fresh);
+            insertRow(ensureDayGroup(stampOf(item)), fresh, stampOf(item));
+            dropEmptyGroup(from);
+            paintArchHead();
+            paintActive();
         }
     });
 
-    archHead.addEventListener("click", function () {
-        archBox.classList.toggle("is-open");
-    });
+    /* ---------------------------------------------------------- Adapter */
+
+    runtime.bump = bumpThread;
 
     const adapter = new ThreadListAdapter({
         list: function () {
             return threads.slice();
         },
         new: function (group) {
+            const now = Date.now();
             const item = {
-                threadId: "t_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+                threadId: "t_" + now.toString(36) + Math.random().toString(36).slice(2, 5),
                 title: titleOf(group),
-                createdAt: Date.now(),
+                createdAt: now,
+                updatedAt: now,
                 archived: false
             };
             threads.unshift(item);
@@ -1660,11 +1876,16 @@ function createThreads(container, hooks) {
             history.get(threadId).push(group);
             if (history.get(threadId).length > MAX_GROUPS) history.set(threadId, history.get(threadId).slice(-MAX_GROUPS));
             saveHistory();
+            const item = threads.find((t) => t.threadId === threadId);
+            if (item) {
+                item.title = titleOf({ messages: [].concat.apply([], history.get(threadId).map(function (g) { return g.messages || []; })) });
+                const row = items.get(threadId);
+                if (row) row.querySelector(".agt-thread-title").textContent = item.title;
+                bumpThread(threadId);
+            }
             return true;
         }
     });
-
-    paintArch();
 
     return { adapter: adapter, runtime: runtime, messageHistory: messageHistory, threads: threads };
 }
@@ -2946,6 +3167,350 @@ function removeProvider(state, id) {
     return state;
 }
 
+// 中文按「字级 bigram」切，英文/数字按单词切；构建期与浏览器共用同一套规则，保证索引与查询对得上。
+const STOP = new Set([
+    "的", "了", "是", "在", "和", "与", "也", "就", "都", "而", "及", "或", "一个", "这个", "那个",
+    "怎么", "怎样", "如何", "什么", "为什么", "哪些", "哪一", "可以", "能否", "是否", "需要", "一下",
+    "the", "a", "an", "of", "to", "and", "or", "is", "are", "in", "on", "for", "with", "how", "what"
+]);
+
+const CJK = /[\u4e00-\u9fa5]/;
+
+function latinTokens(run, push) {
+    // 驼峰与下划线拆开：handleChoices -> handle choices
+    run.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/[_\-.]/g, " ")
+        .split(/\s+/)
+        .forEach(function (word) {
+            const w = word.toLowerCase();
+            if (w.length >= 2 && !STOP.has(w)) push(w);
+        });
+}
+
+function tokenize(source) {
+    const tokens = [];
+    const text = String(source == null ? "" : source).toLowerCase();
+    const push = function (token) {
+        if (token && !STOP.has(token)) tokens.push(token);
+    };
+
+    let run = "";
+    let latin = true;
+    const flush = function () {
+        if (!run) return;
+        if (latin) latinTokens(run, push);
+        else {
+            if (run.length === 1) push(run);
+            for (let i = 0; i + 1 < run.length; i++) push(run.slice(i, i + 2));
+        }
+        run = "";
+    };
+
+    for (const ch of text) {
+        const isCjk = CJK.test(ch);
+        const isWord = /[a-z0-9]/.test(ch);
+        if (isCjk) {
+            if (run && latin) flush();
+            latin = false;
+            run += ch;
+        } else if (isWord) {
+            if (run && !latin) flush();
+            latin = true;
+            run += ch;
+        } else {
+            flush();
+        }
+    }
+    flush();
+    return tokens;
+}
+
+// 本地检索：构建期生成 index.json，这里按需加载 + BM25 变体打分，不联网、不引入向量库。
+
+const K1 = 1.2;
+const B = 0.62;
+
+let loading = null;
+let state = null;
+
+function root() {
+    if (window.__AGH_ROOT__) return window.__AGH_ROOT__;
+    return "assets/agent/";
+}
+
+function loadIndex() {
+    if (state) return Promise.resolve(state);
+    if (loading) return loading;
+    loading = fetch(root() + "index.json", { cache: "no-cache" })
+        .then(function (res) {
+            if (!res.ok) throw new Error("index " + res.status);
+            return res.json();
+        })
+        .then(function (json) {
+            return installIndex(json);
+        })
+        .catch(function () {
+            loading = null;
+            return null;
+        });
+    return loading;
+}
+
+function installIndex(json) {
+    const docs = [];
+    (json.pages || []).forEach(function (page) {
+        (page.s || []).forEach(function (section) {
+            const k = section.k || [];
+            const counts = new Map();
+            for (let i = 0; i + 1 < k.length; i += 2) counts.set(k[i], k[i + 1]);
+            docs.push({
+                page: page.p,
+                pageTitle: page.t,
+                group: page.g,
+                anchor: section.a,
+                heading: section.h,
+                text: section.x || "",
+                counts: counts,
+                titleTokens: new Set(tokenize(page.t + " " + section.h)),
+                len: (section.x || "").length
+            });
+        });
+    });
+
+    const postings = new Map();
+    let totalLen = 0;
+    docs.forEach(function (doc, id) {
+        totalLen += doc.len;
+        doc.id = id;
+        doc.counts.forEach(function (tf, token) {
+            let list = postings.get(token);
+            if (!list) postings.set(token, list = []);
+            list.push(id, tf);
+        });
+    });
+
+    state = { docs: docs, postings: postings, avg: totalLen / Math.max(1, docs.length) };
+    return state;
+}
+
+function idf(df) {
+    const n = state.docs.length;
+    return Math.log(1 + (n - df + 0.5) / (df + 0.5));
+}
+
+function rank(query, options) {
+    if (!state) return [];
+    const opts = options || {};
+    const tokens = tokenize(query);
+    if (!tokens.length) return [];
+
+    const weights = new Map();
+    tokens.forEach(function (token) {
+        weights.set(token, (weights.get(token) || 0) + 1);
+    });
+
+    const scores = new Map();
+    weights.forEach(function (weight, token) {
+        const list = state.postings.get(token);
+        if (!list) return;
+        const df = list.length / 2;
+        const tokenIdf = idf(df);
+        for (let i = 0; i < list.length; i += 2) {
+            const id = list[i];
+            const tf = list[i + 1];
+            const doc = state.docs[id];
+            const norm = 1 - B + B * doc.len / Math.max(1, state.avg);
+            let score = tokenIdf * (tf * (K1 + 1)) / (tf + K1 * norm) * weight;
+            if (doc.titleTokens.has(token)) score *= 2.2;
+            scores.set(id, (scores.get(id) || 0) + score);
+        }
+    });
+
+    const parts = String(query || "").split(/\s+/)
+        .map(function (part) { return part.replace(/[？?。，,]/g, ""); })
+        .filter(function (part) { return part.length >= 3; });
+    const results = [];
+    scores.forEach(function (score, id) {
+        const doc = state.docs[id];
+        parts.forEach(function (part) {
+            if (doc.heading.replace(/\s/g, "").includes(part)) score += 5;
+            if (doc.pageTitle.replace(/\s/g, "").includes(part)) score += 12;
+            if (doc.text.replace(/\s/g, "").includes(part)) score += 3;
+        });
+        if (opts.pageRel && doc.page === opts.pageRel) score *= 1.45;
+        results.push({
+            page: doc.page,
+            pageTitle: doc.pageTitle,
+            group: doc.group,
+            anchor: doc.anchor,
+            heading: doc.heading,
+            text: doc.text,
+            score: score
+        });
+    });
+
+    return results.sort(function (a, b) { return b.score - a.score; }).slice(0, 12);
+}
+
+// 把检索结果拼成「摘录式」回答：只用原文句子，附命中清单，不生成新事实。
+
+// 只覆盖文档里真实出现的说法，不做通用近义词猜测
+const ALIASES = [
+    [/零依赖|不用装|无依赖|不装依赖/, "一个包都不用 npm install 依赖"],
+    [/会话历史|历史消息|消息历史/, "会话 历史 message history toModelMessages"],
+    [/一轮对话|一轮/, "一轮对话 runConversation"],
+    [/前端工具|后端工具/, "前端工具 后端工具 CreateTool"] ,
+    [/跨域|连不上|CORS/, "跨域 CORS"],
+    [/流式|SSE/, "流式 SSE 解析"]
+];
+
+function expand(query) {
+    let text = String(query || "");
+    ALIASES.forEach(function (pair) {
+        if (pair[0].test(text)) text += " " + pair[1];
+    });
+    return text;
+}
+
+function docsBase() {
+    return window.__AGH_DOCS_BASE__ || "";
+}
+
+function pageRel() {
+    return window.__AGH_PAGE__ || "";
+}
+
+function sentences(text) {
+    const list = String(text || "")
+        .split(/(?<=[。！？；])/)
+        .map(function (item) { return item.trim(); })
+        .filter(Boolean);
+    return list.length ? list : String(text || "").trim() ? [String(text).trim()] : [];
+}
+
+function cut(text, max) {
+    const flat = String(text || "").replace(/\s+/g, " ");
+    if (flat.length <= max) return flat;
+    return flat.slice(0, max - 1) + "…";
+}
+
+function bestSentence(section, query) {
+    const parts = sentences(section.text);
+    if (!parts.length) return "";
+    const tokens = Array.from(new Set(tokenize(query)));
+    let best = parts[0];
+    let bestScore = -1;
+    parts.forEach(function (part, index) {
+        let hits = 0;
+        tokens.forEach(function (token) {
+            if (part.toLowerCase().includes(token)) hits += 1;
+        });
+        const score = hits * 2 - index * 0.2;
+        if (score > bestScore) {
+            bestScore = score;
+            best = part;
+        }
+    });
+    return best;
+}
+
+function directAnswer(section, query) {
+    const parts = sentences(section.text);
+    if (!parts.length) return "";
+    let answer = bestSentence(section, query);
+    const next = parts[parts.indexOf(answer) + 1];
+    if (answer.length < 50 && next && answer.length + next.length <= 120) answer += next;
+    if (answer.length <= 128) return answer;
+    const head = answer.slice(0, 126);
+    const comma = Math.max(head.lastIndexOf("，"), head.lastIndexOf("；"), head.lastIndexOf("、"));
+    return (comma > 60 ? head.slice(0, comma) : head) + "…";
+}
+
+function pointOf(section, query) {
+    return cut(bestSentence(section, query), 78);
+}
+
+function hitsHtml(results) {
+    const top = results.slice(0, 5);
+    const pages = new Set(top.map(function (item) { return item.page; })).size;
+    const items = top.map(function (item) {
+        return {
+            href: docsBase() + item.page + "#" + item.anchor,
+            label: "《" + item.pageTitle + "》" + (item.heading ? " · " + item.heading : "")
+        };
+    });
+    // 结构化标记交给渲染层拼 DOM，避免把模型输出当 HTML 直接塞进页面
+    return "%%HITS " + JSON.stringify({
+        title: "命中 " + top.length + " 处 · " + pages + " 篇",
+        items: items
+    });
+}
+
+function buildAnswer(query, results) {
+    const top = results[0];
+    const answer = directAnswer(top, query);
+    const lines = ["关于「" + cut(query, 22) + "」：", "", answer];
+    let bodyLength = answer.length + 12;
+
+    const used = new Set([top.page + "#" + top.anchor]);
+    const points = [];
+    results.slice(1).forEach(function (item) {
+        if (points.length >= 2) return;
+        const id = item.page + "#" + item.anchor;
+        if (used.has(id)) return;
+        const point = pointOf(item, query);
+        if (!point || point === answer) return;
+        const line = "- " + point + "（" + item.pageTitle + " · " + item.heading + "）";
+        if (bodyLength + line.length > 330) return;
+        used.add(id);
+        bodyLength += line.length;
+        points.push(line);
+    });
+
+    if (points.length) {
+        lines.push("", "这几处也相关：");
+        points.forEach(function (line) { lines.push(line); });
+    }
+    lines.push("", hitsHtml(results));
+    return lines.join("\n");
+}
+
+async function retrieveAnswer(query) {
+    const index = await loadIndex();
+    if (!index) return { ok: false, text: "", think: "", results: [] };
+
+    const results = rank(expand(query), { pageRel: pageRel() });
+    const top = results[0];
+    if (!top || top.score < 10) {
+        return { ok: false, text: "", think: "文档里没有足够接近的内容。", results: results.slice(0, 3) };
+    }
+
+    const pages = new Set(results.slice(0, 5).map(function (item) { return item.page; })).size;
+    return {
+        ok: true,
+        text: buildAnswer(query, results),
+        think: "在 " + (index.docs.length || 0) + " 节文档里检索，命中 " + Math.min(results.length, 5) + " 处（" + pages + " 篇），按原文整理回答。",
+        results: results
+    };
+}
+
+function noHitAnswer(query, results) {
+    const near = results && results.length
+        ? "比较接近的是《" + results[0].pageTitle + "》里的「" + results[0].heading + "」，但没有直接对应这句话的段落。"
+        : "这套文档里暂时没有相关内容。";
+    return [
+        "文档里没有直接写到「" + cut(query, 20) + "」。",
+        "",
+        near,
+        "",
+        "可以换成文档里的说法再问一次：",
+        "",
+        "- `流式解析怎么做`",
+        "- `工具是前端跑还是后端跑`",
+        "- `零依赖是怎么做到的`"
+    ].join("\n");
+}
+
 // 演示模型：不联网、不发请求，用预置脚本走完「真实」的框架链路。
 // 契约与 @auipage/model 的 Model 完全一致：completions(params, logback, thinkback) → { content, tool_calls }
 
@@ -3041,11 +3606,13 @@ function threadAnswer() {
 
 function fallbackAnswer() {
     return [
-        "我是**本地演示模型**：回答来自预置脚本，不联网、不调用任何真实模型。",
+        "我是**本地演示模型**：回答来自预置脚本 + 本地文档检索，不联网、不调用任何真实模型。",
         "",
         "这样你能在没有任何配置的情况下，完整体验一遍「流式输出、工具卡片、停止、入库」。",
         "",
-        "可以试试问我：",
+        "问文档里的实现细节时，我会先检索 23 页原文，再摘句子回答，并给出命中位置。",
+        "",
+        "可以试试问我（点一下会填进输入框）：",
         "",
         "- `auipage 是什么`",
         "- `工具是怎么调用的`",
@@ -3078,7 +3645,7 @@ function roundTwoAnswer(toolMessage) {
 
 /* ------------------------------------------------------------------ 意图路由 */
 
-function plan(messages) {
+async function plan(messages) {
     const tool = lastToolMessage(messages);
     if (tool) {
         return { think: "工具结果回来了，整理一下。", text: roundTwoAnswer(tool), call: null };
@@ -3093,10 +3660,10 @@ function plan(messages) {
             call: { name: "page_info", args: "{}" }
         };
     }
-    if (/是什么|介绍|auipage|框架/.test(q)) {
+    if (/auipage\s*是什么|auipage是什么|介绍.{0,4}auipage|auipage.{0,4}框架/.test(q)) {
         return { think: "问的是产品本身，按四个包的结构讲。", text: introAnswer(), call: null };
     }
-    if (/工具|tool|调用|函数/.test(q)) {
+    if (/工具是怎么被调用的|工具怎么调用|tool.{0,6}调用/.test(q)) {
         return { think: "工具问题是这套框架的核心，先讲两条通道。", text: toolAnswer(), call: null };
     }
     if (/跨域|CORS|cors|连不上|报错|401|403/.test(q)) {
@@ -3108,7 +3675,15 @@ function plan(messages) {
     if (/会话|历史|thread|归档/.test(q)) {
         return { think: "会话分三层，按存储边界讲。", text: threadAnswer(), call: null };
     }
-    return { think: "没命中脚本，用兜底说明我是演示模型。", text: fallbackAnswer(), call: null };
+    const found = await retrieveAnswer(q);
+    if (found.ok) {
+        return { think: found.think, text: found.text, call: null };
+    }
+    return {
+        think: "脚本没命中，文档检索也没有足够接近的段落。",
+        text: q ? noHitAnswer(q, found.results) : fallbackAnswer(),
+        call: null
+    };
 }
 
 /* ------------------------------------------------------------------ 模型实现 */
@@ -3120,9 +3695,10 @@ function DemoModel() {
 
 DemoModel.prototype.completions = function (params, logback, thinkback) {
     const signal = params.signal;
-    const planned = plan(params.messages || []);
+    const messages = params.messages || [];
 
-    return new Promise(function (resolve, reject) {
+    return Promise.resolve(plan(messages)).then(function (planned) {
+        return new Promise(function (resolve, reject) {
         let content = "";
         let aborted = false;
 
@@ -3187,6 +3763,7 @@ DemoModel.prototype.completions = function (params, logback, thinkback) {
         };
 
         setTimeout(tick, 220);
+        });
     });
 };
 
@@ -3299,24 +3876,32 @@ function createSettings(options) {
 
     const root = el("section", "agt-settings");
 
+    const dialog = el("div", "agt-set-dialog");
     const head = el("div", "agt-set-head");
-    const back = el("button", "agt-set-back");
-    back.type = "button";
-    back.textContent = "← 返回对话";
     const title = el("h2", "agt-set-title", "模型服务");
-    head.appendChild(back);
+    const sub = el("span", "agt-set-sub", "浏览器直连 · 需要跨域");
+    const back = el("button", "agt-set-close");
+    back.type = "button";
+    back.setAttribute("aria-label", "关闭设置");
+    back.textContent = "×";
     head.appendChild(title);
-    root.appendChild(head);
+    head.appendChild(sub);
+    head.appendChild(back);
+    dialog.appendChild(head);
+    root.appendChild(dialog);
+
+    const body = el("div", "agt-set-body");
+    dialog.appendChild(body);
 
     const note = el("div", "agt-set-note");
     note.innerHTML =
         "<p><b>浏览器直连需要跨域（CORS）</b>　这里填的地址是浏览器直接请求的，对方必须允许跨域，" +
         "否则会显示「请求被浏览器拦住」。本机 Ollama 可用 <code>OLLAMA_ORIGINS=* ollama serve</code> 放行；" +
         "临时体验也可以用带 <code>--disable-web-security</code> 的浏览器打开本站（仅调试用）。</p>";
-    root.appendChild(note);
+    body.appendChild(note);
 
     const grid = el("div", "agt-set-grid");
-    root.appendChild(grid);
+    body.appendChild(grid);
 
     const editor = el("div", "agt-editor");
     const editorCard = el("div", "agt-editor-card");
@@ -3506,6 +4091,13 @@ function createSettings(options) {
         options.onBack && options.onBack();
     });
 
+    root.addEventListener("click", function (event) {
+        if (event.target === root) {
+            root.classList.remove("is-open");
+            options.onBack && options.onBack();
+        }
+    });
+
     paint();
 
     return {
@@ -3684,6 +4276,11 @@ function boot() {
         ui.input.value = text;
         submit();
     };
+    chatScope.onFill = function (text) {
+        ui.input.value = text;
+        ui.input.focus();
+        ui.input.setSelectionRange(text.length, text.length);
+    };
 
     const threads = createThreads(ui.threadList, {
         onSelect: function (threadId) {
@@ -3729,7 +4326,7 @@ function boot() {
         onChange: function () { paintProviders(); refreshStatus(); },
         onBack: function () { ui.input.focus(); }
     });
-    ui.main.appendChild(settings.root);
+    ui.panel.appendChild(settings.root);
 
     function refreshStatus() {
         const provider = activeProvider(state);

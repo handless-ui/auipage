@@ -29,24 +29,32 @@ export function createSettings(options) {
 
     const root = el("section", "agt-settings");
 
+    const dialog = el("div", "agt-set-dialog");
     const head = el("div", "agt-set-head");
-    const back = el("button", "agt-set-back");
-    back.type = "button";
-    back.textContent = "← 返回对话";
     const title = el("h2", "agt-set-title", "模型服务");
-    head.appendChild(back);
+    const sub = el("span", "agt-set-sub", "浏览器直连 · 需要跨域");
+    const back = el("button", "agt-set-close");
+    back.type = "button";
+    back.setAttribute("aria-label", "关闭设置");
+    back.textContent = "×";
     head.appendChild(title);
-    root.appendChild(head);
+    head.appendChild(sub);
+    head.appendChild(back);
+    dialog.appendChild(head);
+    root.appendChild(dialog);
+
+    const body = el("div", "agt-set-body");
+    dialog.appendChild(body);
 
     const note = el("div", "agt-set-note");
     note.innerHTML =
         "<p><b>浏览器直连需要跨域（CORS）</b>　这里填的地址是浏览器直接请求的，对方必须允许跨域，" +
         "否则会显示「请求被浏览器拦住」。本机 Ollama 可用 <code>OLLAMA_ORIGINS=* ollama serve</code> 放行；" +
         "临时体验也可以用带 <code>--disable-web-security</code> 的浏览器打开本站（仅调试用）。</p>";
-    root.appendChild(note);
+    body.appendChild(note);
 
     const grid = el("div", "agt-set-grid");
-    root.appendChild(grid);
+    body.appendChild(grid);
 
     const editor = el("div", "agt-editor");
     const editorCard = el("div", "agt-editor-card");
@@ -234,6 +242,13 @@ export function createSettings(options) {
     back.addEventListener("click", function () {
         root.classList.remove("is-open");
         options.onBack && options.onBack();
+    });
+
+    root.addEventListener("click", function (event) {
+        if (event.target === root) {
+            root.classList.remove("is-open");
+            options.onBack && options.onBack();
+        }
     });
 
     paint();

@@ -2,6 +2,7 @@
 // 契约与 @auipage/model 的 Model 完全一致：completions(params, logback, thinkback) → { content, tool_calls }
 
 import { DEMO_ID } from "./providers.js";
+import { retrieveAnswer, noHitAnswer } from "./retrieve.js";
 
 const SLICE = 3;      // 每次吐几个字
 const TICK = 16;      // 每片间隔毫秒
@@ -94,11 +95,13 @@ function threadAnswer() {
 
 function fallbackAnswer() {
     return [
-        "我是**本地演示模型**：回答来自预置脚本，不联网、不调用任何真实模型。",
+        "我是**本地演示模型**：回答来自预置脚本 + 本地文档检索，不联网、不调用任何真实模型。",
         "",
         "这样你能在没有任何配置的情况下，完整体验一遍「流式输出、工具卡片、停止、入库」。",
         "",
-        "可以试试问我：",
+        "问文档里的实现细节时，我会先检索 23 页原文，再摘句子回答，并给出命中位置。",
+        "",
+        "可以试试问我（点一下会填进输入框）：",
         "",
         "- `auipage 是什么`",
         "- `工具是怎么调用的`",
@@ -131,7 +134,7 @@ function roundTwoAnswer(toolMessage) {
 
 /* ------------------------------------------------------------------ 意图路由 */
 
-function plan(messages) {
+async function plan(messages) {
     const tool = lastToolMessage(messages);
     if (tool) {
         return { think: "工具结果回来了，整理一下。", text: roundTwoAnswer(tool), call: null };
@@ -146,10 +149,10 @@ function plan(messages) {
             call: { name: "page_info", args: "{}" }
         };
     }
-    if (/是什么|介绍|auipage|框架/.test(q)) {
+    if (/auipage\s*是什么|auipage是什么|介绍.{0,4}auipage|auipage.{0,4}框架/.test(q)) {
         return { think: "问的是产品本身，按四个包的结构讲。", text: introAnswer(), call: null };
     }
-    if (/工具|tool|调用|函数/.test(q)) {
+    if (/工具是怎么被调用的|工具怎么调用|tool.{0,6}调用/.test(q)) {
         return { think: "工具问题是这套框架的核心，先讲两条通道。", text: toolAnswer(), call: null };
     }
     if (/跨域|CORS|cors|连不上|报错|401|403/.test(q)) {
@@ -161,7 +164,15 @@ function plan(messages) {
     if (/会话|历史|thread|归档/.test(q)) {
         return { think: "会话分三层，按存储边界讲。", text: threadAnswer(), call: null };
     }
-    return { think: "没命中脚本，用兜底说明我是演示模型。", text: fallbackAnswer(), call: null };
+    const found = await retrieveAnswer(q);
+    if (found.ok) {
+        return { think: found.think, text: found.text, call: null };
+    }
+    return {
+        think: "脚本没命中，文档检索也没有足够接近的段落。",
+        text: q ? noHitAnswer(q, found.results) : fallbackAnswer(),
+        call: null
+    };
 }
 
 /* ------------------------------------------------------------------ 模型实现 */
@@ -173,9 +184,10 @@ function DemoModel() {
 
 DemoModel.prototype.completions = function (params, logback, thinkback) {
     const signal = params.signal;
-    const planned = plan(params.messages || []);
+    const messages = params.messages || [];
 
-    return new Promise(function (resolve, reject) {
+    return Promise.resolve(plan(messages)).then(function (planned) {
+        return new Promise(function (resolve, reject) {
         let content = "";
         let aborted = false;
 
@@ -240,6 +252,7 @@ DemoModel.prototype.completions = function (params, logback, thinkback) {
         };
 
         setTimeout(tick, 220);
+        });
     });
 };
 

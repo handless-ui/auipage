@@ -59,6 +59,29 @@ export function renderMarkdown(source) {
             closeList();
             continue;
         }
+
+        // 命中清单：结构化标记，由这里拼 HTML；流式没收尾时 JSON 解析失败就先不渲染
+        if (/^%%HITS\s/.test(line.trim())) {
+            let data = null;
+            try {
+                data = JSON.parse(line.trim().slice(6));
+            } catch (e) {
+                data = null;
+            }
+            if (data && Array.isArray(data.items)) {
+                flushPara();
+                closeList();
+                const items = data.items.filter(function (item) {
+                    if (!item || typeof item.href !== "string") return false;
+                    if (/^[a-z][a-z0-9+.-]*:/i.test(item.href)) return /^https?:\/\//i.test(item.href);
+                    return !/^\/\//.test(item.href);
+                }).map(function (item) {
+                    return '<li><a href="' + escapeHtml(item.href) + '">' + escapeHtml(item.label) + "</a></li>";
+                }).join("");
+                html.push('<div class="agt-hits"><button type="button" class="agt-hits-toggle" aria-expanded="false">' + escapeHtml(data.title || "") + '</button><ul hidden>' + items + "</ul></div>");
+            }
+            continue;
+        }
         const heading = line.match(/^(#{1,4})\s+(.+)$/);
         if (heading) {
             flushPara();

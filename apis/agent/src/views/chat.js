@@ -35,6 +35,16 @@ const SUGGESTIONS = [
     "模型地址连不上怎么办"
 ];
 
+// 回答正文里被反引号包起来、又正好是这些问句时，转成可点击的入口
+const ASKABLE = new Set(SUGGESTIONS.concat([
+    "连不上模型怎么办",
+    "停止和取消有什么区别",
+    "会话历史怎么存",
+    "流式解析怎么做",
+    "零依赖是怎么做到的",
+    "工具是前端跑还是后端跑"
+]));
+
 export function createChatView(container, scope) {
     let assistantTurn = null;
     let loadingEl = null;
@@ -105,7 +115,18 @@ export function createChatView(container, scope) {
         scrollToEnd();
     }
 
-    function renderThinking(part) {
+    // 流式思考时展开，思考结束（开始正文/工具）后自动收起
+    function closeLiveThinks() {
+        if (!assistantTurn || !assistantTurn.body) return;
+        assistantTurn.body.querySelectorAll('.agt-think[data-live="1"]').forEach(function (box) {
+            box.dataset.live = "";
+            box.open = false;
+            const label = box.querySelector("summary");
+            if (label) label.textContent = "思考过程";
+        });
+    }
+
+    function renderThinking(part, live) {
         const spot = assistantTurn || newTurn("assistant");
         if (loadingEl) {
             loadingEl.remove();
@@ -113,8 +134,10 @@ export function createChatView(container, scope) {
         }
         assistantTurn = spot;
         const box = el("details", "agt-think");
+        if (live) box.dataset.live = "1";
+        box.open = !!live;
         const summary = el("summary", "");
-        summary.textContent = "思考过程";
+        summary.textContent = live ? "正在思考…" : "思考过程";
         box.appendChild(summary);
         const pre = el("div", "agt-think-body");
         box.appendChild(pre);
@@ -127,7 +150,35 @@ export function createChatView(container, scope) {
         };
     }
 
+    function decorate(block) {
+        if (!block) return;
+        Array.from(block.querySelectorAll(".agt-hits-toggle")).forEach(function (toggle) {
+            if (toggle.dataset.bound) return;
+            toggle.dataset.bound = "1";
+            toggle.addEventListener("click", function () {
+                const list = toggle.parentNode.querySelector("ul");
+                if (!list) return;
+                list.hidden = !list.hidden;
+                toggle.classList.toggle("is-open", !list.hidden);
+                toggle.setAttribute("aria-expanded", list.hidden ? "false" : "true");
+            });
+        });
+        if (!scope.onFill) return;
+        Array.from(block.querySelectorAll("code")).forEach(function (node) {
+            const text = node.textContent.trim();
+            if (!ASKABLE.has(text)) return;
+            const ask = el("button", "agt-ask", text);
+            ask.type = "button";
+            ask.title = "把这句话填进输入框";
+            ask.addEventListener("click", function () {
+                scope.onFill(text);
+            });
+            node.replaceWith(ask);
+        });
+    }
+
     function renderText(part) {
+        closeLiveThinks();
         const spot = assistantTurn || newTurn("assistant");
         assistantTurn = spot;
         if (loadingEl) {
@@ -140,6 +191,7 @@ export function createChatView(container, scope) {
         let raw = part.text || "";
         let frame = null;
         block.innerHTML = renderMarkdown(raw);
+        decorate(block);
         scrollToEnd();
 
         return function (delta) {
@@ -148,6 +200,7 @@ export function createChatView(container, scope) {
             frame = setTimeout(function () {
                 frame = null;
                 block.innerHTML = renderMarkdown(raw);
+                decorate(block);
                 scrollToEnd();
             }, 16);
         };
@@ -165,6 +218,7 @@ export function createChatView(container, scope) {
     }
 
     function renderToolCall(part) {
+        closeLiveThinks();
         const spot = assistantTurn || newTurn("assistant");
         assistantTurn = spot;
         if (loadingEl) {
@@ -247,7 +301,7 @@ export function createChatView(container, scope) {
                 return;
             }
             if (part.type === "loading") return renderLoading();
-            if (part.type === "thinking") return renderThinking(part);
+            if (part.type === "thinking") return renderThinking(part, true);
             if (part.type === "tool-call") return renderToolCall(part);
             return renderText(part);
         }
