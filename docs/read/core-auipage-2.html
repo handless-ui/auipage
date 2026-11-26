@@ -7,7 +7,7 @@
 <title>源码解读 · AuiPage 中：sendMessage 与分片泵</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="入口卫语句、task 句柄的每个字段、pump 的四个落定点、preType/preText 合并带，以及 streamFun 为什么会被丢弃。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+<link rel="stylesheet" href="../assets/css/docs.css?v=b1c42135">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -310,6 +310,11 @@ const pump = () =&gt; {
   stop 保留的是<b>已经产出的</b>内容，不是“还没到的”。</p>
   </div>
 </section>
+
+<nav class="pager">
+<a href="../read/core-auipage-1.html"><span class="dir">← 上一页</span><span class="name">AuiPage 上：挂载与事件</span></a>
+<a class="next" href="../read/core-auipage-3.html"><span class="dir">下一页 →</span><span class="name">AuiPage 下：工具与收尾</span></a>
+</nav>
 </main>
 <nav class="toc-rail" aria-label="本页目录">
 <div class="toc-rail-head"><span>本页目录</span><em>5 节</em></div>
@@ -358,8 +363,9 @@ const pump = () =&gt; {
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
-<script src="../assets/js/docs.js?v=bf049af8"></script>
+<script src="../assets/vendor/shader.min.js?v=b1c42135"></script>
+<script src="../assets/js/docs.js?v=b1c42135"></script>
+<script src="../assets/agent/boot.js?v=b1c42135"></script>
 
 </body>
 </html>

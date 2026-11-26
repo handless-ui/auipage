@@ -7,7 +7,7 @@
 <title>源码解读 · fetch：Promise 与事件的双通道</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="createFetch 的工厂形状、hooks 四个口子、超时与取消如何收敛成一条路、SSE 缓冲与 error 补发，以及两个 adapter 的真实差异。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+<link rel="stylesheet" href="../assets/css/docs.css?v=b1c42135">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -388,6 +388,11 @@ const fetch = createFetch(adapter);</pre></div></div>
   状态全在每次调用新建的 <code>Response</code> 里。这一点是这套设计能被并发安全使用的前提。</p>
   </div>
 </section>
+
+<nav class="pager">
+<a href="../read/index.html"><span class="dir">← 上一页</span><span class="name">导读</span></a>
+<a class="next" href="../read/model.html"><span class="dir">下一页 →</span><span class="name">model：流式解析</span></a>
+</nav>
 </main>
 <nav class="toc-rail" aria-label="本页目录">
 <div class="toc-rail-head"><span>本页目录</span><em>9 节</em></div>
@@ -436,8 +441,9 @@ const fetch = createFetch(adapter);</pre></div></div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
-<script src="../assets/js/docs.js?v=bf049af8"></script>
+<script src="../assets/vendor/shader.min.js?v=b1c42135"></script>
+<script src="../assets/js/docs.js?v=b1c42135"></script>
+<script src="../assets/agent/boot.js?v=b1c42135"></script>
 
 </body>
 </html>

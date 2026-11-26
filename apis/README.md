@@ -27,6 +27,7 @@ apis/
 │   ├── sidebar.html       文档目录树
 │   ├── footer.html        页脚
 │   └── scripts.html       页面底部脚本（着色库 + 交互）
+├── agent/               站内助手的源码与打包脚本（产物进 docs/assets/agent/）
 └── pages/               每个页面只有自己的正文
     guide/start.html                        → docs/guide/start.html        跑起示例
     guide/zero-dep.html                     → docs/guide/zero-dep.html     一个包都不用
@@ -175,3 +176,63 @@ node apis/build.mjs --check       # 只检查站内死链与孤立页，不动�
 2. `node apis/build.mjs --check` 必须通过；
 3. 根 README 与各包 README 里的链接、示例代码，是否仍与当前 API 一致；
 4. README 里的文档链接必须是发布地址 `https://handless-ui.github.io/auipage/...`，不要写 `./docs/*.html`；
+
+## 站内助手（悬浮 logo + 对话面板）
+
+`docs/` 每个页面右下角都有一个可拖拽的圆形 logo，点一下才懒加载站内助手；
+加载时全屏提示「系统加载中，请耐心等待」，可以取消。助手本身是一个**真实**的
+`@auipage/core` + `@auipage/agent` + `@auipage/model` + `@auipage/fetch` 示例，
+不是另写的一套对话循环。
+
+```
+apis/agent/
+├── build.mjs            rollup 打包：src/index.js → docs/assets/agent/app.js（ESM）
+└── src/
+    ├── index.js         面板装配：AuiPage + 三个适配器 + 输入区/设置页
+    ├── transport.js     ChatTransportAdapter：Agent → MessageStream → CreateTool 桥
+    ├── tools.js         page_info / list_pages 两个前端工具（真正在浏览器里执行）
+    ├── providers.js     模型服务配置的种子、读写与增删改（localStorage）
+    ├── probe.js         连接诊断：把跨域/密钥/404/超时翻译成人话
+    ├── models.js        provider → Model 实例（demo 协议换成脚本模型）
+    ├── demo.js          内置演示模型，契约与 Model 完全一致
+    ├── settings.js      模型服务页：卡片 + 添加/编辑/测试/设为当前/删除
+    ├── md.js            极简 markdown（流式渲染用）
+    └── views/
+        ├── chat.js      ChatContentRuntime：消息、思考、工具卡片、空态
+        └── thread.js    ThreadList / MessageHistory 适配器（localStorage + 归档/删除）
+```
+
+产物有三个文件，都在 `docs/assets/agent/`：`boot.js`（外壳，手写，挂进 `partials/scripts.html`）、
+`app.js`（打包产物）、`app.css`（面板样式）。
+
+### 行为约定
+
+- **懒加载**：`boot.js` 只在第一次点击时用 `fetch` 拉 `app.js` / `app.css`，再以 Blob URL 动态 `import`；
+  中途取消是真 `AbortController.abort()`，不是假装隐藏。
+- **模型服务**：用户自己填 OpenAI 兼容地址（增/删/改，同一时刻只有一条生效）。
+  默认选中内置「本地模型（演示）」，让没配模型的人也能直接体验；换成自己的模型后即真实对话。配置存 `localStorage`
+  （键 `auipage.docs.agent.v1.providers`，悬浮球位置在同前缀的 `.pos`）。
+- **跨域**：浏览器直连第三方地址，对方必须允许 CORS，否则请求会被拦。
+  设置页有常驻说明，面板顶部也有提示条；本机 Ollama 可用 `OLLAMA_ORIGINS=* ollama serve` 放行。
+  连不上时点「测试连接」会给出具体结论（跨域被拦 / 密钥被拒 / 404 / 超时）。
+- **演示模型**：内置「本地模型（演示）」，`protocol` 为 `demo`、只读、不可删。
+  它的 `completions(params, logback, thinkback)` 与 `Model` 同契约，所以 Agent 的工具循环、
+  CreateTool 的两段式等待、AuiPage 的工具卡片全是真代码，只有 token 来源是预置脚本。
+  适合没配模型的人先体验；回答带「演示模式 · 不联网」状态条与须知。
+- **会话**：列表与消息历史都持久化（键 `auipage.docs.agent.v1.threads` / `.history`），刷新或重开面板还在；
+  每条会话 hover 出现「归档 / 删除」，归档后收进底部「已归档 · n」折叠区，可恢复或删除；
+  删除当前会话时 AuiPage 会自动开一条新会话。写 `localStorage` 失败（隐私模式/配额）时退化为内存。
+- **视觉**：左栏品牌、助手头像、悬浮球统一用站点 logo 图（`assets/img/logo.png`）；
+  悬浮球整块 54px 完整显示（含天线），上方提示「点击我，快速试一下」，每隔 6–11 秒轻微动一下（`prefers-reduced-motion` 下关闭）。
+
+### 命令
+
+```bash
+npm run docs:agent                # 只重打助手：docs/assets/agent/app.js
+node apis/agent/build.mjs         # 同上
+```
+
+`npm run docs` / `npm run docs:dev` 已经先打助手再生成页面，改完 `apis/agent/src` 直接跑一次即可；
+`apis/build.mjs` 算 `?v=` 指纹时会把 `app.js` / `app.css` / `boot.js` 一起算进去。
+
+本地预览助手必须走 http（`file://` 下 `fetch` 拉 `app.js` 会被浏览器拦）。

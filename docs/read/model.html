@@ -7,7 +7,7 @@
 <title>源码解读 · model：请求拼装与流式解析</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="Model 三个字段、settled 幂等、流式与非流式共用的 handleChoices、parseString 的输入契约、tool_calls 双路归并与 think 标签的软切分。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+<link rel="stylesheet" href="../assets/css/docs.css?v=b1c42135">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -290,6 +290,11 @@ if (parts.length &gt; 1) return checkError(parts.map(part =&gt; parseOne(part, t
   而且丢的通常是最后几个字，用户会觉得“模型话说一半停了”。</p>
   </div>
 </section>
+
+<nav class="pager">
+<a href="../read/fetch.html"><span class="dir">← 上一页</span><span class="name">fetch：双通道</span></a>
+<a class="next" href="../read/agent.html"><span class="dir">下一页 →</span><span class="name">agent：工具循环</span></a>
+</nav>
 </main>
 <nav class="toc-rail" aria-label="本页目录">
 <div class="toc-rail-head"><span>本页目录</span><em>8 节</em></div>
@@ -338,8 +343,9 @@ if (parts.length &gt; 1) return checkError(parts.map(part =&gt; parseOne(part, t
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
-<script src="../assets/js/docs.js?v=bf049af8"></script>
+<script src="../assets/vendor/shader.min.js?v=b1c42135"></script>
+<script src="../assets/js/docs.js?v=b1c42135"></script>
+<script src="../assets/agent/boot.js?v=b1c42135"></script>
 
 </body>
 </html>

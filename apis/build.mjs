@@ -393,6 +393,18 @@ function expandSrc(html, slots) {
   return html.replace(new RegExp(SRC_SLOT + "(\\d+)\\u0000", "g"), (all, i) => slots[Number(i)]);
 }
 
+/* 侧栏顺序就是翻页顺序：手写 pager 容易漏页，这里统一生成 */
+function pageNav() {
+  const file = path.join(SRC, 'partials', 'sidebar.html');
+  const list = [];
+  const re = /<a href="{{base}}([^"]+)"[^>]*>([^<]+)<\/a>/g;
+  for (const m of read(file).matchAll(re)) {
+    const label = m[2].replace(/^\s*\d{2}\s*·\s*/, '').trim();
+    list.push({ rel: posix(m[1]), label });
+  }
+  return list;
+}
+
 /* ---------------------------------------------------------------- 生成 / 检查 */
 
 function build() {
@@ -404,6 +416,7 @@ function build() {
   syncVendor();
   const assetVer = assetVersion();
   const generated = [];
+  const nav = pageNav();
 
   if (!files.length) throw new Error(`没有在 ${path.relative(ROOT, pagesDir)} 找到页面`);
 
@@ -438,7 +451,8 @@ function build() {
     };
 
     // chip 目录条插在 pagehead 之后、第一章之前
-    let pageBody = indexed.content;
+    // 手写 pager 一律去掉，改由下面按侧栏顺序统一生成
+    let pageBody = indexed.content.replace(/<nav class="pager">[\s\S]*?<\/nav>\s*/g, '');
     if (toc.chips) {
       const at = pageBody.search(/<section\b/);
       pageBody = at < 0 ? `${pageBody}\n${toc.chips}` : `${pageBody.slice(0, at)}${toc.chips}\n${pageBody.slice(at)}`;
@@ -449,6 +463,19 @@ function build() {
     const srcSlots = [];
     ctx.content = expandSrc(render(protectSrc(pageBody, srcSlots), ctx), srcSlots);
     ctx.preMain = preMain ? expandSrc(render(protectSrc(preMain, srcSlots), ctx), srcSlots) : '';
+
+    // 页末翻页：取侧栏里当前页的前后两项（首页不加）
+    if (!ctx.home) {
+      const at = nav.findIndex((n) => n.rel === rel);
+      if (at >= 0) {
+        const prev = nav[at - 1];
+        const next = nav[at + 1];
+        const items = [];
+        if (prev) items.push(`<a href="${ctx.base}${prev.rel}"><span class="dir">← 上一页</span><span class="name">${prev.label}</span></a>`);
+        if (next) items.push(`<a class="next" href="${ctx.base}${next.rel}"><span class="dir">下一页 →</span><span class="name">${next.label}</span></a>`);
+        if (items.length) ctx.content += `\n\n<nav class="pager${items.length === 1 ? ' one' : ''}">\n${items.join('\n')}\n</nav>`;
+      }
+    }
 
     let html = render(read(layoutFile), ctx);
 

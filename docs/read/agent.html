@@ -7,7 +7,7 @@
 <title>源码解读 · agent：工具循环与两条回传通道</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="Agent 构造、system 原地注入、runConversation 的 maxSteps 循环、callFuns 的并发与失败转文本、createTool 的后端事件与前端 globalThis 回传。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+<link rel="stylesheet" href="../assets/css/docs.css?v=b1c42135">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -278,6 +278,11 @@ for (let step = 1; step &lt;= maxSteps; step++) {
   以及 <code>response("tool-result")</code> 怎么回到 <code>globalThis[id]</code>。</p>
   </div>
 </section>
+
+<nav class="pager">
+<a href="../read/model.html"><span class="dir">← 上一页</span><span class="name">model：流式解析</span></a>
+<a class="next" href="../read/core-auipage-1.html"><span class="dir">下一页 →</span><span class="name">AuiPage 上：挂载与事件</span></a>
+</nav>
 </main>
 <nav class="toc-rail" aria-label="本页目录">
 <div class="toc-rail-head"><span>本页目录</span><em>7 节</em></div>
@@ -326,8 +331,9 @@ for (let step = 1; step &lt;= maxSteps; step++) {
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
-<script src="../assets/js/docs.js?v=bf049af8"></script>
+<script src="../assets/vendor/shader.min.js?v=b1c42135"></script>
+<script src="../assets/js/docs.js?v=b1c42135"></script>
+<script src="../assets/agent/boot.js?v=b1c42135"></script>
 
 </body>
 </html>
