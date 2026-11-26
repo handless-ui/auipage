@@ -20,12 +20,14 @@ function lastUserText(messages) {
     return "";
 }
 
-function lastToolMessage(messages) {
+function lastToolMessages(messages) {
+    const list = [];
     for (let i = messages.length - 1; i >= 0; i--) {
         const item = messages[i];
-        if (item && item.role === "tool") return item;
+        if (!item || item.role !== "tool") break;
+        list.unshift(item);
     }
-    return null;
+    return list;
 }
 
 /* ------------------------------------------------------------------ 脚本库 */
@@ -110,43 +112,87 @@ function fallbackAnswer() {
     ].join("\n");
 }
 
-function roundTwoAnswer(toolMessage) {
-    let info = null;
+function parseToolContent(item) {
     try {
-        info = JSON.parse(toolMessage.content);
+        return JSON.parse(item.content);
     } catch (e) {
-        info = null;
+        return item.content;
     }
-    if (!info) {
-        return "工具返回的内容我没解析出来，不过这次工具调用链路是完整跑通的。";
-    }
-    return [
-        "工具返回了，你当前在：",
-        "",
-        "- 页面：《" + (info.title || "未知") + "》",
-        "- 分组：" + (info.section || "未标注"),
-        "- 地址：`" + (info.url || "") + "`",
-        "",
-        "这一条回答是**第二轮**生成的——第一轮我只发了 `tool_calls`，工具跑完把结果作为 `role: \"tool\"` 的消息塞回来，我才有内容可说。",
-        "也就是说：`runConversation` 的循环、`CreateTool` 的等待、`AuiPage` 的工具卡片，三者刚才都真实工作过。"
-    ].join("\n");
+}
+
+function afterToolAnswer(items) {
+    const names = items.map(function (item) { return item.tool_name || ""; });
+    const values = items.map(parseToolContent);
+    const lines = ["工具返回了，这一轮一共 " + items.length + " 次调用：", ""];
+
+    values.forEach(function (value, i) {
+        const name = names[i] || "tool";
+        if (name === "page_info" && value && typeof value === "object") {
+            lines.push("- **page_info**：当前页《" + (value.title || "未知") + "》，分组 " + (value.section || "未标注") + "；");
+        } else if (name === "list_pages" && value && typeof value === "object") {
+            lines.push("- **list_pages**：侧栏 " + (value.count || 0) + " 个链接，分组 " + ((value.groups || []).join(" / ") || "未分组") + "；");
+        } else if (name === "doc_stats" && value && typeof value === "object") {
+            lines.push("- **doc_stats**：索引收录 " + (value.pages || 0) + " 页 / " + (value.sections || 0) + " 节；");
+        } else if (name === "demo_fail") {
+            lines.push("- **demo_fail**：失败了 —— " + String(value || "未知错误").slice(0, 80) + "；");
+        } else if (name === "deep_dive") {
+            lines.push("- **deep_dive**：用户的选择是「" + String(value && value.topic || value || "继续") + "」；");
+        } else {
+            lines.push("- **" + name + "**：" + String(value).slice(0, 80) + "；");
+        }
+    });
+
+    lines.push("");
+    lines.push("上面的结果都经 `role: \"tool\"` 消息回灌后才生成这段回答；失败的工具不会中断循环，会被转成文本继续走。");
+    return lines.join("\n");
 }
 
 /* ------------------------------------------------------------------ 意图路由 */
 
 async function plan(messages) {
-    const tool = lastToolMessage(messages);
-    if (tool) {
-        return { think: "工具结果回来了，整理一下。", text: roundTwoAnswer(tool), call: null };
+    const tools = lastToolMessages(messages);
+    if (tools.length) {
+        return { think: "工具结果回来了，整理一下。", text: afterToolAnswer(tools), calls: [] };
     }
 
     const q = lastUserText(messages);
 
+    if (/并行|两个工具|多项工具|属于哪个分组/.test(q)) {
+        return {
+            think: "这个问题可以同时问页面和文档目录，一次发两个工具调用。",
+            text: "我同时查一下当前页和文档目录。",
+            calls: [
+                { name: "page_info", args: "{}" },
+                { name: "list_pages", args: "{}" }
+            ]
+        };
+    }
     if (/哪一篇|这篇|当前|页面|我在看/.test(q)) {
         return {
             think: "这个问题需要知道用户当前页面，先调 page_info 工具。",
             text: "我先看一下你正停在哪个页面。",
-            call: { name: "page_info", args: "{}" }
+            calls: [{ name: "page_info", args: "{}" }]
+        };
+    }
+    if (/索引|收录|多少页|多少节|文档统计/.test(q)) {
+        return {
+            think: "问索引规模，调适配器侧工具 doc_stats。",
+            text: "我读一下构建出来的索引统计。",
+            calls: [{ name: "doc_stats", args: "{}" }]
+        };
+    }
+    if (/展开|深挖|确认卡|自定义卡/.test(q)) {
+        return {
+            think: "需要一张自定义交互卡，调 deep_dive。",
+            text: "我给你弹一张确认卡，你决定要不要继续。",
+            calls: [{ name: "deep_dive", args: JSON.stringify({ topic: "当前小节" }) }]
+        };
+    }
+    if (/工具失败|失败演示|故意失败/.test(q)) {
+        return {
+            think: "演示失败路径，调 demo_fail。",
+            text: "这次故意让工具失败，观察错误如何回灌。",
+            calls: [{ name: "demo_fail", args: "{}" }]
         };
     }
     if (/auipage\s*是什么|auipage是什么|介绍.{0,4}auipage|auipage.{0,4}框架/.test(q)) {
@@ -190,12 +236,15 @@ DemoModel.prototype.completions = function (params, logback, thinkback) {
         return new Promise(function (resolve, reject) {
         let content = "";
         let aborted = false;
+        const calls = (planned.calls && planned.calls.length)
+            ? planned.calls
+            : (planned.call ? [planned.call] : []);
 
-        // 步骤队列：先思考、再正文、最后（可选）抛一个 tool_call
+        // 步骤队列：先思考、再正文、最后（可选）抛 tool_calls
         const steps = [];
         if (planned.think) steps.push({ kind: "think", text: planned.think });
         if (planned.text) steps.push({ kind: "text", text: planned.text });
-        if (planned.call) steps.push({ kind: "call" });
+        if (calls.length) steps.push({ kind: "call" });
 
         let stepIndex = 0;
         let cursor = 0;
@@ -218,14 +267,16 @@ DemoModel.prototype.completions = function (params, logback, thinkback) {
 
             const step = steps[stepIndex];
             if (!step) {
-                if (!planned.call) return resolve({ content: content, tool_calls: [] });
+                if (!calls.length) return resolve({ content: content, tool_calls: [] });
                 return resolve({
                     content: content,
-                    tool_calls: [{
-                        id: "call_" + Date.now().toString(36),
-                        type: "function",
-                        function: { name: planned.call.name, arguments: planned.call.args }
-                    }]
+                    tool_calls: calls.map(function (call, i) {
+                        return {
+                            id: "call_" + Date.now().toString(36) + "_" + i,
+                            type: "function",
+                            function: { name: call.name, arguments: call.args }
+                        };
+                    })
                 });
             }
 

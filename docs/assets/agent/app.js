@@ -961,8 +961,195 @@ function toModelMessages(input) {
     return result;
 }
 
-// 工具注册表：全部是「前端工具」——定义在 Agent 侧（只有 description），
-// 真正执行发生在页面（AuiPage.tools_execute），结果再经 ChatTransport.response 回传。
+// 中文按「字级 bigram」切，英文/数字按单词切；构建期与浏览器共用同一套规则，保证索引与查询对得上。
+const STOP = new Set([
+    "的", "了", "是", "在", "和", "与", "也", "就", "都", "而", "及", "或", "一个", "这个", "那个",
+    "怎么", "怎样", "如何", "什么", "为什么", "哪些", "哪一", "可以", "能否", "是否", "需要", "一下",
+    "the", "a", "an", "of", "to", "and", "or", "is", "are", "in", "on", "for", "with", "how", "what"
+]);
+
+const CJK = /[\u4e00-\u9fa5]/;
+
+function latinTokens(run, push) {
+    // 驼峰与下划线拆开：handleChoices -> handle choices
+    run.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replace(/[_\-.]/g, " ")
+        .split(/\s+/)
+        .forEach(function (word) {
+            const w = word.toLowerCase();
+            if (w.length >= 2 && !STOP.has(w)) push(w);
+        });
+}
+
+function tokenize(source) {
+    const tokens = [];
+    const text = String(source == null ? "" : source).toLowerCase();
+    const push = function (token) {
+        if (token && !STOP.has(token)) tokens.push(token);
+    };
+
+    let run = "";
+    let latin = true;
+    const flush = function () {
+        if (!run) return;
+        if (latin) latinTokens(run, push);
+        else {
+            if (run.length === 1) push(run);
+            for (let i = 0; i + 1 < run.length; i++) push(run.slice(i, i + 2));
+        }
+        run = "";
+    };
+
+    for (const ch of text) {
+        const isCjk = CJK.test(ch);
+        const isWord = /[a-z0-9]/.test(ch);
+        if (isCjk) {
+            if (run && latin) flush();
+            latin = false;
+            run += ch;
+        } else if (isWord) {
+            if (run && !latin) flush();
+            latin = true;
+            run += ch;
+        } else {
+            flush();
+        }
+    }
+    flush();
+    return tokens;
+}
+
+// 本地检索：构建期生成 index.json，这里按需加载 + BM25 变体打分，不联网、不引入向量库。
+
+const K1 = 1.2;
+const B = 0.62;
+
+let loading = null;
+let state = null;
+
+function root() {
+    if (window.__AGH_ROOT__) return window.__AGH_ROOT__;
+    return "assets/agent/";
+}
+
+function loadIndex() {
+    if (state) return Promise.resolve(state);
+    if (loading) return loading;
+    loading = fetch(root() + "index.json", { cache: "no-cache" })
+        .then(function (res) {
+            if (!res.ok) throw new Error("index " + res.status);
+            return res.json();
+        })
+        .then(function (json) {
+            return installIndex(json);
+        })
+        .catch(function () {
+            loading = null;
+            return null;
+        });
+    return loading;
+}
+
+function installIndex(json) {
+    const docs = [];
+    (json.pages || []).forEach(function (page) {
+        (page.s || []).forEach(function (section) {
+            const k = section.k || [];
+            const counts = new Map();
+            for (let i = 0; i + 1 < k.length; i += 2) counts.set(k[i], k[i + 1]);
+            docs.push({
+                page: page.p,
+                pageTitle: page.t,
+                group: page.g,
+                anchor: section.a,
+                heading: section.h,
+                text: section.x || "",
+                counts: counts,
+                titleTokens: new Set(tokenize(page.t + " " + section.h)),
+                len: (section.x || "").length
+            });
+        });
+    });
+
+    const postings = new Map();
+    let totalLen = 0;
+    docs.forEach(function (doc, id) {
+        totalLen += doc.len;
+        doc.id = id;
+        doc.counts.forEach(function (tf, token) {
+            let list = postings.get(token);
+            if (!list) postings.set(token, list = []);
+            list.push(id, tf);
+        });
+    });
+
+    state = { docs: docs, postings: postings, avg: totalLen / Math.max(1, docs.length) };
+    return state;
+}
+
+function idf(df) {
+    const n = state.docs.length;
+    return Math.log(1 + (n - df + 0.5) / (df + 0.5));
+}
+
+function rank(query, options) {
+    if (!state) return [];
+    const opts = options || {};
+    const tokens = tokenize(query);
+    if (!tokens.length) return [];
+
+    const weights = new Map();
+    tokens.forEach(function (token) {
+        weights.set(token, (weights.get(token) || 0) + 1);
+    });
+
+    const scores = new Map();
+    weights.forEach(function (weight, token) {
+        const list = state.postings.get(token);
+        if (!list) return;
+        const df = list.length / 2;
+        const tokenIdf = idf(df);
+        for (let i = 0; i < list.length; i += 2) {
+            const id = list[i];
+            const tf = list[i + 1];
+            const doc = state.docs[id];
+            const norm = 1 - B + B * doc.len / Math.max(1, state.avg);
+            let score = tokenIdf * (tf * (K1 + 1)) / (tf + K1 * norm) * weight;
+            if (doc.titleTokens.has(token)) score *= 2.2;
+            scores.set(id, (scores.get(id) || 0) + score);
+        }
+    });
+
+    const parts = String(query || "").split(/\s+/)
+        .map(function (part) { return part.replace(/[？?。，,]/g, ""); })
+        .filter(function (part) { return part.length >= 3; });
+    const results = [];
+    scores.forEach(function (score, id) {
+        const doc = state.docs[id];
+        parts.forEach(function (part) {
+            if (doc.heading.replace(/\s/g, "").includes(part)) score += 5;
+            if (doc.pageTitle.replace(/\s/g, "").includes(part)) score += 12;
+            if (doc.text.replace(/\s/g, "").includes(part)) score += 3;
+        });
+        if (opts.pageRel && doc.page === opts.pageRel) score *= 1.45;
+        results.push({
+            page: doc.page,
+            pageTitle: doc.pageTitle,
+            group: doc.group,
+            anchor: doc.anchor,
+            heading: doc.heading,
+            text: doc.text,
+            score: score
+        });
+    });
+
+    return results.sort(function (a, b) { return b.score - a.score; }).slice(0, 12);
+}
+
+// 工具注册表：
+// - 前端工具：Agent 侧只有 description，真正执行在 AuiPage.tools_execute，结果经 ChatTransport.response 回传；
+// - 适配器侧工具（scope: "adapter"）：execute 在 transport 内执行，用来演示 CreateTool 的 backend 分支；
+// - DEMO_ONLY_TOOLS：只在演示模式挂载，避免真实模型误调用。
 
 const pageInfo = defineTool({
     name: "page_info",
@@ -1002,7 +1189,64 @@ const listPages = defineTool({
     }
 });
 
-const TOOLS = [pageInfo, listPages];
+// 适配器侧执行：不依赖页面 DOM，execute 在 transport 里跑
+const docStats = defineTool({
+    name: "doc_stats",
+    description: "读取当前构建的文档索引统计：页数、小节数、索引体积。回答『索引有多大/收录了多少』时调用。",
+    parameters: {
+        type: "object",
+        properties: {},
+        required: []
+    },
+    execute: async function () {
+        const index = await loadIndex();
+        if (!index) return { pages: 0, sections: 0, version: "missing" };
+        const pages = new Set(index.docs.map(function (doc) { return doc.page; })).size;
+        return {
+            pages: pages,
+            sections: index.docs.length,
+            version: "build"
+        };
+    }
+});
+docStats.scope = "adapter";
+
+// 自定义工具卡：execute 只返回上下文，真正的交互在 render 里
+const deepDive = defineTool({
+    name: "deep_dive",
+    description: "当用户想继续展开某个小节时，弹一张确认卡，让用户决定是否继续深挖。",
+    parameters: {
+        type: "object",
+        properties: {
+            topic: { type: "string", description: "要展开的小节或问题" }
+        },
+        required: ["topic"]
+    },
+    execute: function (args) {
+        return { topic: String((args && args.topic) || "当前小节") };
+    },
+    render: function (data) {
+        return data;
+    }
+});
+
+// 仅演示模式挂载：让「工具失败」这条路径也能被看见
+const demoFail = defineTool({
+    name: "demo_fail",
+    description: "仅用于演示：这个工具会故意抛错，用来观察工具失败卡与错误回灌。",
+    parameters: {
+        type: "object",
+        properties: {},
+        required: []
+    },
+    execute: function () {
+        throw new Error("演示工具失败：这是刻意抛出的错误");
+    }
+});
+
+const TOOLS = [pageInfo, listPages, docStats, deepDive];
+const DEMO_ONLY_TOOLS = [demoFail];
+const ALL_TOOLS = TOOLS.concat(DEMO_ONLY_TOOLS);
 
 // 极简 markdown 渲染：只支持这套文档/对话实际用到的语法，输出前统一转义
 function escapeHtml(text) {
@@ -1189,6 +1433,7 @@ function createChatView(container, scope) {
         emptyEl = el$1("div", "agt-empty");
         emptyEl.appendChild(el$1("h2", "", "你好，我是 auipage 助手"));
         emptyEl.appendChild(el$1("p", "", "可以问我这套文档里的任意一篇，也可以让我解释某个包的实现。回答会实时流式输出，工具调用也看得见。"));
+
         const box = el$1("div", "agt-chips");
         SUGGESTIONS.forEach(function (text) {
             const chip = el$1("button", "agt-chip", text);
@@ -1364,7 +1609,9 @@ function createChatView(container, scope) {
             const state = value.status || "pending";
             card.dataset.status = state;
             name.textContent = value.name || "tool";
-            status.textContent = state === "pending" ? "调用中" : (state === "success" ? "已完成" : "失败");
+            const waiting = state !== "pending" && typeof value.render === "function" && !card.dataset.custom;
+            status.textContent = state === "pending" ? "调用中" : (waiting ? "等待确认" : (state === "success" ? "已完成" : "失败"));
+            if (waiting) card.dataset.status = "pending";
             pre.textContent = prettyArgs(value.args);
             if (state !== "pending") {
                 const out = el$1("pre", "agt-tool-result");
@@ -1372,6 +1619,30 @@ function createChatView(container, scope) {
                 body.innerHTML = "";
                 body.appendChild(pre);
                 body.appendChild(out);
+
+                // 自定义工具卡：render 存在时让页面接管这次交互，并把用户选择回灌给 Agent
+                if (typeof value.render === "function" && !card.dataset.custom) {
+                    card.dataset.custom = "1";
+                    body.innerHTML = "";
+                    const custom = el$1("div", "agt-tool-custom");
+                    custom.appendChild(el$1("div", "agt-tool-custom-label", "自定义工具卡 · render 接管"));
+                    const data = value.result || {};
+                    custom.appendChild(el$1("div", "agt-tool-custom-topic", "要展开：" + String(data.topic || "当前小节")));
+                    const actions = el$1("div", "agt-tool-custom-actions");
+                    const go = el$1("button", "agt-btn agt-btn-main", "继续展开");
+                    const skip = el$1("button", "agt-btn", "先跳过");
+                    go.type = "button";
+                    skip.type = "button";
+                    actions.appendChild(go);
+                    actions.appendChild(skip);
+                    custom.appendChild(actions);
+                    body.appendChild(custom);
+
+                    return new Promise(function (resolve) {
+                        go.addEventListener("click", function () { resolve("用户确认继续：" + String(data.topic || "当前小节")); });
+                        skip.addEventListener("click", function () { resolve("用户跳过：" + String(data.topic || "当前小节")); });
+                    });
+                }
             }
         };
 
@@ -1379,8 +1650,9 @@ function createChatView(container, scope) {
         scrollToEnd();
 
         return function (value) {
-            paint(value || {});
+            const pending = paint(value || {});
             scrollToEnd();
+            return pending;
         };
     }
 
@@ -2973,8 +3245,14 @@ function createTransport(options) {
             );
             const bridge = new CreateTool(stream);
 
-            // Agent 侧只给 description（= 前端工具），真正执行在 AuiPage
-            const tools = options.tools.map(function (tool) {
+            // 前端工具只给 description，真正执行在 AuiPage；带 scope=adapter 的工具在适配器侧执行
+            const baseTools = options.tools || [];
+            const demoOnly = provider.protocol === "demo" ? (options.demoTools || []) : [];
+            const registry = provider.tools === false ? [] : baseTools.concat(demoOnly);
+            const tools = registry.map(function (tool) {
+                if (tool.scope === "adapter" && typeof tool.execute === "function") {
+                    return bridge.create({ description: tool.description, execute: tool.execute });
+                }
                 return bridge.create({ description: tool.description });
             });
 
@@ -2982,8 +3260,8 @@ function createTransport(options) {
                 model: provider.model,
                 tools: tools,
                 systemPrompt: SYSTEM_PROMPT,
-                stream: true,
-                maxSteps: 3,
+                stream: provider.stream !== false,
+                maxSteps: Number(provider.maxSteps) > 0 ? Number(provider.maxSteps) : 3,
                 signal: signal
             });
             // Agent 内部会 new Model(option.model)，这里换成工厂产物（真实 Model 或演示 Model）
@@ -3167,191 +3445,6 @@ function removeProvider(state, id) {
     return state;
 }
 
-// 中文按「字级 bigram」切，英文/数字按单词切；构建期与浏览器共用同一套规则，保证索引与查询对得上。
-const STOP = new Set([
-    "的", "了", "是", "在", "和", "与", "也", "就", "都", "而", "及", "或", "一个", "这个", "那个",
-    "怎么", "怎样", "如何", "什么", "为什么", "哪些", "哪一", "可以", "能否", "是否", "需要", "一下",
-    "the", "a", "an", "of", "to", "and", "or", "is", "are", "in", "on", "for", "with", "how", "what"
-]);
-
-const CJK = /[\u4e00-\u9fa5]/;
-
-function latinTokens(run, push) {
-    // 驼峰与下划线拆开：handleChoices -> handle choices
-    run.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-        .replace(/[_\-.]/g, " ")
-        .split(/\s+/)
-        .forEach(function (word) {
-            const w = word.toLowerCase();
-            if (w.length >= 2 && !STOP.has(w)) push(w);
-        });
-}
-
-function tokenize(source) {
-    const tokens = [];
-    const text = String(source == null ? "" : source).toLowerCase();
-    const push = function (token) {
-        if (token && !STOP.has(token)) tokens.push(token);
-    };
-
-    let run = "";
-    let latin = true;
-    const flush = function () {
-        if (!run) return;
-        if (latin) latinTokens(run, push);
-        else {
-            if (run.length === 1) push(run);
-            for (let i = 0; i + 1 < run.length; i++) push(run.slice(i, i + 2));
-        }
-        run = "";
-    };
-
-    for (const ch of text) {
-        const isCjk = CJK.test(ch);
-        const isWord = /[a-z0-9]/.test(ch);
-        if (isCjk) {
-            if (run && latin) flush();
-            latin = false;
-            run += ch;
-        } else if (isWord) {
-            if (run && !latin) flush();
-            latin = true;
-            run += ch;
-        } else {
-            flush();
-        }
-    }
-    flush();
-    return tokens;
-}
-
-// 本地检索：构建期生成 index.json，这里按需加载 + BM25 变体打分，不联网、不引入向量库。
-
-const K1 = 1.2;
-const B = 0.62;
-
-let loading = null;
-let state = null;
-
-function root() {
-    if (window.__AGH_ROOT__) return window.__AGH_ROOT__;
-    return "assets/agent/";
-}
-
-function loadIndex() {
-    if (state) return Promise.resolve(state);
-    if (loading) return loading;
-    loading = fetch(root() + "index.json", { cache: "no-cache" })
-        .then(function (res) {
-            if (!res.ok) throw new Error("index " + res.status);
-            return res.json();
-        })
-        .then(function (json) {
-            return installIndex(json);
-        })
-        .catch(function () {
-            loading = null;
-            return null;
-        });
-    return loading;
-}
-
-function installIndex(json) {
-    const docs = [];
-    (json.pages || []).forEach(function (page) {
-        (page.s || []).forEach(function (section) {
-            const k = section.k || [];
-            const counts = new Map();
-            for (let i = 0; i + 1 < k.length; i += 2) counts.set(k[i], k[i + 1]);
-            docs.push({
-                page: page.p,
-                pageTitle: page.t,
-                group: page.g,
-                anchor: section.a,
-                heading: section.h,
-                text: section.x || "",
-                counts: counts,
-                titleTokens: new Set(tokenize(page.t + " " + section.h)),
-                len: (section.x || "").length
-            });
-        });
-    });
-
-    const postings = new Map();
-    let totalLen = 0;
-    docs.forEach(function (doc, id) {
-        totalLen += doc.len;
-        doc.id = id;
-        doc.counts.forEach(function (tf, token) {
-            let list = postings.get(token);
-            if (!list) postings.set(token, list = []);
-            list.push(id, tf);
-        });
-    });
-
-    state = { docs: docs, postings: postings, avg: totalLen / Math.max(1, docs.length) };
-    return state;
-}
-
-function idf(df) {
-    const n = state.docs.length;
-    return Math.log(1 + (n - df + 0.5) / (df + 0.5));
-}
-
-function rank(query, options) {
-    if (!state) return [];
-    const opts = options || {};
-    const tokens = tokenize(query);
-    if (!tokens.length) return [];
-
-    const weights = new Map();
-    tokens.forEach(function (token) {
-        weights.set(token, (weights.get(token) || 0) + 1);
-    });
-
-    const scores = new Map();
-    weights.forEach(function (weight, token) {
-        const list = state.postings.get(token);
-        if (!list) return;
-        const df = list.length / 2;
-        const tokenIdf = idf(df);
-        for (let i = 0; i < list.length; i += 2) {
-            const id = list[i];
-            const tf = list[i + 1];
-            const doc = state.docs[id];
-            const norm = 1 - B + B * doc.len / Math.max(1, state.avg);
-            let score = tokenIdf * (tf * (K1 + 1)) / (tf + K1 * norm) * weight;
-            if (doc.titleTokens.has(token)) score *= 2.2;
-            scores.set(id, (scores.get(id) || 0) + score);
-        }
-    });
-
-    const parts = String(query || "").split(/\s+/)
-        .map(function (part) { return part.replace(/[？?。，,]/g, ""); })
-        .filter(function (part) { return part.length >= 3; });
-    const results = [];
-    scores.forEach(function (score, id) {
-        const doc = state.docs[id];
-        parts.forEach(function (part) {
-            if (doc.heading.replace(/\s/g, "").includes(part)) score += 5;
-            if (doc.pageTitle.replace(/\s/g, "").includes(part)) score += 12;
-            if (doc.text.replace(/\s/g, "").includes(part)) score += 3;
-        });
-        if (opts.pageRel && doc.page === opts.pageRel) score *= 1.45;
-        results.push({
-            page: doc.page,
-            pageTitle: doc.pageTitle,
-            group: doc.group,
-            anchor: doc.anchor,
-            heading: doc.heading,
-            text: doc.text,
-            score: score
-        });
-    });
-
-    return results.sort(function (a, b) { return b.score - a.score; }).slice(0, 12);
-}
-
 // 把检索结果拼成「摘录式」回答：只用原文句子，附命中清单，不生成新事实。
 
 // 只覆盖文档里真实出现的说法，不做通用近义词猜测
@@ -3531,12 +3624,14 @@ function lastUserText(messages) {
     return "";
 }
 
-function lastToolMessage(messages) {
+function lastToolMessages(messages) {
+    const list = [];
     for (let i = messages.length - 1; i >= 0; i--) {
         const item = messages[i];
-        if (item && item.role === "tool") return item;
+        if (!item || item.role !== "tool") break;
+        list.unshift(item);
     }
-    return null;
+    return list;
 }
 
 /* ------------------------------------------------------------------ 脚本库 */
@@ -3621,43 +3716,87 @@ function fallbackAnswer() {
     ].join("\n");
 }
 
-function roundTwoAnswer(toolMessage) {
-    let info = null;
+function parseToolContent(item) {
     try {
-        info = JSON.parse(toolMessage.content);
+        return JSON.parse(item.content);
     } catch (e) {
-        info = null;
+        return item.content;
     }
-    if (!info) {
-        return "工具返回的内容我没解析出来，不过这次工具调用链路是完整跑通的。";
-    }
-    return [
-        "工具返回了，你当前在：",
-        "",
-        "- 页面：《" + (info.title || "未知") + "》",
-        "- 分组：" + (info.section || "未标注"),
-        "- 地址：`" + (info.url || "") + "`",
-        "",
-        "这一条回答是**第二轮**生成的——第一轮我只发了 `tool_calls`，工具跑完把结果作为 `role: \"tool\"` 的消息塞回来，我才有内容可说。",
-        "也就是说：`runConversation` 的循环、`CreateTool` 的等待、`AuiPage` 的工具卡片，三者刚才都真实工作过。"
-    ].join("\n");
+}
+
+function afterToolAnswer(items) {
+    const names = items.map(function (item) { return item.tool_name || ""; });
+    const values = items.map(parseToolContent);
+    const lines = ["工具返回了，这一轮一共 " + items.length + " 次调用：", ""];
+
+    values.forEach(function (value, i) {
+        const name = names[i] || "tool";
+        if (name === "page_info" && value && typeof value === "object") {
+            lines.push("- **page_info**：当前页《" + (value.title || "未知") + "》，分组 " + (value.section || "未标注") + "；");
+        } else if (name === "list_pages" && value && typeof value === "object") {
+            lines.push("- **list_pages**：侧栏 " + (value.count || 0) + " 个链接，分组 " + ((value.groups || []).join(" / ") || "未分组") + "；");
+        } else if (name === "doc_stats" && value && typeof value === "object") {
+            lines.push("- **doc_stats**：索引收录 " + (value.pages || 0) + " 页 / " + (value.sections || 0) + " 节；");
+        } else if (name === "demo_fail") {
+            lines.push("- **demo_fail**：失败了 —— " + String(value || "未知错误").slice(0, 80) + "；");
+        } else if (name === "deep_dive") {
+            lines.push("- **deep_dive**：用户的选择是「" + String(value && value.topic || value || "继续") + "」；");
+        } else {
+            lines.push("- **" + name + "**：" + String(value).slice(0, 80) + "；");
+        }
+    });
+
+    lines.push("");
+    lines.push("上面的结果都经 `role: \"tool\"` 消息回灌后才生成这段回答；失败的工具不会中断循环，会被转成文本继续走。");
+    return lines.join("\n");
 }
 
 /* ------------------------------------------------------------------ 意图路由 */
 
 async function plan(messages) {
-    const tool = lastToolMessage(messages);
-    if (tool) {
-        return { think: "工具结果回来了，整理一下。", text: roundTwoAnswer(tool), call: null };
+    const tools = lastToolMessages(messages);
+    if (tools.length) {
+        return { think: "工具结果回来了，整理一下。", text: afterToolAnswer(tools), calls: [] };
     }
 
     const q = lastUserText(messages);
 
+    if (/并行|两个工具|多项工具|属于哪个分组/.test(q)) {
+        return {
+            think: "这个问题可以同时问页面和文档目录，一次发两个工具调用。",
+            text: "我同时查一下当前页和文档目录。",
+            calls: [
+                { name: "page_info", args: "{}" },
+                { name: "list_pages", args: "{}" }
+            ]
+        };
+    }
     if (/哪一篇|这篇|当前|页面|我在看/.test(q)) {
         return {
             think: "这个问题需要知道用户当前页面，先调 page_info 工具。",
             text: "我先看一下你正停在哪个页面。",
-            call: { name: "page_info", args: "{}" }
+            calls: [{ name: "page_info", args: "{}" }]
+        };
+    }
+    if (/索引|收录|多少页|多少节|文档统计/.test(q)) {
+        return {
+            think: "问索引规模，调适配器侧工具 doc_stats。",
+            text: "我读一下构建出来的索引统计。",
+            calls: [{ name: "doc_stats", args: "{}" }]
+        };
+    }
+    if (/展开|深挖|确认卡|自定义卡/.test(q)) {
+        return {
+            think: "需要一张自定义交互卡，调 deep_dive。",
+            text: "我给你弹一张确认卡，你决定要不要继续。",
+            calls: [{ name: "deep_dive", args: JSON.stringify({ topic: "当前小节" }) }]
+        };
+    }
+    if (/工具失败|失败演示|故意失败/.test(q)) {
+        return {
+            think: "演示失败路径，调 demo_fail。",
+            text: "这次故意让工具失败，观察错误如何回灌。",
+            calls: [{ name: "demo_fail", args: "{}" }]
         };
     }
     if (/auipage\s*是什么|auipage是什么|介绍.{0,4}auipage|auipage.{0,4}框架/.test(q)) {
@@ -3701,12 +3840,15 @@ DemoModel.prototype.completions = function (params, logback, thinkback) {
         return new Promise(function (resolve, reject) {
         let content = "";
         let aborted = false;
+        const calls = (planned.calls && planned.calls.length)
+            ? planned.calls
+            : (planned.call ? [planned.call] : []);
 
-        // 步骤队列：先思考、再正文、最后（可选）抛一个 tool_call
+        // 步骤队列：先思考、再正文、最后（可选）抛 tool_calls
         const steps = [];
         if (planned.think) steps.push({ kind: "think", text: planned.think });
         if (planned.text) steps.push({ kind: "text", text: planned.text });
-        if (planned.call) steps.push({ kind: "call" });
+        if (calls.length) steps.push({ kind: "call" });
 
         let stepIndex = 0;
         let cursor = 0;
@@ -3729,14 +3871,16 @@ DemoModel.prototype.completions = function (params, logback, thinkback) {
 
             const step = steps[stepIndex];
             if (!step) {
-                if (!planned.call) return resolve({ content: content, tool_calls: [] });
+                if (!calls.length) return resolve({ content: content, tool_calls: [] });
                 return resolve({
                     content: content,
-                    tool_calls: [{
-                        id: "call_" + Date.now().toString(36),
-                        type: "function",
-                        function: { name: planned.call.name, arguments: planned.call.args }
-                    }]
+                    tool_calls: calls.map(function (call, i) {
+                        return {
+                            id: "call_" + Date.now().toString(36) + "_" + i,
+                            type: "function",
+                            function: { name: call.name, arguments: call.args }
+                        };
+                    })
                 });
             }
 
@@ -4299,6 +4443,7 @@ function boot() {
     const transport = createTransport({
         getProvider: function () { return activeProvider(state); },
         tools: TOOLS,
+        demoTools: DEMO_ONLY_TOOLS,
         createModel: createModel
     });
 
@@ -4312,7 +4457,7 @@ function boot() {
             ThreadList: threads.runtime,
             ChatContent: chat.runtime
         },
-        tools: TOOLS
+        tools: ALL_TOOLS
     });
 
     const settings = createSettings({

@@ -70,6 +70,7 @@ export function createChatView(container, scope) {
         emptyEl = el("div", "agt-empty");
         emptyEl.appendChild(el("h2", "", "你好，我是 auipage 助手"));
         emptyEl.appendChild(el("p", "", "可以问我这套文档里的任意一篇，也可以让我解释某个包的实现。回答会实时流式输出，工具调用也看得见。"));
+
         const box = el("div", "agt-chips");
         SUGGESTIONS.forEach(function (text) {
             const chip = el("button", "agt-chip", text);
@@ -245,7 +246,9 @@ export function createChatView(container, scope) {
             const state = value.status || "pending";
             card.dataset.status = state;
             name.textContent = value.name || "tool";
-            status.textContent = state === "pending" ? "调用中" : (state === "success" ? "已完成" : "失败");
+            const waiting = state !== "pending" && typeof value.render === "function" && !card.dataset.custom;
+            status.textContent = state === "pending" ? "调用中" : (waiting ? "等待确认" : (state === "success" ? "已完成" : "失败"));
+            if (waiting) card.dataset.status = "pending";
             pre.textContent = prettyArgs(value.args);
             if (state !== "pending") {
                 const out = el("pre", "agt-tool-result");
@@ -253,6 +256,30 @@ export function createChatView(container, scope) {
                 body.innerHTML = "";
                 body.appendChild(pre);
                 body.appendChild(out);
+
+                // 自定义工具卡：render 存在时让页面接管这次交互，并把用户选择回灌给 Agent
+                if (typeof value.render === "function" && !card.dataset.custom) {
+                    card.dataset.custom = "1";
+                    body.innerHTML = "";
+                    const custom = el("div", "agt-tool-custom");
+                    custom.appendChild(el("div", "agt-tool-custom-label", "自定义工具卡 · render 接管"));
+                    const data = value.result || {};
+                    custom.appendChild(el("div", "agt-tool-custom-topic", "要展开：" + String(data.topic || "当前小节")));
+                    const actions = el("div", "agt-tool-custom-actions");
+                    const go = el("button", "agt-btn agt-btn-main", "继续展开");
+                    const skip = el("button", "agt-btn", "先跳过");
+                    go.type = "button";
+                    skip.type = "button";
+                    actions.appendChild(go);
+                    actions.appendChild(skip);
+                    custom.appendChild(actions);
+                    body.appendChild(custom);
+
+                    return new Promise(function (resolve) {
+                        go.addEventListener("click", function () { resolve("用户确认继续：" + String(data.topic || "当前小节")); });
+                        skip.addEventListener("click", function () { resolve("用户跳过：" + String(data.topic || "当前小节")); });
+                    });
+                }
             }
         };
 
@@ -260,8 +287,9 @@ export function createChatView(container, scope) {
         scrollToEnd();
 
         return function (value) {
-            paint(value || {});
+            const pending = paint(value || {});
             scrollToEnd();
+            return pending;
         };
     }
 

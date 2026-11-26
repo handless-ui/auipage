@@ -1,6 +1,6 @@
 // 面板装配：AuiPage + 四个适配器 + 输入区 + 模型切换
 import { AuiPage } from "@auipage/core";
-import { TOOLS } from "./tools.js";
+import { TOOLS, DEMO_ONLY_TOOLS, ALL_TOOLS } from "./tools.js";
 import { createChatView } from "./views/chat.js";
 import { createThreads } from "./views/thread.js";
 import { createTransport } from "./transport.js";
@@ -193,6 +193,7 @@ function boot() {
     const transport = createTransport({
         getProvider: function () { return activeProvider(state); },
         tools: TOOLS,
+        demoTools: DEMO_ONLY_TOOLS,
         createModel: createModel
     });
 
@@ -206,7 +207,7 @@ function boot() {
             ThreadList: threads.runtime,
             ChatContent: chat.runtime
         },
-        tools: TOOLS
+        tools: ALL_TOOLS
     });
 
     const settings = createSettings({

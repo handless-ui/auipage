@@ -45,8 +45,14 @@ export function createTransport(options) {
             );
             const bridge = new CreateTool(stream);
 
-            // Agent 侧只给 description（= 前端工具），真正执行在 AuiPage
-            const tools = options.tools.map(function (tool) {
+            // 前端工具只给 description，真正执行在 AuiPage；带 scope=adapter 的工具在适配器侧执行
+            const baseTools = options.tools || [];
+            const demoOnly = provider.protocol === "demo" ? (options.demoTools || []) : [];
+            const registry = provider.tools === false ? [] : baseTools.concat(demoOnly);
+            const tools = registry.map(function (tool) {
+                if (tool.scope === "adapter" && typeof tool.execute === "function") {
+                    return bridge.create({ description: tool.description, execute: tool.execute });
+                }
                 return bridge.create({ description: tool.description });
             });
 
@@ -54,8 +60,8 @@ export function createTransport(options) {
                 model: provider.model,
                 tools: tools,
                 systemPrompt: SYSTEM_PROMPT,
-                stream: true,
-                maxSteps: 3,
+                stream: provider.stream !== false,
+                maxSteps: Number(provider.maxSteps) > 0 ? Number(provider.maxSteps) : 3,
                 signal: signal
             });
             // Agent 内部会 new Model(option.model)，这里换成工厂产物（真实 Model 或演示 Model）

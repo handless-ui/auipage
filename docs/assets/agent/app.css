@@ -749,8 +749,41 @@
     word-break: break-word;
 }
 
+.agt-tool-custom {
+    padding: 4px 2px 2px;
+}
+
+.agt-tool-custom-label {
+    font-size: 10.5px;
+    color: #2b59ff;
+    letter-spacing: .2px;
+}
+
+.agt-tool-custom-topic {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: #22314d;
+}
+
+.agt-tool-custom-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.agt-tool-custom-actions .agt-btn,
+.agt-tool-custom-actions .agt-btn-main {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 11.5px;
+}
+
 .agt-tool-result {
     color: #2f7d4e !important;
+}
+
+.agt-tool[data-status="error"] .agt-tool-result {
+    color: #c43838 !important;
 }
 
 /* ---------------------------------------------------------------- 输入 */
@@ -1142,6 +1175,41 @@
     color: #5a6a85;
 }
 
+.agt-guide {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 18px;
+}
+
+.agt-guide-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 11px 12px;
+    border: 1px solid #e5ebf6;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.agt-guide-item b {
+    font-size: 10.5px;
+    color: #2b59ff;
+    letter-spacing: .3px;
+}
+
+.agt-guide-item span {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1b2a45;
+}
+
+.agt-guide-item small {
+    font-size: 10.5px;
+    line-height: 1.55;
+    color: #8694ac;
+}
+
 .agt-chips {
     display: flex;
     flex-wrap: wrap;
@@ -1261,6 +1329,41 @@
     border-radius: 4px;
     background: #fff3d9;
     color: #96601a;
+}
+
+.agt-cmd {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px !important;
+    flex-wrap: wrap;
+}
+
+.agt-cmd code {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 8px !important;
+    font-size: 11px;
+    word-break: break-all;
+}
+
+.agt-copy {
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid #e6c993;
+    border-radius: 7px;
+    background: #fff;
+    color: #96601a;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.agt-probe-steps {
+    margin: 6px 0 0;
+    padding: 0 0 0 15px;
+    font-size: 10.5px;
+    line-height: 1.7;
+    color: #8694ac;
 }
 
 .agt-set-grid {
@@ -1403,6 +1506,40 @@
 }
 
 /* 添加/编辑弹层 */
+.agt-set-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px dashed #e8eef8;
+}
+
+.agt-set-privacy {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #8694ac;
+}
+
+.agt-clear {
+    flex: 0 0 auto;
+    height: 28px;
+    padding: 0 11px;
+    border: 1px solid #e7d2d2;
+    border-radius: 8px;
+    background: #fff;
+    color: #b44848;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.agt-clear.is-armed {
+    border-color: #c43838;
+    background: #fff2f2;
+}
+
 .agt-editor {
     position: fixed;
     inset: 0;
@@ -1418,7 +1555,9 @@
 }
 
 .agt-editor-card {
-    width: min(560px, calc(100vw - 40px));
+    width: min(620px, calc(100vw - 40px));
+    max-width: 100%;
+    box-sizing: border-box;
     max-height: calc(100vh - 60px);
     overflow: auto;
     padding: 20px 22px 18px;
@@ -1444,6 +1583,7 @@
     flex-direction: column;
     gap: 5px;
     flex: 1;
+    min-width: 0;
 }
 
 .agt-field span {
@@ -1452,10 +1592,13 @@
 }
 
 .agt-field input {
+    width: 100%;
+    min-width: 0;
     height: 34px;
     padding: 0 10px;
     border: 1px solid #dfe6f3;
     border-radius: 8px;
+    box-sizing: border-box;
     font-size: 12.5px;
     color: #0b1322;
     outline: none;
@@ -1467,8 +1610,39 @@
 }
 
 .agt-editor-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
+    align-items: end;
+}
+
+.agt-extra {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+.agt-switches {
+    display: flex;
+    flex: 1;
+    align-items: flex-end;
+    gap: 16px;
+    padding-bottom: 2px;
+}
+
+.agt-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: #6a7a94;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.agt-check input {
+    width: 14px;
+    height: 14px;
+    accent-color: #2b59ff;
+    margin: 0;
 }
 
 .agt-editor-tip {
@@ -1531,4 +1705,39 @@
 /* 会话区是 flex 列：子项不能被压缩，否则内容会溢出但 scrollHeight 不算 */
 .agt-chat-inner > * {
     flex: 0 0 auto;
+}
+
+@media (max-width: 640px) {
+    .agt-guide {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .agt-editor {
+        padding: 12px;
+    }
+
+    .agt-editor-card {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        padding: 16px 16px 14px;
+        border-radius: 12px;
+    }
+
+    .agt-params {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .agt-extra {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .agt-switches {
+        flex: initial;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 18px;
+        padding-top: 4px;
+    }
 }
