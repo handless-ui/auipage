@@ -34,16 +34,20 @@ export default function (value) {
     let text = String(value == null ? "" : value).trim();
 
     // 结束标记：可能单独出现，也可能紧跟在最后一条事件后面
+    // #doc:done
     text = text.replace(/data:\s*\[DONE\]$/, "").trim();
     if (text === "" || text === "[DONE]") return [];
+    // #end
 
     // 单条：带 data: 前缀或裸 JSON
     let single = tryParse(stripDataPrefix(text)) || tryParse(text);
     if (single) return checkError(single.value);
 
     // 多条 SSE 事件，以 "\n\ndata: " 分隔
+    // #doc:multi
     const parts = text.split(/\r?\n\r?\ndata: /);
     if (parts.length > 1) return checkError(parts.map(part => parseOne(part, text)));
+    // #end
 
     // NDJSON：逐行 JSON（跳过空行和 ":" 注释行）
     const lines = text.split(/\r?\n/).filter(line => line.trim() && !line.trim().startsWith(":"));

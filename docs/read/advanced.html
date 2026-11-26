@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源码解读 · 进阶：时序、signal、状态机与测试矩阵</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="把前面八篇横向串起来：一次对话的端到端时序、signal 穿过四层的方式、片段合并带的状态迁移，以及现有测试覆盖了什么。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="on">24 · 进阶：时序与测试矩阵</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>端到端时序：一句话走一圈</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>signal 怎么穿四层</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>片段状态机：合并带怎么迁移</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>测试矩阵：148 个用例都测了什么</span></a></div>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="on">24 · 进阶：时序与测试矩阵</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>端到端时序：一句话走一圈</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>signal 怎么穿四层</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>片段状态机：合并带怎么迁移</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>测试矩阵：148 个用例都测了什么</span></a></div>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 10</em>结课：把八篇串成一条线</h1>
+<p class="lede">前八篇按包讲，这一篇横着切：一次对话从头到尾经过谁、取消信号怎么穿四层、片段在合并带里怎么迁移、以及仓库里的 148 个用例覆盖到了哪里。</p>
+<div class="badges"><span class="badge">横向四节</span><span class="badge">端到端</span><span class="badge">signal</span><span class="badge">148 用例</span></div></div>
+
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>端到端时序：一句话走一圈</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>signal 怎么穿四层</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>片段状态机：合并带怎么迁移</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>测试矩阵：148 个用例都测了什么</span></a></div></nav>
+<section class="block" id="s-01">
+  <div class="block-head"><span class="idx">01</span><h2>端到端时序：一句话走一圈</h2></div>
+  <div class="prose">
+  <p>把用户按下发送到消息入库，压缩成十三步。每一步都能在源码里找到对应那段代码：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">timeline</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>#  page                                   server
+------------------------------------------------
+1  sendMessage({role,content})   -------> ChatTransport.run
+2                                         Agent.generate  (inject system)
+3                                         Model.completions
+4                                         fetch POST /chat/completions
+5  next({type:"text"})           <------- SSE data
+6  _handleChunk  merge band               
+7  ChatContent.append                     
+8  next({type:"tool-call"})      <------- SSE data
+9  _handleToolCall -> execute             
+10 response("tool-result")       -------> tool goes into messages
+11                                        Model.completions (2nd round)
+12 next({done:true})             <------- SSE [DONE]
+13 _finalize -> toHistoryMessages -> append         </pre></div>
+  </div>
+  <p><b>三个交接点决定了整套架构</b>：页面 ↔ 服务端之间是 <code>generator</code>（异步迭代器），服务端 ↔ 模型之间是 <code>completions</code> 的返回值，
+  <code>AuiPage</code> ↔ 界面之间是 <code>append</code> 的返回值。三处都是“函数返回一个东西”，不是事件总线。
+  <b>这是全套代码最一致的地方</b>：每一层都能被 await，也都能被打断。</p>
+  <p>注意第 10–11 行的位置：<code>tool-result</code> 不是“回到原来那次请求继续跑”，而是<b>新起一轮模型调用</b>。
+  服务端那一轮在 <code>Agent.generate</code> 里其实已经结束了，页面回传的是新请求的输入。所以一次带工具的对话，至少两次 HTTP。</p>
+  </div>
+</section>
+
+<section class="block" id="s-02">
+  <div class="block-head"><span class="idx">02</span><h2>signal 怎么穿四层</h2></div>
+  <div class="prose">
+  <p>取消之所以能真的停掉网络请求，是因为同一个 <code>signal</code> 从页面一路传到了 <code>socket</code>。链路一共四跳：</p>
+  <div class="code">
+  <div class="code-head"><span class="file">signal</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>AuiPage.cancel()
+    |
+    | _requestEnd("cancelled")
+    ↓
+task.controller.abort()          # AbortController
+    ↓
+adapter.run({ context: { signal } })
+    ↓
+Model.completions({ signal })
+    ↓
+fetch({ signal })
+    ↓
+adapter(requestOptions.signal)
+    ↓
+req.destroy()                    # Node: really close the socket</pre></div>
+  </div>
+  <p><b>关键在 fetch 那一层做了“二次收敛”</b>：外部传来的 <code>signal</code> 不直接给 adapter，而是先 <code>addEventListener("abort")</code>
+  转发到内部 controller，再把内部 signal 交给 adapter。于是 adapter 只需要认一个 signal，不必理解“是超时还是用户取消”。</p>
+  <p>另外两处不会断：<b><code>stop()</code> 也 abort</b>（它和 cancel 共用 <code>_requestEnd</code>），
+  但 <b><code>signal</code> 只到模型请求，不到工具</b>。一个正在跑的前端工具拿不到取消信号，只能靠它自己的超时。</p>
+  <p>还有一条兜底：<code>_requestEnd</code> 在 <code>busy</code> 或 <code>nextPending</code> 时不起立即收尾，而是挂 <code>_stopTimeout</code>（默认 5000ms）。
+  <b>这是给“适配器忽略 signal”准备的</b>——signal 传了，对方不认，页面至少不会永远停在执行中。</p>
+  </div>
+</section>
+
+<section class="block" id="s-03">
+  <div class="block-head"><span class="idx">03</span><h2>片段状态机：合并带怎么迁移</h2></div>
+  <div class="prose">
+  <p><code>_handleChunk</code> 看起来只有两个分支，其实是一个由 <code>preType</code> 驱动的状态机。状态就是 <code>task.preType</code>：</p>
+  <div class="table-wrap"><table class="spec">
+<thead><tr><th>preType</th><th>收到什么</th><th>发生什么</th></tr></thead>
+<tbody>
+<tr><td><code>""</code>（空）</td><td><code>text</code> / <code>thinking</code> / <code>loading</code></td><td>开带：<code>preText = 首片</code>，第一次渲染这条 assistant 消息</td></tr>
+<tr><td>文本类</td><td>同类型再来一片</td><td><code>preText += text</code>，<code>streamFun</code> 就地更新，不新建消息</td></tr>
+<tr><td>文本类</td><td>换了一种类型</td><td>旧带落盘（<code>_render</code> 一次），再按上面的规则开新带</td></tr>
+<tr><td>文本类</td><td>流结束 <code>done</code></td><td><code>_finalize</code> 把残留 <code>preText</code> 再落一次，然后清空</td></tr>
+<tr><td>任意</td><td><code>tool-call</code></td><td>不入带，直接交给 <code>_handleToolCall</code></td></tr>
+</tbody></table></div>
+  <p>四种正常情形对应四个行为：<b>同类型续写</b>只追加不渲染新消息；<b>类型切换</b>把旧带落盘、开新带；
+  <b>流结束</b>由 <code>_finalize</code> 补最后一片；<b><code>tool-call</code></b> 关掉旧带后直接交给工具。
+  真正没有兜底的是第五种——<b>不属于白名单、也不是 <code>tool-call</code> 的类型</b>，会被静默丢弃，这是当前实现里最容易埋新 bug 的地方。</p>
+  <p>入库时还有第二层合并（<code>toHistoryMessages</code>）：把相邻同角色的消息拼成一条。所以一次对话在内存里可能是 6 条，
+  入库后只剩 2 条。<b>渲染按批次、入库按语义</b>，这就是为什么两处逻辑不能合并。</p>
+  </div>
+</section>
+
+<section class="block" id="s-04">
+  <div class="block-head"><span class="idx">04</span><h2>测试矩阵：148 个用例都测了什么</h2></div>
+  <div class="prose">
+  <p>单测用一套极简 DSL（<code>describe</code> / <code>it</code> / <code>expect</code>），全部是本地假适配器，不连网。跑法：<code>node test/index.unit.js</code>。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>文件</th><th>套件</th><th>主要覆盖</th></tr></thead>
+  <tbody>
+  <tr><td><code>core.unit.js</code></td><td>11</td><td>九个类的构造与默认值、<code>mount</code> 命名、<code>initOption</code> 合并</td></tr>
+  <tr><td><code>core-flow.unit.js</code></td><td>9</td><td>消息规范化、适配器容错、工具两段式、stop / cancel</td></tr>
+  <tr><td><code>fetch.unit.js</code></td><td>5</td><td>事件四路、SSE 切块、超时、abort、错误补发</td></tr>
+  <tr><td><code>model.unit.js</code></td><td>4</td><td>七种输入形状、tool_calls 归并、think 标签软切分</td></tr>
+  <tr><td><code>agent.unit.js</code></td><td>5</td><td>工具循环、失败转文本、前后端双通道</td></tr>
+  <tr><td><code>agent-flow.unit.js</code></td><td>4</td><td>端到端：页面 → 服务端 → 回传</td></tr>
+  </tbody></table></div>
+  <p><b>38 套件 / 148 用例，全绿</b>。另有一套 <code>*.spec.js</code> 是联调脚本，只有设置 <code>AUIPAGE_OLLAMA=1</code> 才跑，默认跳过——
+  它需要一个本地 <code>ollama</code>（默认 <code>qwen3.5</code>），所以不在 CI 里。</p>
+  <p>写新代码时，<b>最该补的三类用例</b>：① 片段的类型切换（合并带边界）；② 工具卡在没有 updater 时的落库；③ 取消发生在
+  <code>nextPending</code> 为真的那一瞬间。<b>这三个位置目前都是“逻辑对、但很容易被改错”的地方</b>。</p>
+  <p>走到这里，源码解读这一组就结束了。想动手改，建议顺序是：<b>先改 <code>toModelMessages</code>（纯函数，风险最低）</b>，
+  再改适配器（有测试兜底），最后才碰 <code>AuiPage</code> 的 <code>pump</code> 与工具通道。</p>
+  </div>
+</section>
+</main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>4 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>端到端时序：一句话走一圈</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>signal 怎么穿四层</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>片段状态机：合并带怎么迁移</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>测试矩阵：148 个用例都测了什么</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
+
+</body>
+</html>

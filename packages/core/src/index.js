@@ -1,3 +1,4 @@
+// #doc:exports
 export { default as AuiPage } from "./AuiPage.js";
 
 export { default as ChatTransportAdapter } from "./ChatTransportAdapter.js";
@@ -12,3 +13,4 @@ export { default as generator } from "./generator.js";
 export { default as MessageStream } from "./MessageStream.js";
 
 export { default as toModelMessages } from "./tools/toModelMessages.js";
+// #end

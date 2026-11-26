@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源码解读 · model：请求拼装与流式解析</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="Model 三个字段、settled 幂等、流式与非流式共用的 handleChoices、parseString 的输入契约、tool_calls 双路归并与 think 标签的软切分。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="on">17 · model：流式解析</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>Model 只有三个字段</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>completions 的状态全在一个闭包里</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>settled：为什么 Promise 必须自己看门</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>请求体：工具传的是 description，不是 execute</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>流式和非流式，最后都进同一个 handleChoices</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>parseString 的输入契约：七种形状都要认</span></a><a href="#s-07" data-toc="s-07"><i>07</i><span>tool_calls 归并：index 与 id 两条线索</span></a><a href="#s-08" data-toc="s-08"><i>08</i><span>think 标签：把“半个标签”留在缓冲区</span></a></div><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="on">17 · model：流式解析</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>Model 只有三个字段</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>completions 的状态全在一个闭包里</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>settled：为什么 Promise 必须自己看门</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>请求体：工具传的是 description，不是 execute</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>流式和非流式，最后都进同一个 handleChoices</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>parseString 的输入契约：七种形状都要认</span></a><a href="#s-07" data-toc="s-07"><i>07</i><span>tool_calls 归并：index 与 id 两条线索</span></a><a href="#s-08" data-toc="s-08"><i>08</i><span>think 标签：把“半个标签”留在缓冲区</span></a></div><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 03</em>model：请求拼装与流式解析</h1>
+<p class="lede"><code>@auipage/model</code> 277 行，只做一件事：把「消息数组 + 工具清单」发出去，把「返回的流」拼回 <code>content</code> 和 <code>tool_calls</code>。
+它的难点全在流上——chunk 边界不落在语义边界上。</p>
+<div class="badges"><span class="badge">277 行</span><span class="badge">5 个文件</span><span class="badge">SSE / NDJSON</span><span class="badge">think 标签</span></div></div>
+
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>Model 只有三个字段</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>completions 的状态全在一个闭包里</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>settled：为什么 Promise 必须自己看门</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>请求体：工具传的是 description，不是 execute</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>流式和非流式，最后都进同一个 handleChoices</span></a><a class="chip" href="#s-06" data-toc="s-06"><i>06</i><span>parseString 的输入契约：七种形状都要认</span></a><a class="chip" href="#s-07" data-toc="s-07"><i>07</i><span>tool_calls 归并：index 与 id 两条线索</span></a><a class="chip" href="#s-08" data-toc="s-08"><i>08</i><span>think 标签：把“半个标签”留在缓冲区</span></a></div></nav>
+<section class="block" id="s-01">
+  <div class="block-head"><span class="idx">01</span><h2>Model 只有三个字段</h2></div>
+  <div class="prose">
+  <p><code>Model</code> 不是一个 SDK 客户端，它只是一个<b>配置容器</b>。构造函数不校验、不给默认值：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/index.js</span><span class="ln">:4</span><button data-copy="">复制</button></div><div class="code-body"><pre>function Model(fields) {
+    this.model = fields.model;
+    this.apiKey = fields.apiKey;
+    this.baseURL = fields.baseURL;</pre></div></div>
+  <p>不校验是刻意的：<code>model</code> 名字可以是任何服务商的任何模型，<code>baseURL</code> 可以是自建网关、代理、本地 <code>ollama</code>，
+  校验只会把本来能用的组合挡在外面。<b>配置错误会在第一次请求时以 HTTP 错误的形式暴露</b>，界面上还看得见，比构造期抛错更实用。</p>
+  <p>只有一处“规整”发生在请求时，而不是构造时：<code>this.baseURL.replace(/\/+$/, "")</code>。
+  放在构造里也完全可以，但那样 <code>model.baseURL = "..."</code> 事后改值就会绕过规整，所以它被放在拼接 URL 的那一刻——<b>每次请求都重新算</b>。</p>
+  <p><code>apiKey</code> 没有做任何脱敏，注释里也没有。这意味着调试时打日志很容易把它带出去；如果你在二次封装里打印 <code>model</code>，
+  要自己 <code>Object.assign({}, model, { apiKey: "***" })</code>。</p>
+  </div>
+</section>
+
+<section class="block" id="s-02">
+  <div class="block-head"><span class="idx">02</span><h2>completions 的状态全在一个闭包里</h2></div>
+  <div class="prose">
+  <p>整个请求是 <code>new Promise</code> 包起来的，所有中间变量都在闭包里，不挂到任何对象上：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/completions.js</span><span class="ln">:39</span><button data-copy="">复制</button></div><div class="code-body"><pre>const state = { content: "", tool_calls: [] };
+const callbacks = { logback, thinkback };
+
+let buffer = "";
+let httpError = null;
+let streamError = null;
+let settled = false;
+
+const finish = (fn, value) =&gt; {
+    if (settled) return;
+    settled = true;
+    fn(value);
+};
+const fail = value =&gt; finish(reject, toError(value, "模型请求失败"));</pre></div></div>
+  <p>五个变量各有分工：<code>state</code> 是<b>输出累加器</b>（<code>content</code> 与 <code>tool_calls</code> 最后原样返回给 agent），
+  <code>buffer</code> 只在非流式下用（把整段响应攒起来一次性解析），<code>httpError</code> / <code>streamError</code> 记录“已经出过错”，
+  <code>settled</code> 保证 Promise 只结束一次。</p>
+  <p><b>为什么 <code>state</code> 要跨 chunk 存活</b>：流式下每个 chunk 只带来一小段增量，<code>content</code> 必须自己累加；
+  而 <code>tool_calls</code> 的第 1 片只给 <code>id</code> 和 <code>index</code>，参数是后面若干片陆续拼进来的，所以必须有一个能跨 chunk 记住槽位的对象。
+  这个对象里还会被塞进 <code>_toolSlots</code>、<code>thinkBuf</code>、<code>inThink</code> 三个“内部字段”——它们不属于对外契约，只是没有别的地方可放。</p>
+  <p><code>callbacks</code> 只包了 <code>logback</code> / <code>thinkback</code> 两个回调。它们一直往下传到 <code>handleChoices</code>，沿途不被替换、不被判断，
+  所以 <b>写 <code>if (logback) logback(x)</code> 这种卫语句的地方全部在 <code>handleChoices</code> 里</b>，这里不必重复判断。</p>
+  </div>
+</section>
+
+<section class="block" id="s-03">
+  <div class="block-head"><span class="idx">03</span><h2>settled：为什么 Promise 必须自己看门</h2></div>
+  <div class="prose">
+  <p>一个流式请求有<b>五条</b>可能通向失败：HTTP 4xx、<code>parseString</code> 抛错、<code>handleChoices</code> 抛错、<code>res</code> 的 <code>error</code> 事件、<code>fetch</code> 自身的 reject。
+  它们可能在同一毫秒内先后触发（比如 4xx 的同时连接被关），<code>Promise</code> 虽然会忽略第二次 <code>reject</code>，但<b>代码会继续往下跑</b>，
+  于是 <code>flushThinkBuffer</code> 会在已经 reject 之后再调一次 <code>thinkback</code>——界面上就会看到内容“回魂”。</p>
+  <p>所以有一个统一的出口：</p>
+  <p><code>const finish = (fn, value) =&gt; { if (settled) return; settled = true; fn(value); }</code></p>
+  <p>所有成功路径都走 <code>finish(resolve, ...)</code>，所有失败路径都走 <code>fail(...)</code>（内部就是 <code>finish(reject, toError(...))</code>）。
+  <code>settled</code> 在<b>调用 fn 之前</b>就置位，这不是顺序洁癖：如果先 <code>fn()</code> 再置位，而 <code>resolve</code> 触发的 <code>then</code> 回调里又同步调用了什么，
+  重入时就还会看到 <code>settled === false</code>。</p>
+  <p><code>toError</code> 把任意形态（<code>Error</code>、<code>{message}</code>、字符串、<code>null</code>）收敛成 <code>Error</code>。
+  必要性来自 <code>parseString</code> 的 <code>throw item.error</code>：模型返回的 <code>error</code> 字段经常是普通对象或字符串，不是 <code>Error</code> 实例。
+  上层若用 <code>catch (e) e.message</code> 就会拿到 <code>undefined</code>。</p>
+  </div>
+</section>
+
+<section class="block" id="s-04">
+  <div class="block-head"><span class="idx">04</span><h2>请求体：工具传的是 description，不是 execute</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/completions.js</span><span class="ln">:56</span><button data-copy="">复制</button></div><div class="code-body"><pre>fetch({
+    url: `${this.baseURL.replace(/\/+$/, "")}/chat/completions`,
+    method: "POST",
+    headers: {
+        "Authorization": `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+        model: this.model,
+        messages: params.messages,
+        tools: params.tools ? params.tools.map(tool =&gt; tool.description) : [],
+        stream: params.stream,
+    }),
+    timeout: params.timeout,
+    signal: params.signal</pre></div></div>
+  <p><b><code>tools: params.tools.map(tool =&gt; tool.description)</code></b> 这一行是 model 与 agent 之间唯一的契约点。<code>CreateTool</code> 产出的对象是
+  <code>{ description, execute }</code>，而 OpenAI 协议只认 <code>{ type: 'function', function: {...} }</code>。所以这里做了一次<b>降维</b>：
+  只把 <code>description</code> 发出去，<code>execute</code> 留在进程内。<b>函数永远不出本地</b>，这也是这套框架敢让前端工具直接跑在页面里的原因。</p>
+  <p><code>tools</code> 缺省传 <code>[]</code> 而不是省略字段。有些服务商（尤其兼容 OpenAI 的第三方网关）对缺失 <code>tools</code> 和空数组的处理不一致，
+  空数组是最安全的形状。</p>
+  <p><code>stream: params.stream</code> 一路透传，<b>没有做布尔归一化</b>。传 <code>undefined</code> 时字段会被 <code>JSON.stringify</code> 直接丢掉，
+  服务端按默认（非流式）处理——这依赖服务端行为，属于已知的隐式约定。</p>
+  <p><code>timeout</code> 和 <code>signal</code> 只是原样交给 <code>fetch</code>，model 包自己不实现超时和取消。上一页讲的那套 <code>abortWith</code> 就是这里的下游。</p>
+  </div>
+</section>
+
+<section class="block" id="s-05">
+  <div class="block-head"><span class="idx">05</span><h2>流式和非流式，最后都进同一个 handleChoices</h2></div>
+  <div class="prose">
+  <p>两种模式的差别只有“什么时候解析、解析什么形状”，之后完全合流：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/completions.js</span><span class="ln">:82</span><button data-copy="">复制</button></div><div class="code-body"><pre>res.on("data", chunk =&gt; {
+    if (settled) return;
+    if (!params.stream) {
+        buffer += chunk;
+        return;
+    }
+    let parsed;
+    try {
+        parsed = parseString(chunk.toString());
+    } catch (e) {
+        streamError = e;
+        fail(e);</pre></div></div>
+  <p><b>流式</b>：每个 chunk 立刻 <code>parseString</code>，可能一次解析出多条事件（一个 chunk 里塞了两个 <code>data:</code>），
+  所以结果被 <code>Array.isArray(parsed) ? parsed : [parsed]</code> 归一，再逐条把 <code>item.choices</code> 交给 <code>handleChoices</code>。</p>
+  <p><b>非流式</b>：<code>data</code> 时只做 <code>buffer += chunk</code>，什么都不解析。等到 <code>end</code> 事件，才把整段 buffer 解析成
+  <code>{ choices: [{ message }] }</code> 的形状，然后<b>手工包成 <code>[{ delta: choices[0].message }]</code> 喂给同一个 <code>handleChoices</code></b>。</p>
+  <p>这是全文件最值得学的一处设计：<code>message</code> 与 <code>delta</code> 的字段名其实不同（<code>tool_calls</code> 一个带 <code>index</code> 一个不带），
+  但 <code>handleChoices</code> 只读 <code>delta.content</code> / <code>delta.reasoning</code> / <code>delta.tool_calls</code>，两种形状在这些字段上恰好同构。
+  <b>于是两条路径共用一套累加逻辑，不需要写第二份解析代码</b>。代价是：非流式的 <code>tool_calls</code> 没有 <code>index</code>，
+  归并时要走“没有 index 就追加到最后一个槽位”的兜底分支（下一节讲）。</p>
+  <p><b>校验只做一处</b>：非流式在 <code>end</code> 里显式检查 <code>choices[0].message</code> 存在，否则抛“模型响应缺少 choices[0].message”。
+  流式不检查，因为流式的“空响应”是合法的（模型可能只回了 <code>tool_calls</code>）。</p>
+  <p>注意 <code>end</code> 里的判定顺序：先 <code>streamError</code>、再 <code>httpError</code>。流式下如果已经解析失败，报解析错误比报 HTTP 错误更有定位价值——
+  毕竟 HTTP 已经通了，问题在格式。</p>
+  </div>
+</section>
+
+<section class="block" id="s-06">
+  <div class="block-head"><span class="idx">06</span><h2>parseString 的输入契约：七种形状都要认</h2></div>
+  <div class="prose">
+  <p>这个函数不知道自己在解析哪家服务商，只知道“拿到的可能是这几种东西”。它按“先剥结束标记，再试单条，再试多事件，最后试 NDJSON”的顺序试：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/parseString.js</span><span class="ln">:38</span><button data-copy="">复制</button></div><div class="code-body"><pre>text = text.replace(/data:\s*\[DONE\]$/, "").trim();
+if (text === "" || text === "[DONE]") return [];</pre></div></div>
+  <p><code>data: [DONE]</code> 的处理有个细节：它先 <code>replace(/data:\s*\[DONE\]$/,"")</code> <b>再</b> <code>.trim()</code>。
+  因为结束标记经常紧跟在最后一条事件后面（<code>...}\n\ndata: [DONE]</code>），单独判断会漏掉；剥掉之后剩下的内容继续按正常事件解析，
+  所以一段文本里“最后一条事件 + [DONE]”能一次拿到两条结果。</p>
+  <p>空串和 <code>[DONE]</code> 返回 <code>[]</code>，<b>而不是 <code>null</code></b>：调用方统一按“数组”处理，省掉一次类型判断。</p>
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/parseString.js</span><span class="ln">:48</span><button data-copy="">复制</button></div><div class="code-body"><pre>const parts = text.split(/\r?\n\r?\ndata: /);
+if (parts.length &gt; 1) return checkError(parts.map(part =&gt; parseOne(part, text)));</pre></div></div>
+  <p>多条事件的切分点写死为 <code>/\r?\n\r?\ndata: </code>——带空行、带 <code>data: </code> 空格。<b>这是脆弱的</b>：
+  如果服务端发 <code>data:</code> 后面没有空格，或事件之间用 <code>\r\n\r\n</code> 且无空格，这个分支就切不开，会落到最后的 <code>SyntaxError</code>。
+  现实里 OpenAI 兼容服务都用这个格式，所以够用；但它不是通用 SSE 解析器，这一点必须知道。</p>
+  <p>每段都经过 <code>parseOne</code> → <code>stripDataPrefix</code> → <code>JSON.parse</code>，失败时抛的 <code>SyntaxError</code> 会带上 <b>原文前 120 字符</b>。
+  这是排障最有用的一条信息：模型网关返回 HTML 错误页时，你能立刻从报错里看出来。</p>
+  <p>最后一道 <code>checkError</code> 是“错误体识别”：只要是 <code>{"error": ...}</code> 形状，无论单条还是数组里某一条，都直接 <code>throw</code>，
+  交给 <code>completions</code> 的 <code>toError</code> 收敛。这样错误判定只在一处，不会散落在各分支。</p>
+  </div>
+</section>
+
+<section class="block" id="s-07">
+  <div class="block-head"><span class="idx">07</span><h2>tool_calls 归并：index 与 id 两条线索</h2></div>
+  <div class="prose">
+  <p>流式工具调用是分段下发的：第 1 片给 <code>index: 0</code> + <code>id</code> + <code>function.name</code>，后面若干片只给
+  <code>index: 0</code> + <code>function.arguments</code> 的碎片。要拼成一个完整的调用，必须能<b>把碎片认出是同一个调用</b>：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/streamHandler.js</span><span class="ln">:17</span><button data-copy="">复制</button></div><div class="code-body"><pre>function mergeToolCall(state, toolCall) {
+    if (!state._toolSlots) state._toolSlots = new Map();
+
+    const calls = state.tool_calls;
+    const index = typeof toolCall.index === "number" ? toolCall.index : null;
+    const hasId = typeof toolCall.id === "string" &amp;&amp; toolCall.id !== "";
+
+    // 带 id 视为新调用；同 id 重复下发时复用已有槽位
+    if (hasId) {
+        const exist = calls.find(call =&gt; call.id === toolCall.id);
+        if (exist) {
+            appendArguments(exist, toolCall);
+            return;
+        }
+        const slot = normalizeCall(toolCall);
+        calls.push(slot);
+        if (index !== null) state._toolSlots.set(index, slot);
+        return;
+    }
+
+    let slot = index !== null ? state._toolSlots.get(index) : null;
+    if (!slot &amp;&amp; calls.length) slot = calls[calls.length - 1];
+
+    // 首片就没有 id：建占位槽位，后续分片补齐参数
+    if (!slot) {
+        slot = normalizeCall(toolCall);
+        calls.push(slot);
+        if (index !== null) state._toolSlots.set(index, slot);
+        return;
+    }
+
+    appendArguments(slot, toolCall);</pre></div></div>
+  <p>判定顺序是三层兜底：</p>
+  <p><b>1. 有 <code>id</code></b> → 当作新调用，先按 <code>id</code> 查重：已存在就只追加参数（同一条 <code>id</code> 被重复下发的情况），
+  不存在就 <code>normalizeCall</code> 建槽并登记到 <code>_toolSlots[index]</code>。
+  <code>normalizeCall</code> 只保证 <code>function.arguments</code> 是字符串——有的服务商首个分片给 <code>arguments: ""</code>，
+  有的干脆不给，后续要 <code>+=</code>，类型不对就会拼成 <code>"undefined{...}"</code>。</p>
+  <p><b>2. 无 <code>id</code> 有 <code>index</code></b> → 从 <code>_toolSlots</code> 里取回槽位。这就是 Map 存在的理由：
+  <code>index</code> 是唯一的稳定标识，<code>calls</code> 数组里的位置会因并发调用顺序变化。</p>
+  <p><b>3. 两个都没有</b> → 追加到 <code>calls[calls.length - 1]</code>，也就是“认为它是上一条的续片”。
+  这条兜底是给<b>非流式</b>路径准备的：那里 <code>tool_calls</code> 是完整对象、没有 <code>index</code>，一次进来就是一个完整调用。</p>
+  <p><code>appendArguments</code> 只做两件事：<code>fn.name</code> 若槽位还没有就补上（有的模型把 <code>name</code> 放在后面的分片里），
+  <code>arguments</code> 字符串直接 <code>+=</code>。<b>它不做 JSON 解析</b>——解析留到 <code>callFuns</code> 执行工具时，因为拼接中途的字符串一定不是合法 JSON。</p>
+  </div>
+</section>
+
+<section class="block" id="s-08">
+  <div class="block-head"><span class="idx">08</span><h2>think 标签：把“半个标签”留在缓冲区</h2></div>
+  <div class="prose">
+  <p>有些模型（如 MiniMax 系列）把思考过程写成 <code>&lt;think&gt;...&lt;/think&gt;</code> 混在 <code>content</code> 里。剥离它的难点不是找标签，
+  而是 <b>chunk 可能正好切在标签中间</b>：你收到 <code>"&lt;thi"</code>，下一块才是 <code>"nk&gt;..."</code>。这时不能把 <code>&lt;thi</code> 当正文发出去。</p>
+  <div class="code"><div class="code-head"><span class="file">packages/model/src/reasoning.js</span><span class="ln">:20</span><button data-copy="">复制</button></div><div class="code-body"><pre>function partialTagLength(text, tag) {
+    const max = Math.min(tag.length - 1, text.length);
+    for (let len = max; len &gt; 0; len--) {
+        if (text.endsWith(tag.slice(0, len))) return len;
+    }
+    return 0;</pre></div></div>
+  <p><code>partialTagLength</code> 从“最长可能前缀”往短里试，返回<b>文本尾部与标签前缀重合的长度</b>。
+  比如 <code>text = "abc&lt;thi"</code>、<code>tag = "&lt;/think&gt;"</code>，它会返回 <code>4</code>，于是最后 4 个字符被扣下来存进
+  <code>state.thinkBuf</code>，等下一块到了再拼回去判断。<b>注意 <code>max = tag.length - 1</code></b>：整标签不会是“前缀”，排除掉它才能避免死循环。</p>
+  <p><code>extractThink</code> 用两个状态字段跨 chunk 记录：<code>inThink</code>（现在是否在思考块里）与 <code>thinkBuf</code>（被扣下的半截）。
+  四种情况的处理各不相同：</p>
+  <p><b>在思考块内找到 <code>&lt;/think&gt;</code></b> → 前面的都归 <code>thinking</code>，退出思考态，<b>剩余内容递归</b>（可能后面又有一个完整的 <code>&lt;think&gt;</code> 块）。</p>
+  <p><b>在思考块内没找到</b> → 扣下可能的标签尾巴，其余全归 <code>thinking</code>，<code>content</code> 给空串。</p>
+  <p><b>不在思考态</b> → 找 <code>&lt;think&gt;</code>；找不到就只扣标签尾巴，其余都是正文。</p>
+  <p><b>有 <code>&lt;think&gt;</code> 没 <code>&lt;/think&gt;</code></b> → 进入思考态，<code>&lt;think&gt;</code> 之前的是正文，之后的都算思考。</p>
+  <p>流结束时，<code>thinkBuf</code> 里可能还剩一段<b>永远等不到配对</b>的文本（服务端直接断了）。<code>flushThinkBuffer</code> 按当前所处模式归属输出：
+  在思考态就归 <code>thinkback</code>，否则归 <code>logback</code> 并累加进 <code>state.content</code>。<b>不 flush 就会丢字</b>，
+  而且丢的通常是最后几个字，用户会觉得“模型话说一半停了”。</p>
+  </div>
+</section>
+</main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>8 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>Model 只有三个字段</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>completions 的状态全在一个闭包里</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>settled：为什么 Promise 必须自己看门</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>请求体：工具传的是 description，不是 execute</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>流式和非流式，最后都进同一个 handleChoices</span></a></li><li><a class="toc-item" href="#s-06" data-toc="s-06"><i>06</i><span>parseString 的输入契约：七种形状都要认</span></a></li><li><a class="toc-item" href="#s-07" data-toc="s-07"><i>07</i><span>tool_calls 归并：index 与 id 两条线索</span></a></li><li><a class="toc-item" href="#s-08" data-toc="s-08"><i>08</i><span>think 标签：把“半个标签”留在缓冲区</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
+
+</body>
+</html>

@@ -1,6 +1,7 @@
 // 页面消息（富片段）→ 模型线上消息（纯文本 + tool_calls / tool 结果）
 
 // 入参既可以是历史消息组数组，也可以是纯消息数组
+// #doc:flat
 function flatten(input) {
     const list = [];
     for (const item of input || []) {
@@ -10,6 +11,7 @@ function flatten(input) {
     }
     return list;
 }
+// #end
 
 // 只拼接 text 片段；thinking / loading 与自定义片段不进模型上下文
 function textOf(parts) {
@@ -47,6 +49,7 @@ export default function toModelMessages(input) {
         const parts = Array.isArray(message.content) ? message.content : [];
         const text = typeof message.content === "string" ? message.content : textOf(parts);
 
+        // #doc:calls
         // 只保留已结束的工具调用，避免模型收到没有结果的 tool_call
         const calls = parts.filter(part => part
             && part.type === "tool-call"
@@ -79,6 +82,7 @@ export default function toModelMessages(input) {
                 content: contentOf(payload)
             });
         });
+        // #end
     }
 
     return result;

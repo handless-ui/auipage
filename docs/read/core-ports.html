@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源码解读 · 端口：Adapter 与 Runtime 的契约</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="五个端口类的同一个模板、initOption 会改写默认值对象带来的污染风险、EmptyFunction 的作用，以及每个方法被谁调用。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="on">22 · 端口：Adapter 与 Runtime</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>一个模板，抄了五遍</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>那个展开运算符不是装饰</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>name 字段：唯一的“接口声明”</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>每个方法被谁调</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>MessageStream：给工具一个“往页面推”的口子</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>为什么不写接口声明</span></a></div><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="on">22 · 端口：Adapter 与 Runtime</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>一个模板，抄了五遍</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>那个展开运算符不是装饰</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>name 字段：唯一的“接口声明”</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>每个方法被谁调</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>MessageStream：给工具一个“往页面推”的口子</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>为什么不写接口声明</span></a></div><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 08</em>端口：Adapter 与 Runtime 的契约</h1>
+<p class="lede"><code>core</code> 里最“无聊”的六个文件，恰恰是整套框架能被替换的原因。它们全是同一个模板：声明默认值、把用户传的合并进来、挂上 <code>name</code>。</p>
+<div class="badges"><span class="badge">6 个文件</span><span class="badge">114 行</span><span class="badge">端口模式</span><span class="badge">零依赖</span></div></div>
+
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>一个模板，抄了五遍</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>那个展开运算符不是装饰</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>name 字段：唯一的“接口声明”</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>每个方法被谁调</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>MessageStream：给工具一个“往页面推”的口子</span></a><a class="chip" href="#s-06" data-toc="s-06"><i>06</i><span>为什么不写接口声明</span></a></div></nav>
+<section class="block" id="s-01">
+  <div class="block-head"><span class="idx">01</span><h2>一个模板，抄了五遍</h2></div>
+  <div class="prose">
+  <p><code>ThreadListAdapter</code>、<code>MessageHistoryAdapter</code>、<code>ChatTransportAdapter</code>、<code>ThreadListRuntime</code>、
+  <code>ChatContentRuntime</code> 这五个类，代码结构一模一样，差别只有“默认方法清单”和 <code>name</code>：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/core/src/ChatTransportAdapter.js</span><span class="ln">:5</span><button data-copy="">复制</button></div><div class="code-body"><pre>const DEFAUTL_OPTIONS = {
+    run: EmptyFunction,
+    response: EmptyFunction,
+};
+</pre></div></div>
+  <p>把默认实现写成一个常量，再在构造里做一次“合并 + 拷贝”，好处是<b>三个问题一次解决</b>：</p>
+  <p><b>① 用户可以不实现任何方法。</b><code>EmptyFunction</code> 就是 <code>() =&gt; void 0</code>，一行。它让 <code>AuiPage</code> 里那些
+  <code>this.adapter.ThreadList?.list(...)</code> 的调用永远不会因为“方法不存在”抛 <code>TypeError</code>。</p>
+  <p><b>② 没传的键有兜底，传了的键覆盖。</b>顺序是 <code>initOption(options, {...DEFAUTL_OPTIONS})</code>——
+  把用户传的对象覆盖到默认值对象上。<b>方向不能反</b>，反过来会让默认实现盖掉用户的实现。</p>
+  <p><b>③ 只拷贝白名单里的键。</b><code>for (let key in DEFAUTL_OPTIONS)</code> 遍历的是<b>默认值对象的键</b>，不是用户对象的键。
+  <b>这意味着用户多传的属性会被静默丢弃</b>。想在适配器上挂自定义方法，不能通过配置对象传，只能加在原型上或者用闭包。</p>
+  </div>
+</section>
+
+<section class="block" id="s-02">
+  <div class="block-head"><span class="idx">02</span><h2>那个展开运算符不是装饰</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/core/src/ChatTransportAdapter.js</span><span class="ln">:16</span><button data-copy="">复制</button></div><div class="code-body"><pre>let value = initOption(options, { ...DEFAUTL_OPTIONS });
+for (let key in DEFAUTL_OPTIONS) {
+    this[key] = value[key];
+}</pre></div></div>
+  <p><code>{ ...DEFAUTL_OPTIONS }</code> 必须存在。因为 <code>initOption(setOption, defaultOption)</code> 的实现是
+  <b>把 <code>setOption</code> 的每个键写进 <code>defaultOption</code> 并返回它</b>——它是<b>原地改写第二个参数</b>。</p>
+  <p>如果直接写 <code>initOption(options, DEFAUTL_OPTIONS)</code>，模块级常量就被第一个实例改掉了：
+  第一个页面传了 <code>run: A</code>，第二个页面即使不传，也会拿到 <code>run: A</code>。
+  <b>这是“共享可变默认值”的经典坑，展开一次就把每个实例隔离开。</b></p>
+  <p><code>let value = ...</code> 之后还要 <code>for (let key in DEFAUTL_OPTIONS) this[key] = value[key]</code>，而不是直接 <code>this.run = value.run</code>。
+  这样新增一个默认方法只改常量，构造函数不用动。</p>
+  <div class="note"><p><b>注意 <code>DEFAUTL_OPTIONS</code> 的拼写：源码里少了一个 <code>I</code>（正确是 DEFAULT）。你在文件里搜 <code>DEFAULT_OPTIONS</code> 是搜不到的，这是历史遗留，不影响运行。</b></p></div>
+  </div>
+</section>
+
+<section class="block" id="s-03">
+  <div class="block-head"><span class="idx">03</span><h2>name 字段：唯一的“接口声明”</h2></div>
+  <div class="prose">
+  <p>每个类都硬编码了一行 <code>this.name = "ChatTransportAdapter"</code>。它没有任何类型检查作用，<b>只被 <code>mount</code> 用来剥后缀</b>：</p>
+  <p><code>name.replace("Adapter","")</code> → <code>"ChatTransport"</code>，于是页面里写 <code>this.adapter.ChatTransport</code>。
+  <b>类名、name 字段、mount 的后缀三者必须一致</b>。改名时漏一处，就是这个端口“接了但调不到”——而且不会报错，因为默认实现本来就是空函数。</p>
+  <p>这也解释了为什么 <code>AuiPage</code> 构造函数里调用的是 <code>this.adapter.ThreadList?.list(...)</code>，而不是 <code>this.adapter.ThreadListAdapter</code>。
+  <b>后缀是给 mount 剥的，不是给业务代码用的</b>。</p>
+  </div>
+</section>
+
+<section class="block" id="s-04">
+  <div class="block-head"><span class="idx">04</span><h2>每个方法被谁调</h2></div>
+  <div class="prose">
+  <p>端口的方法不多，但每一条都有明确调用点。下表可以直接当“实现适配器时要填什么”的清单。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>端口</th><th>方法</th><th>调用点 / 语义</th></tr></thead>
+  <tbody>
+  <tr><td rowspan="5"><code>ThreadList</code><br><em>Adapter</em></td><td><code>list()</code></td><td>构造时调一次，返回会话列表 → <code>runtime.ThreadList.init</code></td></tr>
+  <tr><td><code>new(group)</code></td><td>没有当前线程时新建，<b>必须返回带 <code>threadId</code> 的对象</b></td></tr>
+  <tr><td><code>append(item)</code></td><td>新建成功后把它塞进列表视图（<code>runtime.ThreadList.append</code>）</td></tr>
+  <tr><td><code>delete</code> / <code>archive</code> / <code>unarchive</code></td><td><code>deleteThread</code> 等三个薄壳，成功后才改视图</td></tr>
+  <tr><td><em>Runtime</em> 侧</td><td><code>init</code> / <code>active</code> / <code>delete</code> / <code>archive</code> / <code>unarchive</code> / <code>append</code> 六个，AuiPage 直接调</td></tr>
+  <tr><td rowspan="2"><code>MessageHistory</code></td><td><code>load(threadId)</code></td><td><code>activeThread</code> 时加载，回传<b>按轮分组</b>的数组</td></tr>
+  <tr><td><code>append(threadId, group)</code></td><td><code>_finalize</code> 入库；<b>存不存由它决定</b>（例如 <code>status</code> 为 cancelled 时可丢）</td></tr>
+  <tr><td rowspan="2"><code>ChatTransport</code></td><td><code>run({messages, context})</code></td><td>必须返回<b>异步迭代器</b>（<code>next()</code> 返回 Promise）</td></tr>
+  <tr><td><code>response(type, payload)</code></td><td>前端工具结果回传，<code>type</code> 固定 <code>"tool-result"</code></td></tr>
+  <tr><td rowspan="2"><code>ChatContent</code><br><em>Runtime</em></td><td><code>init(messages)</code></td><td>切线程时清空并重放历史</td></tr>
+  <tr><td><code>append(role, part)</code></td><td>渲染一条片段，<b>可返回更新函数</b>（<code>void</code> 也合法）</td></tr>
+  </tbody></table></div>
+  <p>这张表里唯一“有返回值要求”的是 <code>ThreadList.new</code>——它必须给出 <code>threadId</code>，否则 <code>_finalize</code> 会抛
+  <code>"新建会话失败"</code>。<code>ChatContent.append</code> 的返回值是<b>可选</b>的：不返回就没有流式更新，但消息仍会入库。</p>
+  </div>
+</section>
+
+<section class="block" id="s-05">
+  <div class="block-head"><span class="idx">05</span><h2>MessageStream：给工具一个“往页面推”的口子</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/core/src/MessageStream.js</span><span class="ln">:4</span><button data-copy="">复制</button></div><div class="code-body"><pre>function MessageStream(send, end) {
+    this.send = send || EmptyFunction;
+    this.end = end || EmptyFunction;
+}</pre></div></div>
+  <p>它只有两个字段，没有 <code>name</code>，也不走 <code>mount</code>。因为它不是端口，是<b>一个通道</b>：</p>
+  <p><code>send</code> 被 <code>createTool</code> 用来推 <code>tool-call</code> 事件（<code>pending</code> 与 <code>success/error</code> 两次），
+  <code>end</code> 用来在流结束时收尾。<b>方向是单向的：服务端 → 页面</b>。</p>
+  <p>反方向（页面 → 服务端）不走这里，走的是 <code>ChatTransportAdapter.response("tool-result", ...)</code>。
+  <b>两条通道分开，是因为它们的生命周期不同</b>：<code>MessageStream</code> 跟着一次 HTTP 流，<code>response</code> 是独立的一次请求。</p>
+  <p><code>send || EmptyFunction</code> 这个兜底很重要：没有 <code>ms</code> 时（比如在纯逻辑测试里造一个 <code>CreateTool</code>），
+  工具调用会“静默发不出去”，但不会抛错——这让你可以单独测 <code>execute</code> 而不启动服务端。</p>
+  </div>
+</section>
+
+<section class="block" id="s-06">
+  <div class="block-head"><span class="idx">06</span><h2>为什么不写接口声明</h2></div>
+  <div class="prose">
+  <p>这五个类没有 <code>abstract</code>、没有 <code>interface</code>、也没有 <code>throw new Error("not implemented")</code>。
+  <b>全部用空函数兜底</b>，是有意的取舍：</p>
+  <p><b>① 零依赖且跨端</b>：<code>core</code> 要能在浏览器里跑，不能依赖 <code>Node</code> 的 <code>EventEmitter</code>，也不引入类型库。</p>
+  <p><b>② 允许“部分实现”</b>：只想做一个只读列表？只实现 <code>list</code> 就行，其它方法空着，页面能跑。<b>如果强制实现，最小用例就得多写十个空方法</b>。</p>
+  <p><b>③ 契约靠文档和类型文件</b>：<code>@auipage/types</code> 里的 <code>.d.ts</code> 才是真正的契约声明。运行时故意不校验——
+  <b>宁可让开发者少写代码，也不要为了报错而增加启动成本</b>。</p>
+  <p>代价也很明显：<b>实现错了不会在构造期发现</b>。<code>run</code> 返回了非迭代器，要到 <code>sendMessage</code> 里那句
+  <code>typeof generator.next !== "function"</code> 才报 <code>"ChatTransport.run() 返回空值"</code>。排查这类问题时，
+  先怀疑 <code>name</code>，再怀疑返回形状。</p>
+  </div>
+</section>
+</main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>6 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>一个模板，抄了五遍</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>那个展开运算符不是装饰</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>name 字段：唯一的“接口声明”</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>每个方法被谁调</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>MessageStream：给工具一个“往页面推”的口子</span></a></li><li><a class="toc-item" href="#s-06" data-toc="s-06"><i>06</i><span>为什么不写接口声明</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
+
+</body>
+</html>

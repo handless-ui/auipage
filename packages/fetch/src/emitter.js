@@ -20,6 +20,7 @@ class Emitter {
     return this;
   }
 
+  // #doc:emit
   emit(event, ...args) {
     const list = this._events[event];
     if (!list || list.length === 0) return false;
@@ -33,6 +34,7 @@ class Emitter {
       }
     }
     return true;
+  // #end
   }
 }
 

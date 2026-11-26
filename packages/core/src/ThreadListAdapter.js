@@ -1,6 +1,7 @@
 import { initOption } from "oipage/web/option/index.js";
 import { EmptyFunction } from "./tools/enum.js";
 
+// #doc:methods
 const DEFAUTL_OPTIONS = {
     list: EmptyFunction,
     new: EmptyFunction,
@@ -8,6 +9,7 @@ const DEFAUTL_OPTIONS = {
     unarchive: EmptyFunction,
     delete: EmptyFunction
 };
+// #end
 
 function ThreadListAdapter(options) {
     this.name="ThreadListAdapter";

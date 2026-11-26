@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源码解读 · fetch：Promise 与事件的双通道</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="createFetch 的工厂形状、hooks 四个口子、超时与取消如何收敛成一条路、SSE 缓冲与 error 补发，以及两个 adapter 的真实差异。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="on">16 · fetch：双通道</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>为什么既要 Promise 又要事件</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>hooks 的四个口子，和 SSE 是怎么被认出来的</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>超时和取消，最后都变成同一个 abort</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>Response：一个带终态的迷你状态机</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>SSE 切块：为什么要留最后一段</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>错误比监听器先到，怎么办</span></a><a href="#s-07" data-toc="s-07"><i>07</i><span>39 行的 emitter，只做对了两件事</span></a><a href="#s-08" data-toc="s-08"><i>08</i><span>两个 adapter：一个懒加载，一个读流</span></a><a href="#s-09" data-toc="s-09"><i>09</i><span>选 adapter：一行环境判断的边界</span></a></div><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="on">16 · fetch：双通道</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>为什么既要 Promise 又要事件</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>hooks 的四个口子，和 SSE 是怎么被认出来的</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>超时和取消，最后都变成同一个 abort</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>Response：一个带终态的迷你状态机</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>SSE 切块：为什么要留最后一段</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>错误比监听器先到，怎么办</span></a><a href="#s-07" data-toc="s-07"><i>07</i><span>39 行的 emitter，只做对了两件事</span></a><a href="#s-08" data-toc="s-08"><i>08</i><span>两个 adapter：一个懒加载，一个读流</span></a><a href="#s-09" data-toc="s-09"><i>09</i><span>选 adapter：一行环境判断的边界</span></a></div><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 02</em>fetch：Promise 与事件的双通道</h1>
+<p class="lede"><code>@auipage/fetch</code> 273 行，没有依赖，要被浏览器和 Node 同时跑。它最不常规的地方是<b>一次请求返回两个东西</b>：一个 Promise，和一个能一直 <code>on('data')</code> 的对象。</p>
+<div class="badges"><span class="badge">273 行</span><span class="badge">零依赖</span><span class="badge">双端</span><span class="badge">SSE 自动识别</span></div></div>
+
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>为什么既要 Promise 又要事件</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>hooks 的四个口子，和 SSE 是怎么被认出来的</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>超时和取消，最后都变成同一个 abort</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>Response：一个带终态的迷你状态机</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>SSE 切块：为什么要留最后一段</span></a><a class="chip" href="#s-06" data-toc="s-06"><i>06</i><span>错误比监听器先到，怎么办</span></a><a class="chip" href="#s-07" data-toc="s-07"><i>07</i><span>39 行的 emitter，只做对了两件事</span></a><a class="chip" href="#s-08" data-toc="s-08"><i>08</i><span>两个 adapter：一个懒加载，一个读流</span></a><a class="chip" href="#s-09" data-toc="s-09"><i>09</i><span>选 adapter：一行环境判断的边界</span></a></div></nav>
+<section class="block" id="s-01">
+  <div class="block-head"><span class="idx">01</span><h2>为什么既要 Promise 又要事件</h2></div>
+  <div class="prose">
+  <p>原生 <code>fetch</code> 的做法是：<code>fetch()</code> 给你一个 <code>Response</code>，你自己 <code>res.body.getReader()</code> 读流。
+  这个模型在浏览器里没问题，但到 Node 端要换一套 <code>http.request</code> 的事件写法，两边的“读流”长得完全不一样。
+  <code>createFetch</code> 的办法是把差异压进 <b>adapter</b>，外面只留一套统一壳：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/fetch.js</span><span class="ln">:11</span><button data-copy="">复制</button></div><div class="code-body"><pre>return function fetch(options) {
+  // 必须返回 Promise&lt;response&gt;，让调用方能 .then(res =&gt; res.on(...))
+  return new Promise((resolve, reject) =&gt; {
+    if (!options || !options.url) {
+      reject(new Error('fetch: options.url is required'));
+      return;
+    }
+
+    // 请求体是普通对象时自动序列化，避免 Node 端 req.write(object) 抛 TypeError
+    if (isPlainBody(options.body)) {
+      options = Object.assign({}, options, { body: JSON.stringify(options.body) });
+    }
+
+    const response = new Response();
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let timer = null;
+    let failed = false;
+
+    response._cancel = () =&gt; { if (controller) controller.abort(); };
+
+    // adapter 调用前先把 response 交出去，确保 .then(res =&gt; ...) 里能立刻 on(...) 注册监听
+    // 用 queueMicrotask 推后一拍，避免同步 resolve 后用户立刻注册的监听错过首个 data
+    queueMicrotask(() =&gt; resolve(response));</pre></div></div>
+  <p>三个决定值得逐个说。</p>
+  <p><b>返回 Promise 而不是直接返回对象</b>：因为 <code>options.url</code> 缺失这种参数错误必须能被 <code>catch</code> 到。如果直接返回 <code>Response</code>，这类错误只能从 <code>error</code> 事件里取，调用方写 <code>try/catch</code> 就抓不到。</p>
+  <p><b><code>queueMicrotask(() =&gt; resolve(response))</code> 推后一拍</b>：这是全文件最容易看漏的一行。调用方拿到 <code>response</code> 是在 <code>.then</code> 回调里，
+  而 <code>adapter</code> 的第一块数据最早也要等一个真实的 I/O 回来。先把 <code>resolve</code> 排进微任务队列，能保证
+  <code>.then</code> 里的 <code>on()</code> 一定先于第一个 <code>data</code> 执行——否则首个 chunk 会在没人监听时被丢掉。
+  它同时也是“<code>resolve</code> 一定在 <code>adapter</code> 调用之后入队、却先执行”的原因：<code>adapter</code> 内部至少有一次 <code>await</code>。</p>
+  <p><b>普通对象请求体自动 <code>JSON.stringify</code></b>：只判 <code>[object Object]</code>。<code>FormData</code>、<code>Blob</code>、<code>ArrayBuffer</code> 一律原样透传，
+  否则上传二进制会被字符串化毁掉。Node 端 <code>req.write(object)</code> 会直接抛 <code>TypeError</code>，所以这一步在 Node 上是必需的，不只是顺手。</p>
+  <p>还有一行不起眼、但决定了取消能不能用：<code>response._cancel = () =&gt; controller.abort()</code>。取消能力挂在 <b>Response 上</b>，
+  而不是通过参数传进去——因为调用方通常在拿到 <code>response</code> 之后才知道要不要取消。</p>
+  </div>
+</section>
+
+<section class="block" id="s-02">
+  <div class="block-head"><span class="idx">02</span><h2>hooks 的四个口子，和 SSE 是怎么被认出来的</h2></div>
+  <div class="prose">
+  <p>adapter 只被允许回调四件事：拿到了响应头、来了一块数据、结束了、出错了。所有状态改写都集中在 <code>onResponse</code> 里：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/fetch.js</span><span class="ln">:44</span><button data-copy="">复制</button></div><div class="code-body"><pre>const hooks = {
+  onResponse(meta) {
+    if (meta &amp;&amp; typeof meta.status === 'number') {
+      response.status = meta.status;
+      response.ok = meta.status &gt;= 200 &amp;&amp; meta.status &lt; 300;
+    }
+    if (meta &amp;&amp; meta.headers) {
+      response.headers = meta.headers;
+
+      // 自动检测 SSE：浏览器 Headers 对象用 get()，Node 的 plain object 用 []
+      const contentType =
+        (typeof meta.headers.get === 'function' &amp;&amp; meta.headers.get('content-type')) ||
+        meta.headers['content-type'] ||
+        '';
+      if (contentType.includes('text/event-stream')) {
+        response._sseMode = true;
+      }
+    }
+
+    // 非 2xx 单独通知：不占用 error 事件、不锁 _done，错误体照常投递
+    if (response.status &gt;= 400) {
+      response.emit('http-error', { status: response.status, headers: response.headers });
+    }
+  },
+  onData(chunk) {
+    response._push('data', chunk);
+  },
+  onEnd() {
+    clearTimer();
+    response._push('end');
+  },
+  onError(err) {
+    if (failed) return;
+    failed = true;
+    clearTimer();
+    // 错误同时通过 error 事件 和 catch 暴露，避免遗漏
+    response._push('error', err);
+    reject(err);
+  }
+};</pre></div></div>
+  <p><b><code>status</code> / <code>ok</code> 在这里落地</b>，adapter 不再关心语义，只报数字。</p>
+  <p><b>SSE 判定写了两种取值方式</b>：浏览器给的是 <code>Headers</code> 对象（要 <code>.get()</code>），Node 给的是普通对象（要 <code>[]</code>）。
+  这一行 <code>(typeof headers.get === 'function' &amp;&amp; headers.get('content-type')) || headers['content-type']</code> 就是为跨端准备的，
+  和 <code>Response.header()</code> 里那套判断是同一个思路，只是这里不方便多调一次方法。</p>
+  <p><b><code>http-error</code> 是一个独立事件</b>，这是有意的设计：4xx/5xx 既不算“网络错误”，也不能算“成功”。
+  它不触发 <code>error</code>、也不置 <code>_done</code>，所以<b>错误响应体还会照常从 <code>data</code> 流下来</b>——
+  上层的 <code>completions</code> 正是靠这一点，把 <code>{"error":{"message":...}}</code> 读出来拼进错误信息。</p>
+  <p>反过来，<code>onError</code> 里同时做了两件事：<code>_push('error')</code> 和 <code>reject(err)</code>。
+  事件是给“已经在听”的人，<code>reject</code> 是给“还在 <code>await</code>”的人，两条路都要通，否则总有一类调用方会永远挂住。
+  <code>failed</code> 这个布尔量只干一件事：防止 abort 之后的又一次 error 重复 reject。</p>
+  </div>
+</section>
+
+<section class="block" id="s-03">
+  <div class="block-head"><span class="idx">03</span><h2>超时和取消，最后都变成同一个 abort</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/fetch.js</span><span class="ln">:87</span><button data-copy="">复制</button></div><div class="code-body"><pre>const abortWith = (err) =&gt; {
+  if (controller) controller.abort();
+  hooks.onError(err);
+};
+
+// 超时：到点先中断底层请求，再走统一错误通道
+if (options.timeout &gt; 0) {
+  timer = setTimeout(() =&gt; {
+    timer = null;
+    abortWith(new Error('fetch: 请求超时（' + options.timeout + 'ms）'));
+  }, options.timeout);
+}
+
+// 外部 signal
+if (options.signal) {
+  if (options.signal.aborted) {
+    abortWith(new Error('fetch: 请求已取消'));
+    return;
+  }
+  options.signal.addEventListener('abort', () =&gt; {
+    abortWith(new Error('fetch: 请求已取消'));
+  });
+}
+
+// 把内部 controller 的 signal 交给 adapter，adapter 可据此中断底层请求
+const requestOptions = controller ? Object.assign({}, options, { signal: controller.signal }) : options;
+
+let ret;
+try {
+  ret = adapter(requestOptions, hooks);
+} catch (err) {
+  hooks.onError(err);
+  return;
+}
+// adapter 允许返回 Promise，失败也要走同一条错误通道
+if (ret &amp;&amp; typeof ret.then === 'function') ret.then(null, hooks.onError);</pre></div></div>
+  <p>这段里有两层 signal：外面传进来的 <code>options.signal</code>，和内部 <code>new AbortController()</code> 的 <code>controller.signal</code>。
+  <b>真正交给 adapter 的只有内部那个</b>（<code>Object.assign({}, options, { signal: controller.signal })</code>）。
+  外部 signal 做的事只有一件：<code>addEventListener('abort', ...)</code> 转发成 <code>controller.abort()</code>。</p>
+  <p>这么绕一圈的原因是“超时”和“手动取消”在语义上是两件事，但对底层请求来说是同一件事：中断 I/O。
+  把两条来源都汇到 <code>abortWith</code>，adapter 就只需要认一个 <code>signal</code>，不必区分是自己超时了还是被用户按了取消。
+  代价是：<b>错误文案在这里就定了</b>（<code>请求超时</code> / <code>请求已取消</code>），上层想区分只能靠 message 字符串，没有 <code>code</code> 字段。这是当前版本的取舍，不是疏忽。</p>
+  <p>另外两处细节：<code>signal.aborted</code> 为真时<b>直接 return，不再调 adapter</b>，省掉一次必然失败的请求；
+  <code>clearTimer()</code> 在 <code>onEnd</code> 里、也在 <code>onError</code> 里，成功和失败都要清，否则 Node 进程会被一个还活着的 <code>setTimeout</code> 拖住不退出。</p>
+  <p>最后三行处理“adapter 自己抛错”和“adapter 返回了 rejected Promise”两种形态。<code>ret.then(null, hooks.onError)</code> 只接失败不接成功，
+  因为成功路径已经通过回调走完了，不需要再传值。</p>
+  </div>
+</section>
+
+<section class="block" id="s-04">
+  <div class="block-head"><span class="idx">04</span><h2>Response：一个带终态的迷你状态机</h2></div>
+  <div class="prose">
+  <p><code>Response.js</code> 101 行，核心是六个私有字段。<code>_done</code> 管“还能不能继续推”，<code>_sseMode</code> / <code>_sseBuffer</code> 管 SSE 切块，
+  <code>_cancel</code> 管中断，<code>_errorPending</code> 管“错误来得太早”：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/response.js</span><span class="ln">:8</span><button data-copy="">复制</button></div><div class="code-body"><pre>this.status = 0;
+this.headers = {};
+this.ok = false;
+this._done = false; // 标记是否已经 end/error，防止重复触发
+this._sseMode = false; // SSE 模式：按 \n\n 分割事件，提取 data: 字段原始字符串
+this._sseBuffer = ''; // SSE 缓冲区，处理 chunk 边界
+this._cancel = null; // 由 createFetch 注入，用于中断底层请求
+this._errorPending = null; // 消费者还没来得及注册时就发生的错误，注册后补发</pre></div></div>
+  <p><code>_push</code> 的第一行是全部状态机的入口判据：</p>
+  <p><code>if (this._done &amp;&amp; type !== 'error') return;</code> —— 这就是入口判据。</p>
+  <p><b>为什么 <code>error</code> 能穿过 <code>_done</code></b>：已经 <code>end</code> 的请求理论上不该再出错，但真实世界里 Node 的 <code>req</code> 在 <code>end</code> 之后仍可能吐
+  <code>ECONNRESET</code>。如果这时把错误吞掉，上层会以为这是一次干净的结束。<b>宁可重复一次错误，也不能漏报失败</b>。</p>
+  <p><code>end</code> 的处理只有一句 <code>this._done = true</code>，外加 SSE 模式下 flush 缓冲区。<code>data</code> 则完全取决于 <code>_sseMode</code>：
+  非 SSE 时原样透传字符串，把“怎么解读”留给上层；SSE 时走下一节的切块逻辑。</p>
+  </div>
+</section>
+
+<section class="block" id="s-05">
+  <div class="block-head"><span class="idx">05</span><h2>SSE 切块：为什么要留最后一段</h2></div>
+  <div class="prose">
+  <p>SSE 的事件以空行分隔，但网络给你的 chunk 不按事件边界切——一个 chunk 可能是“半个事件”，也可能是“两个半事件”。所以必须有缓冲区：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/response.js</span><span class="ln">:53</span><button data-copy="">复制</button></div><div class="code-body"><pre>if (type === 'data' &amp;&amp; this._sseMode) {
+  this._sseBuffer += payload;
+
+  // 按 \n\n 分割出完整事件，最后一段可能不完整
+  const parts = this._sseBuffer.split(/\r{0,1}\n\r{0,1}\n/);
+  this._sseBuffer = parts.pop();
+
+  for (const part of parts) {
+    const payload = this._extractSSEData(part);
+    if (payload !== null) {
+      this.emit('data', payload);
+    }
+  }
+  return;</pre></div></div>
+  <p><code>split(/\r{0,1}\n\r{0,1}\n/)</code> 里那个 <code>{0,1}</code> 不是炫技，是等价于 <code>\r?</code> 的显式写法（有的服务端发 <code>\r\n</code>，有的只发 <code>\n</code>）。
+  <b><code>parts.pop()</code> 拿到的最后一段</b>永远可能是“没写完的事件”，所以它被塞回 <code>_sseBuffer</code> 等下一块数据，不解析。
+  这是整套流式解析不掉字的唯一保证。</p>
+  <p>切出来之后交给 <code>_extractSSEData</code> 只取 <code>data:</code> 前缀的内容：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/response.js</span><span class="ln">:96</span><button data-copy="">复制</button></div><div class="code-body"><pre>_extractSSEData(raw) {
+  const dataLines = [];
+  for (const line of raw.split('\n')) {
+    if (line.startsWith('data:')) {
+      dataLines.push(line.replace(/^data:\s*/, '').replace(/\r$/, ''));
+    }
+  }
+  if (dataLines.length === 0) return null;
+  return dataLines.join('\n');</pre></div></div>
+  <p><b>只认 <code>data:</code>，<code>event:</code> / <code>id:</code> / <code>retry:</code> 一律忽略</b>，多行 <code>data:</code> 用 <code>\n</code> 拼回去（SSE 规范就是这么定义的）。
+  没有 <code>data:</code> 的块返回 <code>null</code>——注释行（以 <code>:</code> 开头的 keep-alive）就靠这个被自然丢掉，不需要额外判断。</p>
+  <p><code>end</code> 时还有一次 flush：<code>if (_sseMode &amp;&amp; _sseBuffer.trim())</code>。原因是有些服务端最后一条事件后面不带空行，
+  直接关连接；不 flush 就会丢掉最后一条。</p>
+  </div>
+</section>
+
+<section class="block" id="s-06">
+  <div class="block-head"><span class="idx">06</span><h2>错误比监听器先到，怎么办</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/response.js</span><span class="ln">:21</span><button data-copy="">复制</button></div><div class="code-body"><pre>on(event, listener) {
+  super.on(event, listener);
+  if (event === 'error' &amp;&amp; this._errorPending) {
+    const err = this._errorPending;
+    this._errorPending = null;
+    // 异步补发，避免在注册栈里同步回调
+    queueMicrotask(() =&gt; this.emit('error', err));
+  }
+  return this;</pre></div></div>
+  <p>典型场景：URL 写错，<code>adapter</code> 在同一个 tick 内就 <code>onError</code> 了，而调用方还在 <code>.then(res =&gt; res.on('error', ...))</code> 的路上。
+  直接 <code>emit</code> 出去，这个错误就<b>永久丢失</b>（native EventEmitter 在这种情况下会直接抛未捕获异常）。</p>
+  <p>所以 <code>_push('error')</code> 会先检查有没有监听器；没有就存进 <code>_errorPending</code>，等 <code>on('error')</code> 注册时补发。
+  补发用的是 <code>queueMicrotask</code> 而不是同步调用——如果在 <code>on()</code> 的栈里同步回调，监听器里再调 <code>off()</code> 或 <code>cancel()</code> 就会踩到半注册状态。</p>
+  <p>这个机制只给 <code>error</code> 事件开了口，<code>data</code> 没有。<b>这是刻意的</b>：数据丢了没法补救（补发等于重放，调用方会把同一段内容处理两次），
+  但“请求失败了”这个事实补发一次是安全的。</p>
+  </div>
+</section>
+
+<section class="block" id="s-07">
+  <div class="block-head"><span class="idx">07</span><h2>39 行的 emitter，只做对了两件事</h2></div>
+  <div class="prose">
+  <p>不用 Node 的 <code>events</code>、不用第三方库，是因为这个包要能在浏览器里跑，而它需要的功能只有 <code>on</code> / <code>off</code> / <code>emit</code> 三个。</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/emitter.js</span><span class="ln">:24</span><button data-copy="">复制</button></div><div class="code-body"><pre>emit(event, ...args) {
+  const list = this._events[event];
+  if (!list || list.length === 0) return false;
+  // 复制一份再触发，避免 off 回调过程中影响本次派发
+  for (const fn of list.slice()) {
+    try {
+      fn.apply(null, args);
+    } catch (e) {
+      // 单个监听器异常不影响其它监听器，也不再冒泡成进程级异常
+      console.error(e);
+    }
+  }
+  return true;</pre></div></div>
+  <p><b><code>list.slice()</code></b>：先复制再遍历。否则监听器里调 <code>off(event, other)</code> 会让数组长度变化，后面的监听器被跳过——这类 bug 只在“取消订阅发生在派发过程中”时复现，极难查。</p>
+  <p><b><code>try/catch</code></b>：单个监听器抛错不许影响其它监听器，也不许变成进程级异常。代价是错误被降级成 <code>console.error</code>，
+  在生产环境里可能没人看。这是“流式渲染不能因为一个 UI 回调挂掉而断流”的必然代价：<code>core</code> 那边每个 chunk 都会调一次渲染。</p>
+  <p><code>_events</code> 用 <code>Object.create(null)</code> 而不是 <code>{}</code>，是为了让 <code>toString</code>、<code>constructor</code> 这类原型链上的名字也能当事件名，且不受原型污染影响。</p>
+  </div>
+</section>
+
+<section class="block" id="s-08">
+  <div class="block-head"><span class="idx">08</span><h2>两个 adapter：一个懒加载，一个读流</h2></div>
+  <div class="prose">
+  <p>Node 端第一个动作不是发包，是 <code>await import</code>：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/adapter-node.js</span><span class="ln">:7</span><button data-copy="">复制</button></div><div class="code-body"><pre>const [{ default: http }, { default: https }, { URL }] = await Promise.all([
+  import('http'),
+  import('https'),
+  import('url')
+]);</pre></div></div>
+  <p><b>为什么把这三个 import 放在函数里</b>：打包器（webpack / vite / rollup）会静态扫描顶层 <code>import</code>，一旦看到 <code>'http'</code>
+  就会报“Node 内置模块无法在浏览器解析”，哪怕这段代码运行不到。<code>await import()</code> 是动态的，扫描器看不到，浏览器构建就能过。
+  代价是每次请求多一次已缓存的模块解析，可以忽略。</p>
+  <p>真正的请求只用 <code>http</code> / <code>https</code> 两个库里的一个，选谁由协议决定。<code>res.setEncoding('utf8')</code> 这一行很关键：
+  不设的话 chunk 是 <code>Buffer</code>，而 <code>Response</code> 的 SSE 缓冲是<b>字符串拼接</b>，<code>Buffer + string</code> 会隐式 <code>toString()</code>，
+  多字节字符（中文）被切成两半时就成乱码了。设了 <code>setEncoding</code>，Node 自己按字符边界解码。</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/adapter-node.js</span><span class="ln">:56</span><button data-copy="">复制</button></div><div class="code-body"><pre>if (signal) {
+  if (signal.aborted) {
+    onError(new Error('请求已取消'));
+    return;
+  }
+  signal.addEventListener('abort', () =&gt; {
+    req.destroy(new Error('请求已取消'));</pre></div></div>
+  <p>取消走 <code>req.destroy(err)</code>，错误从 <code>req</code> 的 <code>error</code> 事件回来——所以 adapter 不需要自己 <code>onError</code>，只要不吞错误就行。</p>
+  <p>浏览器端相反，原生 <code>fetch</code> 已经解压、已经处理重定向、已经带 <code>signal</code>，唯一要自己干的是读流：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/adapter-browser.js</span><span class="ln">:27</span><button data-copy="">复制</button></div><div class="code-body"><pre>const reader = res.body.getReader();
+const decoder = new TextDecoder('utf-8');
+
+// 循环读取流直到 done
+// 用 async IIFE 形式启动，错误统一走 onError
+(async () =&gt; {
+  try {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        onEnd();
+        return;
+      }
+      // value 是 Uint8Array，解码为字符串
+      onData(decoder.decode(value, { stream: true }));</pre></div></div>
+  <p><code>decoder.decode(value, { stream: true })</code> 里的 <code>stream: true</code> 是同一个问题的浏览器版本：<code>TextDecoder</code> 默认假定每次输入都是完整文本，
+  加了这个选项才会把“半个 UTF-8 字符”留到下一次解码。少了它，中文流式输出会零星蹦出 <code>�</code>。</p>
+  <p><code>if (!res.body)</code> 单独处理：204 或 <code>HEAD</code> 请求没有 body，<code>getReader()</code> 会抛 <code>TypeError</code>。</p>
+  <div class="note"><p><b>两端的实际差异（文档里不写会踩坑）</b>：Node adapter 不跟随 3xx 重定向、不做 gzip 解压、不设 <code>Accept-Encoding</code>。
+  如果自家网关会 302 或强制压缩，需要在 adapter 之外处理，或者干脆在 Node 侧换掉 adapter。</p></div>
+  </div>
+</section>
+
+<section class="block" id="s-09">
+  <div class="block-head"><span class="idx">09</span><h2>选 adapter：一行环境判断的边界</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/fetch/src/index.js</span><span class="ln">:8</span><button data-copy="">复制</button></div><div class="code-body"><pre>const isBrowser = typeof window !== 'undefined' &amp;&amp; typeof window.document !== 'undefined';
+
+const adapter = isBrowser ? browserAdapter : nodeAdapter;
+
+const fetch = createFetch(adapter);</pre></div></div>
+  <p>判据是 <code>window</code> 且 <code>window.document</code>。用两个条件而不是只看 <code>window</code>，是为了避开 Web Worker（有 <code>self</code> 没有
+  <code>document</code>）——Worker 里其实也能用原生 <code>fetch</code>，但会被判成 Node 分支，这是当前的已知边界。</p>
+  <p><b>SSR 环境</b>：Node 里跑、没有 <code>window</code>，会正确落到 <code>nodeAdapter</code>。这也是注释里那句“SSR 环境需要 polyfill 时也能正确走 nodeAdapter”的意思：
+  如果你的框架在服务端注入了假的 <code>window</code> 但没注入 <code>document</code>，判断依然成立。</p>
+  <p><code>createFetch(adapter)</code> 在模块加载时就执行一次，之后所有请求复用同一个闭包。adapter 是<b>纯函数式的</b>——不持有任何请求状态，
+  状态全在每次调用新建的 <code>Response</code> 里。这一点是这套设计能被并发安全使用的前提。</p>
+  </div>
+</section>
+</main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>9 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>为什么既要 Promise 又要事件</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>hooks 的四个口子，和 SSE 是怎么被认出来的</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>超时和取消，最后都变成同一个 abort</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>Response：一个带终态的迷你状态机</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>SSE 切块：为什么要留最后一段</span></a></li><li><a class="toc-item" href="#s-06" data-toc="s-06"><i>06</i><span>错误比监听器先到，怎么办</span></a></li><li><a class="toc-item" href="#s-07" data-toc="s-07"><i>07</i><span>39 行的 emitter，只做对了两件事</span></a></li><li><a class="toc-item" href="#s-08" data-toc="s-08"><i>08</i><span>两个 adapter：一个懒加载，一个读流</span></a></li><li><a class="toc-item" href="#s-09" data-toc="s-09"><i>09</i><span>选 adapter：一行环境判断的边界</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
+
+</body>
+</html>

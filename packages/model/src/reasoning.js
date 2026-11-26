@@ -16,12 +16,14 @@ const CLOSE = "</think>";
 
 // 计算文本尾部与标签前缀的最长匹配长度
 // 用于标签可能被截断在 chunk 边界的情况（如收到 "</thi"）
+// #doc:partial
 function partialTagLength(text, tag) {
     const max = Math.min(tag.length - 1, text.length);
     for (let len = max; len > 0; len--) {
         if (text.endsWith(tag.slice(0, len))) return len;
     }
     return 0;
+// #end
 }
 
 // 部分模型（如 MiniMax-M3）会把思考过程以 <think>...</think> 形式混在 content 中

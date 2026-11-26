@@ -1,6 +1,7 @@
 import toHistoryMessages from "./tools/toHistoryMessages.js";
 
 // 挂载适配器/运行时：name 缺失时回退到配置对象的 key，避免直接崩
+// #doc:mount
 function mount(aui, list, suffix) {
     const result = {};
     for (const [key, instance] of Object.entries(list || {})) {
@@ -11,8 +12,10 @@ function mount(aui, list, suffix) {
     }
     return result;
 }
+// #end
 
 // 适配器调用：Promise 就等完成，同步值直接处理，同步返回 undefined 视为未实现
+// #doc:invoke
 function invoke(target, method, apply, args) {
     if (!target || typeof target[method] !== "function") return;
     let ret;
@@ -28,8 +31,10 @@ function invoke(target, method, apply, args) {
     }
     if (typeof apply === "function") apply(ret);
 }
+// #end
 
 // 安全调用：返回值可能为 void / Promise，异常与拒绝都不外泄
+// #doc:safe
 function callSafely(fn, arg) {
     if (typeof fn !== "function") return;
     try {
@@ -42,23 +47,29 @@ function callSafely(fn, arg) {
 function asUpdater(ret) {
     return typeof ret === "function" ? ret : null;
 }
+// #end
 
 // content 规范化为片段数组：字符串按整段处理，避免逐字符渲染
+// #doc:content
 function normalizeContent(content) {
     if (Array.isArray(content)) return content;
     if (content === void 0 || content === null) return [];
     if (typeof content === "string") return content === "" ? [] : [{ type: "text", text: content }];
     return [content];
 }
+// #end
 
 // 取消时等待 next() 落定的兜底上限（毫秒），防止适配器忽略 signal 时页面停在执行中
+// #doc:cancelchk
 const DEFAULT_STOP_TIMEOUT = 5000;
 
 // 被取消的任务：后续分片与工具结果一律丢弃；被 stop 则继续把结果落地
 function isCancelled(task) {
     return !!(task.endRequest && task.endRequest.status === "cancelled");
+// #end
 }
 
+// #doc:ctor
 function AuiPage(options) {
     options = options || {};
 
@@ -102,8 +113,10 @@ function AuiPage(options) {
         this.runtime.ThreadList?.init(threads);
     });
 }
+// #end
 
 // 触发生命周期事件；handler 抛错被吞掉，避免影响 sendMessage 主流程
+// #doc:events
 AuiPage.prototype._emit = function (event, payload) {
     let handlers = this._events[event];
     if (!handlers) return;
@@ -128,8 +141,10 @@ AuiPage.prototype.off = function (event, handler) {
     if (idx >= 0) list.splice(idx, 1);
     return this;
 };
+// #end
 
 // 交给界面渲染，同时登记显示条目：取消时据此告诉界面涉及哪几条
+// #doc:render
 AuiPage.prototype._render = function (task, role, part) {
     const content = this.runtime.ChatContent;
     if (!content || typeof content.append !== "function") return;
@@ -137,7 +152,9 @@ AuiPage.prototype._render = function (task, role, part) {
     task.displayed.push({ index: task.displayed.length, role: role, part: part });
     return content.append(role, part);
 };
+// #end
 
+// #doc:send
 AuiPage.prototype.sendMessage = function (message) {
     let _this = this;
 
@@ -217,7 +234,9 @@ AuiPage.prototype.sendMessage = function (message) {
         for (let i = 0; i < content.length; i++) {
             this._render(task, input.role, content[i]);
         }
+// #end
 
+        // #doc:pump
         const finishEnd = () => {
             const request = task.endRequest;
             if (task.ended || !request) return;
@@ -257,6 +276,7 @@ AuiPage.prototype.sendMessage = function (message) {
                     if (task.endRequest) return finishEnd();
                     if (task.ended) return;
                     pump();
+        // #end
                 }, function (error) {
                     task.busy = false;
 
@@ -286,6 +306,7 @@ AuiPage.prototype.sendMessage = function (message) {
  * @param {object} [task] 指定任务；工具侧传入自己所属的任务，避免打到下一轮
  * @returns {boolean} 当时是否有可结束的任务
  */
+// #doc:end
 AuiPage.prototype._requestEnd = function (status, by, task) {
     task = task || this._currentTask;
     if (!task || task.ended) return false;
@@ -315,6 +336,7 @@ AuiPage.prototype._requestEnd = function (status, by, task) {
     this._finalize(status, true, null, by, task);
     return true;
 };
+// #end
 
 /**
  * 主动结束当前任务：当作成功收尾——内容保留、入库标记 stopped、sendMessage 正常 resolve。
@@ -322,6 +344,7 @@ AuiPage.prototype._requestEnd = function (status, by, task) {
  *
  * @returns {boolean} 当时是否有正在执行的任务
  */
+// #doc:stopcancel
 AuiPage.prototype.stop = function () {
     return this._requestEnd("stopped", "user");
 };
@@ -351,6 +374,7 @@ AuiPage.prototype._toolControl = function (task, call) {
         cancel: function () { return _this._requestEnd("cancelled", "tool", task); }
     };
 };
+// #end
 
 /**
  * 处理单个生成器分片。文本类分片按类型累积并通过 streamFun 流式追加，
@@ -359,6 +383,7 @@ AuiPage.prototype._toolControl = function (task, call) {
  * @param {object} task 当前任务句柄
  * @param {{value: object, done: boolean}} chunk 生成器返回项
  */
+// #doc:chunk
 AuiPage.prototype._handleChunk = async function (task, chunk) {
     if (!task || task.ended || task.endRequest) return;
 
@@ -391,6 +416,7 @@ AuiPage.prototype._handleChunk = async function (task, chunk) {
         if (task.streamFun) callSafely(task.streamFun, value.text);
     }
 };
+// #end
 
 /**
  * 工具调用分片：pending 时挂上视图并执行前端工具，success/error 时回填后端工具结果。
@@ -398,6 +424,7 @@ AuiPage.prototype._handleChunk = async function (task, chunk) {
  * @param {object} task 当前任务句柄
  * @param {object} call 工具调用分片
  */
+// #doc:toolpending
 AuiPage.prototype._handleToolCall = async function (task, call) {
 
     // 工具开始调用（前端工具 + 后端工具）
@@ -430,8 +457,10 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
         if (task.ended || isCancelled(task)) return;
 
         const render = this.tools_render[call.name];
+// #end
 
         // 需要视图交互获取结果
+        // #doc:toolrender
         if (typeof render === "function" && updater) {
             const pending = Promise.resolve(updater(Object.assign({}, call, {
                 result: result,
@@ -499,6 +528,8 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
             }]);
         }
 
+        // #end
+        // #doc:toolplain
         // 没有可用的视图入口，就当作纯工具调用
         else {
             if (updater) {
@@ -525,9 +556,11 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
         }
 
         return;
+        // #end
     }
 
     // 工具调用结束（后端工具）
+    // #doc:toolbackend
     if (call.status === "success" || call.status === "error") {
         if (task.tool_calls[call.id]) {
             callSafely(task.tool_calls[call.id], call);
@@ -545,6 +578,7 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
             });
         }
     }
+    // #end
 };
 
 /**
@@ -557,6 +591,7 @@ AuiPage.prototype._handleToolCall = async function (task, call) {
  * @param {"user"|"tool"} [by] stopped / cancelled 时的发起方
  * @param {object} [taskArg] 指定任务；兜底计时器传入，避免落到下一轮
  */
+// #doc:finishA
 AuiPage.prototype._finalize = async function (status, isHistory, err, by, taskArg) {
     let task = taskArg || this._currentTask;
     if (!task || task.ended) return;
@@ -582,6 +617,8 @@ AuiPage.prototype._finalize = async function (status, isHistory, err, by, taskAr
         callSafely(function () { return task.generator.return(); });
     }
 
+// #end
+    // #doc:finishB
     // 3. 入库；失败降级为 error，避免前端误以为消息已保存
     let failure = status === "error" ? err : null;
 
@@ -633,7 +670,9 @@ AuiPage.prototype._finalize = async function (status, isHistory, err, by, taskAr
     else if (finalStatus === "cancelled") task.reject("已取消");
     else task.resolve();
 };
+    // #end
 
+// #doc:active
 AuiPage.prototype.activeThread = function (threadId, __noLoad__) {
     if (this.currentThreadId === threadId) return;
 
@@ -662,7 +701,9 @@ AuiPage.prototype.activeThread = function (threadId, __noLoad__) {
         this.runtime.ChatContent?.init(plainMessages);
     }, [threadId]);
 };
+// #end
 
+// #doc:threads
 AuiPage.prototype.deleteThread = function (threadId) {
     invoke(this.adapter.ThreadList, "delete", () => {
         this.runtime.ThreadList?.delete(threadId);
@@ -685,8 +726,11 @@ AuiPage.prototype.unarchiveThread = function (threadId) {
     }, [threadId]);
 };
 
+// #end
+// #doc:newthread
 AuiPage.prototype.newThread = function () {
     this.activeThread(void 0);
 };
+// #end
 
 export default AuiPage;

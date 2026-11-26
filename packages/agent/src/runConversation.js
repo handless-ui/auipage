@@ -35,6 +35,7 @@ function appendAssistantMessage(messages, result) {
 export default async function runConversation(_this, messages, logback, thinkback) {
 
     // maxSteps 为 0 表示不限制
+    // #doc:loop
     const maxSteps = _this.maxSteps > 0 ? _this.maxSteps : Infinity;
 
     for (let step = 1; step <= maxSteps; step++) {
@@ -57,6 +58,7 @@ export default async function runConversation(_this, messages, logback, thinkbac
         result.tool_calls.forEach((call, i) => {
             messages.push(toToolMessage(call, toolResults[i]));
         });
+        // #end
     }
 
     throw new Error("工具调用步骤超过 maxSteps 上限：" + _this.maxSteps);

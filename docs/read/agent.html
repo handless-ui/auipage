@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源码解读 · agent：工具循环与两条回传通道</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="Agent 构造、system 原地注入、runConversation 的 maxSteps 循环、callFuns 的并发与失败转文本、createTool 的后端事件与前端 globalThis 回传。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="on">18 · agent：工具循环</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>Agent 的五个字段，和 maxSteps 的 0</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>system 提示词：原地改数组，还是新建数组</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>runConversation：一轮对话其实是两条 assistant 消息</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>callFuns：并发执行，失败当文本</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>createTool 的后端分支：同一个对象被改写两次</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>前端工具：先建 Promise，再发事件</span></a><a href="#s-07" data-toc="s-07"><i>07</i><span>整条链路的边界条件</span></a></div><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="on">18 · agent：工具循环</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>Agent 的五个字段，和 maxSteps 的 0</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>system 提示词：原地改数组，还是新建数组</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>runConversation：一轮对话其实是两条 assistant 消息</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>callFuns：并发执行，失败当文本</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>createTool 的后端分支：同一个对象被改写两次</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>前端工具：先建 Promise，再发事件</span></a><a href="#s-07" data-toc="s-07"><i>07</i><span>整条链路的边界条件</span></a></div><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 04</em>agent：工具循环与两条回传通道</h1>
+<p class="lede"><code>@auipage/agent</code> 200 行，四个文件。它负责“让模型能动手”：一轮模型输出工具调用，执行，把结果塞回去，再来一轮。难点在<b>工具可能跑在浏览器里</b>。</p>
+<div class="badges"><span class="badge">200 行</span><span class="badge">4 个文件</span><span class="badge">maxSteps</span><span class="badge">前端工具</span></div></div>
+
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>Agent 的五个字段，和 maxSteps 的 0</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>system 提示词：原地改数组，还是新建数组</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>runConversation：一轮对话其实是两条 assistant 消息</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>callFuns：并发执行，失败当文本</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>createTool 的后端分支：同一个对象被改写两次</span></a><a class="chip" href="#s-06" data-toc="s-06"><i>06</i><span>前端工具：先建 Promise，再发事件</span></a><a class="chip" href="#s-07" data-toc="s-07"><i>07</i><span>整条链路的边界条件</span></a></div></nav>
+<section class="block" id="s-01">
+  <div class="block-head"><span class="idx">01</span><h2>Agent 的五个字段，和 maxSteps 的 0</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/agent/src/index.js</span><span class="ln">:9</span><button data-copy="">复制</button></div><div class="code-body"><pre>this.model = new Model(option.model);
+this.tools = option.tools || [];
+this.systemPrompt = option.systemPrompt || "";
+this.stream = option.stream || false;
+
+// 工具调用循环上限，0 表示不限制
+this.maxSteps = option.maxSteps &gt; 0 ? option.maxSteps : 0;
+
+// 取消信号，透传给每次模型请求
+this.signal = option.signal || null;</pre></div></div>
+  <p><code>model</code> 被包成 <code>new Model(option.model)</code>，所以外部传的是<b>普通配置对象</b>，不是 <code>Model</code> 实例。
+  这样在配置里写死 <code>{ model, apiKey, baseURL }</code> 就能用，不必自己 <code>import</code> 一次。</p>
+  <p><code>maxSteps = option.maxSteps &gt; 0 ? option.maxSteps : 0</code> 这一行看起来啰嗦（等价于“不是正数就当 0”），但它<b>防的是 <code>undefined</code>、
+  负数和 <code>NaN</code></b>：三者都会被归一成 0。<b>0 在这里不是“一步都不许走”，而是“不限”</b>——
+  真正的解释发生在 <code>runConversation</code> 里（<code>maxSteps &gt; 0 ? maxSteps : Infinity</code>）。
+  这种“0 表示无限”的约定在超时、<code>timeout</code>、前端工具超时里重复出现，是全库统一的口子。</p>
+  <p><code>signal</code> 存在实例上而不是每次调用传参，因为一次对话里的多轮请求应该共享同一个取消信号：
+  用户按取消，正在等模型的那一轮要断，后面还没发的那几轮也不该再发。</p>
+  </div>
+</section>
+
+<section class="block" id="s-02">
+  <div class="block-head"><span class="idx">02</span><h2>system 提示词：原地改数组，还是新建数组</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/agent/src/index.js</span><span class="ln">:27</span><button data-copy="">复制</button></div><div class="code-body"><pre>if (this.systemPrompt) {
+    let first = messages[0];
+    if (!first || first.role !== "system" || first.content !== this.systemPrompt) {
+        messages.unshift({
+            role: "system",
+            content: this.systemPrompt
+        });
+    }
+}</pre></div></div>
+  <p>这里是<b>原地 <code>unshift</code></b>，会改掉调用方传进来的 <code>messages</code>。注释写得很明确：“原地修改，保持契约”。</p>
+  <p>为什么不返回一个新数组？因为上层（<code>core</code> 的 <code>sendMessage</code>）在多轮里会一直复用同一个 <code>messages</code>：
+  用户发第二条消息时，它希望看到的是“完整历史”，而不是每一轮都被重新包一次。原地改一次，历史里就多一条 system；
+  如果改成返回新数组而调用方忘了接住，下一轮就又没有 system 了。</p>
+  <p>代价是<b>同一个数组不能跨 Agent 复用</b>。所以有一道判重：首条已经是同内容的 system 就跳过。
+  没有这行判重，连续调两次 <code>generate</code> 会得到两条一样的 system，模型会当成两段不同指令，行为会飘。</p>
+  <p>判重条件里连 <code>content</code> 都参与比较：<b>换了 system 提示词就会插入新的</b>，旧的那条留在历史里。</p>
+  <p>这带来一个真实的坑：<b>中途换人格时，旧人格还在上下文里</b>。要彻底替换，得自己先 <code>messages.shift()</code> 掉旧 system，再调 <code>generate</code>。</p>
+  </div>
+</section>
+
+<section class="block" id="s-03">
+  <div class="block-head"><span class="idx">03</span><h2>runConversation：一轮对话其实是两条 assistant 消息</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/agent/src/runConversation.js</span><span class="ln">:39</span><button data-copy="">复制</button></div><div class="code-body"><pre>const maxSteps = _this.maxSteps &gt; 0 ? _this.maxSteps : Infinity;
+
+for (let step = 1; step &lt;= maxSteps; step++) {
+
+    const result = await _this.model.completions({
+        messages,
+        tools: _this.tools,
+        stream: _this.stream,
+        signal: _this.signal || void 0,
+    }, logback, thinkback);
+
+    const hasToolCalls = appendAssistantMessage(messages, result);
+
+    if (!hasToolCalls) {
+        return result.content;
+    }
+
+    const toolResults = await callFuns(_this, result.tool_calls);
+
+    result.tool_calls.forEach((call, i) =&gt; {
+        messages.push(toToolMessage(call, toolResults[i]));
+    });</pre></div></div>
+  <p><code>maxSteps</code> 的循环是 <b><code>for (let step = 1; step &lt;= maxSteps; step++)</code></b>，没有 <code>while (true)</code>，也没有递归。
+  这样“超限”一定落在函数末尾那个 <code>throw</code> 上，而不是栈溢出——错误信息里还能带上真实的配置值。</p>
+  <p><b>一轮的结果被拆成最多两条消息</b>：<code>appendAssistantMessage</code> 先推 <code>{ role:'assistant', content }</code>，
+  再推 <code>{ role:'assistant', tool_calls }</code>。这是 OpenAI 协议的要求——<code>tool_calls</code> 必须挂在一条 assistant 消息上，
+  而正文又得单独可读。<b>两条消息的 <code>tool_call_id</code> 才对得上后面的 <code>role:'tool'</code></b>。</p>
+  <p><code>toolResults</code> 用 <code>await callFuns(...)</code> 拿到<b>与 <code>tool_calls</code> 等长的数组</b>，然后用 <code>forEach</code> 按下标配对，
+  逐个 <code>messages.push(toToolMessage(call, toolResults[i]))</code>。<b>顺序在这里被强制固定</b>：模型发起的顺序 = 结果回填的顺序。
+  即使 <code>callFuns</code> 内部是并发执行、完成先后乱序，回填也一定按原序——否则历史里的 <code>tool</code> 消息和 <code>tool_calls</code> 就对不上号。</p>
+  <p><code>toToolMessage</code> 里有一句 <code>typeof value === "string" ? value : JSON.stringify(value) + ""</code>。
+  加空串是为了处理 <code>undefined</code>（<code>JSON.stringify(undefined)</code> 返回 <code>undefined</code> 而不是字符串），
+  <b>工具没返回值时不能让 <code>content</code> 变成 <code>undefined</code></b>，否则整个 <code>messages</code> 序列化后会缺字段。</p>
+  <p>没有工具调用时直接 <code>return result.content</code>，只返回字符串、不返回整个 <code>result</code>。
+  <b>想拿 <code>tool_calls</code> 的调用方拿不到</b>——这是当前契约，需要 <code>messages</code> 自己去数组里翻。</p>
+  </div>
+</section>
+
+<section class="block" id="s-04">
+  <div class="block-head"><span class="idx">04</span><h2>callFuns：并发执行，失败当文本</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/agent/src/callFuns.js</span><span class="ln">:12</span><button data-copy="">复制</button></div><div class="code-body"><pre>const tasks = (tool_calls || []).map(call =&gt; {
+    const fn = (call &amp;&amp; call.function) || {};
+    const tool = (_this.tools || []).find(
+        t =&gt; t.description.function.name === fn.name
+    );
+
+    if (!tool) {
+        return Promise.resolve("工具" + fn.name + "不存在");
+    }
+
+    if (typeof tool.execute !== "function") {
+        return Promise.resolve("工具" + fn.name + "缺少 execute");
+    }
+
+    let args;
+    try {
+        // 无参工具：arguments 为空字符串或缺失时按 {} 处理
+        args = typeof fn.arguments === "string" &amp;&amp; fn.arguments.trim() ? JSON.parse(fn.arguments) : {};
+    } catch (e) {
+        return Promise.resolve("参数解析失败:" + e);
+    }
+
+    try {
+        // 工具内部报错（含同步抛错）也不要阻断对话，转成字符串继续往下走
+        return Promise.resolve(tool.execute(args)).catch(e =&gt; "运行出错:" + e);
+    } catch (e) {
+        return Promise.resolve("运行出错:" + e);</pre></div></div>
+  <p><b>并发来自 <code>map</code> + <code>Promise.all</code></b>：所有工具同时开始，等最慢的那个。
+  但这里有个容易被忽略的点：<code>map</code> 里的函数是<b>同步返回 Promise</b> 的，说明每个工具的执行都已经<b>立即启动</b>了——
+  包括“工具不存在”“参数解析失败”这类根本不会执行的，也返回一个已 resolve 的 Promise 占位。<b>用 <code>Promise.resolve</code> 而不是 <code>null</code></b>，
+  是因为后面 <code>Promise.all</code> 会把非 Promise 包一层，但占位分支若返回 <code>null</code>，<code>toolResults[i]</code> 就会变成 <code>null</code> 并在 <code>toToolMessage</code> 里变成 <code>"null"</code> 字符串。现在它能拿到一句人类可读的说明。</p>
+  <p><b>失败绝不让 Promise reject</b>。三种失败（工具不存在、参数坏、执行抛错）全部转成字符串返回，交给模型“自己看怎么办”。
+  这是有意的：<b>工具失败是对话的一部分，不是对话的终点</b>。模型读到“参数解析失败:Unexpected token”能改参数重试；
+  如果整轮 reject，上层只会看到一次崩溃，用户还得从头再来。</p>
+  <p>两种 catch 都写了（同步 <code>try/catch</code> + <code>.catch</code>），因为工具可能是同步函数（<code>throw</code> 不会变成 rejected Promise），
+  也可能是 async 函数。漏掉任何一个，同步抛错的工具就会把整轮对话打挂。</p>
+  <p><b>参数缺省按 <code>{}</code></b>：<code>fn.arguments</code> 是空串或缺失时直接给 <code>{}</code>，不调 <code>JSON.parse</code>。
+  否则空串会抛 <code>Unexpected end of JSON input</code>——无参工具全都会“失败”。</p>
+  <p>还有一点值得记：<code>tool.execute(args)</code> 被调用时<b>不传第二参数</b>。工具拿不到 <code>signal</code>、拿不到上下文，
+  所以工具内部想做取消必须自己从闭包里拿。<b>这是设计上的缺口</b>，不是忘了写。</p>
+  </div>
+</section>
+
+<section class="block" id="s-05">
+  <div class="block-head"><span class="idx">05</span><h2>createTool 的后端分支：同一个对象被改写两次</h2></div>
+  <div class="prose">
+  <p><code>CreateTool(ms)</code> 里的 <code>ms</code> 是一个“消息发送器”（在 <code>core</code> 侧由 <code>MessageStream</code> 提供），
+  <code>create</code> 把工具包装成一个恒定的形状：<code>{ description, execute }</code>——<b>与 model 包需要的 <code>description</code> 恰好对齐</b>。</p>
+  <div class="code"><div class="code-head"><span class="file">packages/agent/src/createTool.js</span><span class="ln">:31</span><button data-copy="">复制</button></div><div class="code-body"><pre>if (execute) {
+    _this.ms.send(toolInfo); // 开始调用工具
+
+    let result, status;
+    try {
+        result = await execute(args);
+        status = "success"; // 调用成功
+    } catch (error) {
+        result = error;
+        status = "error"; // 调用失败
+    }
+
+    _this.ms.send(initOption({ // 结束调用工具
+        status,
+        result
+    }, toolInfo));
+
+    // 失败继续抛出，由 callFuns 统一转成给模型的错误文本
+    if (status === "error") throw result;
+
+    return result;</pre></div></div>
+  <p><b>两次 <code>ms.send</code>，一次 <code>pending</code>、一次 <code>success/error</code></b>。第二次发送用的是
+  <code>initOption({ status, result }, toolInfo)</code>，而 <code>initOption</code> 的实现是<b>把 <code>setOption</code> 的键逐个写入第二个参数并返回它</b>——
+  也就是说，<b>发出去的是同一个 <code>toolInfo</code> 对象，只是多了 <code>status</code> 和 <code>result</code></b>。
+  接收端能靠 <code>id</code> 把两条事件串起来，id 在第一次发送时就已经生成。</p>
+  <p><code>id = Date.now() + "_" + Math.random().toString(36).substring(2).toUpperCase()</code>：时间戳保证排序，随机段保证同一毫秒内不撞。
+  <b>它同时被用作 <code>globalThis</code> 的键</b>（下一节），所以必须全局唯一，不能只用序号。</p>
+  <p><b>失败时 <code>throw result</code> 而不是 <code>return</code></b>：这一层先把“失败”事件发出去（用户能在界面上看到红色工具卡），
+  再把错误抛给 <code>callFuns</code>，让后者转成给模型的文本。<b>两层职责不重叠</b>：事件给界面，异常给对话。</p>
+  <p><code>result = error; status = "error"</code> 时把 <code>error</code> 直接塞进 <code>result</code>。所以前端拿到的 <code>result</code>
+  可能是一个 <code>Error</code> 实例——序列化过 SSE 之后它会变成 <code>{}</code>。<b>这是当前版本的一个真实缺陷</b>：错误详情到不了页面，
+  只能靠 <code>status</code> 区分。要修就得在这里做一次 <code>String(error.message || error)</code>。</p>
+  </div>
+</section>
+
+<section class="block" id="s-06">
+  <div class="block-head"><span class="idx">06</span><h2>前端工具：先建 Promise，再发事件</h2></div>
+  <div class="prose">
+  <p>没有 <code>execute</code> 的工具被判定为“前端工具”：<code>caller: "frontend"</code>，实际执行发生在<b>浏览器</b>里。
+  服务端这一侧只做一件事——挂起等待，等页面把结果回传。</p>
+  <p>顺序是关键：<b><code>new Promise</code> 先建，<code>ms.send</code> 后发</b>。注释写了原因：“避免页面同步回传时 <code>_resolve</code> 还不存在”。
+  如果先发事件，页面在同一 tick 里立刻回传（本地 <code>ms</code> 实现很可能就是同步派发），
+  <code>globalThis[toolInfo.id]</code> 还没挂上，回传就直接丢了，而这轮对话会永久卡住——没有报错、没有超时（如果没配 timeout），只是不动了。</p>
+  <p><b>回传通道是 <code>globalThis[id]</code> 一个全局函数</b>，签名 <code>function (result, status)</code>。用全局而不是 <code>ms</code> 的某个注册接口，
+  是为了让页面侧（<code>core</code> 的 <code>_handleChunk</code>）能用最简单的方式回调，不需要再握一次引用。
+  代价是<b>全局命名空间被占用</b>，所以 <code>done()</code> 里一定 <code>delete globalThis[toolInfo.id]</code>——
+  成功、失败、超时、发送抛错，四条路都会走到 <code>done</code>，否则就是内存泄漏（每个工具调用留一个闭包）。</p>
+  <p><code>settle</code> 是“只兑现一次”的闸：回调里先 <code>const current = settle; settle = null;</code> 再调 resolve/reject。
+  <b>先置空再调用</b>，所以页面重复回传第二次时会看到 <code>settle === null</code> 直接 return，不会因为重复 resolve 或“成功后又报错”把状态弄乱。</p>
+  <p><code>timeout &gt; 0</code> 才起定时器，0 表示无限等。<b>默认 0 是危险的</b>：页面刷新、用户关标签，服务端就永远挂着。
+  所以文档示例里都建议显式传一个超时值。</p>
+  <p><code>ms.send(toolInfo)</code> 外面还包了一层 <code>try/catch</code>：发送失败（比如流已经关了）就把 <code>settle</code> 清掉、<code>done()</code> 清理，
+  再 <code>throw</code>。不清的话，那个已经没人会调用的 <code>globalThis[id]</code> 会一直留着。</p>
+  </div>
+</section>
+
+<section class="block" id="s-07">
+  <div class="block-head"><span class="idx">07</span><h2>整条链路的边界条件</h2></div>
+  <div class="prose">
+  <p>把四个文件连起来看，有几条“一定会遇到”的边界，写代码时最好先想一遍：</p>
+  <p><b>maxSteps 超限</b>时抛出 <code>"工具调用步骤超过 maxSteps 上限：" + 值</code>。<b>已经执行过的工具结果都留在了 <code>messages</code> 里</b>，
+  所以上层可以选择继续调 <code>generate</code> 把对话接下去，而不是从头再来。<code>core</code> 的取消/继续就是靠这个前提成立的。</p>
+  <p><b>没有工具调用就结束</b>：<code>return result.content</code> 可能是空串（模型只回了思考）。调用方不该把空串当失败。</p>
+  <p><b>工具返回非字符串</b>会被 <code>JSON.stringify</code>，所以返回对象是安全的；返回 <code>undefined</code> 会变成 <code>"undefined"</code> 文本，
+  模型会读到这四个字母。工具里该 <code>return ""</code> 或 <code>return { ok: true }</code>，不要裸 <code>return</code>。</p>
+  <p><b>signal 只到模型请求</b>：<code>_this.signal</code> 传进 <code>completions</code>，但不会传给工具。
+  取消一个正在跑的前端工具，只能靠工具自己的超时。</p>
+  <p>下一页开始讲 <code>core</code>：<code>AuiPage</code> 怎么把这里发出的 <code>tool-call</code> 事件接住、变成界面上的工具卡，
+  以及 <code>response("tool-result")</code> 怎么回到 <code>globalThis[id]</code>。</p>
+  </div>
+</section>
+</main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>7 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>Agent 的五个字段，和 maxSteps 的 0</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>system 提示词：原地改数组，还是新建数组</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>runConversation：一轮对话其实是两条 assistant 消息</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>callFuns：并发执行，失败当文本</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>createTool 的后端分支：同一个对象被改写两次</span></a></li><li><a class="toc-item" href="#s-06" data-toc="s-06"><i>06</i><span>前端工具：先建 Promise，再发事件</span></a></li><li><a class="toc-item" href="#s-07" data-toc="s-07"><i>07</i><span>整条链路的边界条件</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
+
+</body>
+</html>

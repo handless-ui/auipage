@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>源码解读 · AuiPage 中：sendMessage 与分片泵</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="入口卫语句、task 句柄的每个字段、pump 的四个落定点、preType/preText 合并带，以及 streamFun 为什么会被丢弃。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="on">20 · AuiPage 中：一轮对话</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>入口：两道卫语句，两个字符串 reject</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>task 句柄：十九个字段，各管一段</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>pump：四个落定点，两条分岔</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>_handleChunk：一条“合并带”</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>streamFun 为什么会失效，以及为什么不用管</span></a></div><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="on">20 · AuiPage 中：一轮对话</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>入口：两道卫语句，两个字符串 reject</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>task 句柄：十九个字段，各管一段</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>pump：四个落定点，两条分岔</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>_handleChunk：一条“合并带”</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>streamFun 为什么会失效，以及为什么不用管</span></a></div><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 06</em>AuiPage 中：sendMessage 与分片泵</h1>
+<p class="lede">一轮对话在 <code>AuiPage</code> 里不是 <code>while</code> 循环，而是一串 <code>.then</code> 串起来的泵。<b>每一次 <code>generator.next()</code> 都是一个可以被打断的落定点</b>。</p>
+<div class="badges"><span class="badge">148 行</span><span class="badge">pump</span><span class="badge">endRequest</span><span class="badge">合并带</span></div></div>
+
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>入口：两道卫语句，两个字符串 reject</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>task 句柄：十九个字段，各管一段</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>pump：四个落定点，两条分岔</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>_handleChunk：一条“合并带”</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>streamFun 为什么会失效，以及为什么不用管</span></a></div></nav>
+<section class="block" id="s-01">
+  <div class="block-head"><span class="idx">01</span><h2>入口：两道卫语句，两个字符串 reject</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/core/src/AuiPage.js</span><span class="ln">:158</span><button data-copy="">复制</button></div><div class="code-body"><pre>AuiPage.prototype.sendMessage = function (message) {
+    let _this = this;
+
+    return new Promise((resolve, reject) =&gt; {
+
+        if (this.isExecuting) return reject("当前正在执行中");
+
+        if (!message || typeof message !== "object") return reject("消息格式不正确");
+
+        // content 规范化：字符串包成单个 text 片段，避免逐字符渲染
+        const content = normalizeContent(message.content);
+        const input = Array.isArray(message.content) ? message : Object.assign({}, message, { content });
+
+        this.isExecuting = true;
+
+        // 取消通道：signal 交给适配器，由它透传到底层 HTTP / 模型请求
+        const controller = typeof AbortController === "function" ? new AbortController() : null;
+
+        let generator;
+        try {
+            generator = this.adapter.ChatTransport.run({
+                messages: [input],
+                context: {
+                    history: this.currentMessages,
+                    tools: this.tools_description,
+                    signal: controller ? controller.signal : void 0
+                }
+            });
+        } catch (error) {
+            // run() 同步抛错：复位状态，否则页面永久卡在“执行中”
+            this.isExecuting = false;
+            reject(error);
+            return;
+        }
+
+        if (!generator || typeof generator.next !== "function") {
+            this.isExecuting = false;
+            reject("ChatTransport.run() 返回空值");
+            return;
+        }
+
+        // 结束信号：工具或界面里发起 stop / cancel 时唤醒等待中的流程
+        let signalEnd;
+        const endSignal = new Promise(function (resolve) { signalEnd = resolve; });
+
+        // 写入任务上下文，供后续协同使用
+        let taskId = String(++this._taskSeq);
+        const task = this._currentTask = {
+            taskId,
+            message: input,
+            generator,
+            controller,
+            cacheMessages: [input],
+            displayed: [],
+            preType: "",
+            preText: "",
+            textTypes: ["loading", "thinking", "text"],
+            streamFun: void 0,
+            tool_calls: {},
+            resolve,
+            reject,
+            ended: false,
+            endRequest: null,
+            endSignal: { promise: endSignal, resolve: signalEnd },
+            busy: false,
+            nextPending: false
+        };
+
+        // 任务开始生命周期
+        this._emit("task:start", {
+            taskId,
+            threadId: this.currentThreadId,
+            message: input
+        });
+
+        // 回显用户消息
+        for (let i = 0; i &lt; content.length; i++) {
+            this._render(task, input.role, content[i]);
+        }</pre></div></div>
+  <p>两个拒绝都是<b>字符串</b>而不是 <code>Error</code>：<code>reject("当前正在执行中")</code>、<code>reject("消息格式不正确")</code>。
+  所以 <code>catch (e)</code> 里 <code>e.message</code> 是 <code>undefined</code>，要 <code>String(e)</code> 才能拿到文案。<b>这是当前版本的既有契约</b>，
+  改它属于破坏性变更，暂时别动。</p>
+  <p><code>isExecuting</code> 的复位点有<b>三处</b>：<code>run()</code> 同步抛错、<code>generator</code> 非法、以及最后的 <code>_finalize</code>。
+  前两处是“还没进执行期就失败”，必须手动复位，否则页面会永久卡在“执行中”，再也发不出第二条消息。</p>
+  <p><code>input</code> 那行的三元判断值得注意：<code>content</code> 已经是数组时<b>直接复用 message 对象</b>，不是浅拷贝。
+  所以数组形态的消息会被 <code>task.message</code> 和 <code>taskStart</code> 事件共享同一个引用——监听器里改它，会改到任务自己的记录。</p>
+  <p><code>ChatTransport.run({ messages: [input], context: { history, tools, signal } })</code>：<b>只发当前这一条</b>，
+  历史走 <code>context.history</code>。<code>signal</code> 是给适配器透传到底层 HTTP 的，这也是 <code>cancel()</code> 能真断请求的前提。</p>
+  </div>
+</section>
+
+<section class="block" id="s-02">
+  <div class="block-head"><span class="idx">02</span><h2>task 句柄：十九个字段，各管一段</h2></div>
+  <div class="prose">
+  <p>这个对象是这一轮对话的<b>全部上下文</b>，被 <code>pump</code>、<code>_handleChunk</code>、<code>_handleToolCall</code>、<code>_finalize</code> 共享。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>字段</th><th>用途</th><th>谁写</th></tr></thead>
+  <tbody>
+  <tr><td><code>taskId</code></td><td>自增序号，进事件与工具控制句柄</td><td>构造</td></tr>
+  <tr><td><code>message</code> / <code>generator</code> / <code>controller</code></td><td>输入、数据源、中断器</td><td>构造</td></tr>
+  <tr><td><code>cacheMessages</code></td><td>本轮要入库的消息数组</td><td>全程</td></tr>
+  <tr><td><code>displayed</code></td><td>已推给界面的条目（取消时撤销用）</td><td><code>_render</code></td></tr>
+  <tr><td><code>preType</code> / <code>preText</code> / <code>streamFun</code></td><td>当前“合并带”的类型、累积文本、更新函数</td><td><code>_handleChunk</code></td></tr>
+  <tr><td><code>textTypes</code></td><td><code>["loading","thinking","text"]</code>，可流式的类型白名单</td><td>构造</td></tr>
+  <tr><td><code>tool_calls</code></td><td><code>id → updater</code>，还没完结的工具卡</td><td><code>_handleToolCall</code></td></tr>
+  <tr><td><code>ended</code> / <code>endRequest</code> / <code>endSignal</code></td><td>终态、结束请求、唤醒信号</td><td>构造 / <code>_requestEnd</code></td></tr>
+  <tr><td><code>busy</code> / <code>nextPending</code></td><td>“正在处理分片”“next 还没落定”</td><td><code>pump</code></td></tr>
+  <tr><td><code>stopTimer</code></td><td>取消的兜底计时器</td><td><code>_requestEnd</code></td></tr>
+  </tbody></table></div>
+  <p><b><code>busy</code> 和 <code>nextPending</code> 是取消逻辑的核心</b>：前者表示“正在处理分片/工具”，后者表示“<code>next()</code> 已调用但 Promise 未落定”。
+  只要有一个为真，<code>_requestEnd</code> 就不会立刻收尾——必须等手上这一块落完，否则这次工具的结果会从消息里丢掉。</p>
+  </div>
+</section>
+
+<section class="block" id="s-03">
+  <div class="block-head"><span class="idx">03</span><h2>pump：四个落定点，两条分岔</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/core/src/AuiPage.js</span><span class="ln">:240</span><button data-copy="">复制</button></div><div class="code-body"><pre>const finishEnd = () =&gt; {
+    const request = task.endRequest;
+    if (task.ended || !request) return;
+    this._finalize(request.status, true, null, request.by, task);
+};
+
+const pump = () =&gt; {
+    if (task.ended) return;
+    if (task.endRequest) return finishEnd();
+
+    let step;
+    try {
+        step = generator.next();
+    } catch (error) {
+        this._finalize("error", false, error);
+        return;
+    }
+
+    task.nextPending = true;
+
+    Promise.resolve(step).then(function (res) {
+        task.nextPending = false;
+
+        // next 未决期间发起过结束请求：此刻已落定，可以安全收尾
+        if (task.endRequest) return finishEnd();
+        if (task.ended) return;
+
+        if (res &amp;&amp; res.done) {
+            _this._finalize("complete", true);
+            return;
+        }
+
+        task.busy = true;
+        _this._handleChunk(task, res).then(function () {
+            task.busy = false;
+
+            if (task.endRequest) return finishEnd();
+            if (task.ended) return;
+            pump();</pre></div></div>
+  <p><code>pump()</code> 每次只做一件事：调一次 <code>generator.next()</code>，然后<b>把后续交给 <code>.then</code></b>。
+  之所以不用 <code>while</code>，是因为每次 <code>next()</code> 都可能 await 一个网络往返，用 <code>while</code> 就只能写 <code>await</code>，
+  而 <code>await</code> 会把整个函数变成异步，<code>sendMessage</code> 里那些同步卫语句就没法在“进执行期前”拦住了。</p>
+  <p>四个落定点，每个都必须检查 <code>endRequest</code>——顺序不能换：</p>
+  <p><b>① <code>next()</code> 同步返回前</b>：<code>try/catch</code> 包住，同步抛错直接 <code>_finalize("error", false, error)</code>。</p>
+  <p><b>② <code>next()</code> 的 Promise 落定</b>：先 <code>nextPending = false</code>，再判 <code>endRequest</code> → <code>finishEnd()</code>；
+  再判 <code>ended</code>；最后判 <code>res.done</code> → <code>_finalize("complete", true)</code>。</p>
+  <p><b>③ <code>_handleChunk</code> 完成</b>：<code>busy = false</code>，同样先判 <code>endRequest</code>，然后 <code>pump()</code> 递归下一轮。</p>
+  <p><b>④ <code>_handleChunk</code> 拒绝</b>：<code>busy = false</code>，<code>endRequest</code> 优先（丢弃分片异常），否则 <code>_finalize("error")</code>。</p>
+  <p><b>为什么 <code>nextPending = true</code> 写在 <code>next()</code> 之后</b>：<code>next()</code> 可能同步返回一个已 resolve 的值，
+  这时 <code>Promise.resolve(step).then</code> 仍要等一个微任务。把 <code>nextPending</code> 置位在 <code>next()</code> 返回之后、<code>.then</code> 之前，
+  能保证<b>整个这段空窗期里 <code>_requestEnd</code> 走“等待”分支而不是“立刻收尾”</b>。</p>
+  <p><code>finishEnd</code> 的第一行是 <code>if (task.ended || !request) return;</code>。<code>!request</code> 这个判断是为了让“分片完成时顺手调一次”
+  不会在没发起结束请求时误收尾——它是<b>幂等入口</b>，可以被四个落定点都调用一次。</p>
+  </div>
+</section>
+
+<section class="block" id="s-04">
+  <div class="block-head"><span class="idx">04</span><h2>_handleChunk：一条“合并带”</h2></div>
+  <div class="prose">
+  <div class="code"><div class="code-head"><span class="file">packages/core/src/AuiPage.js</span><span class="ln">:387</span><button data-copy="">复制</button></div><div class="code-body"><pre>AuiPage.prototype._handleChunk = async function (task, chunk) {
+    if (!task || task.ended || task.endRequest) return;
+
+    const value = (chunk &amp;&amp; chunk.value) || {};
+    const text = typeof value.text === "string" ? value.text : "";
+
+    // 类型变了，或者是一种特殊类型
+    if (value.type != task.preType || !task.textTypes.includes(value.type)) {
+        task.streamFun = void 0;
+
+        if (task.preText) {
+            task.cacheMessages.push({
+                role: "assistant",
+                content: [{ type: task.preType, text: task.preText }]
+            });
+            task.preText = "";
+            task.preType = "";
+        }
+
+        if (!task.textTypes.includes(value.type)) {
+            if (value.type === "tool-call") await this._handleToolCall(task, value);
+        } else {
+            task.preText = text;
+            task.preType = value.type;
+            task.streamFun = this._render(task, "assistant", value);
+        }
+
+    } else {
+        task.preText += text;
+        if (task.streamFun) callSafely(task.streamFun, value.text);
+    }
+};</pre></div></div>
+  <p>生成的片段有两种命运：<b>能流的</b>（<code>loading</code> / <code>thinking</code> / <code>text</code>）和<b>不能流的</b>（<code>tool-call</code> 等）。
+  能流的片段不会一条一条进 <code>cacheMessages</code>，而是先被<b>合并</b>——连续的同类文本会攒成一大段，最后只入一条消息。
+  这条合并带就是 <code>preType</code> + <code>preText</code>。</p>
+  <p>判据是 <code>value.type != task.preType || !task.textTypes.includes(value.type)</code>：<b>类型变了，或者来的是特殊类型</b>，就要关闭当前带。
+  关闭的动作只有两步：<code>streamFun = undefined</code>（旧流作废）、<code>preText</code> 非空则压进 <code>cacheMessages</code>。</p>
+  <p>然后分岔：<b>非文本类型</b>只处理 <code>tool-call</code>（交给 <code>_handleToolCall</code>），其它类型<b>什么都不做</b>——
+  也就是说，适配器发来 <code>{type:"plan"}</code> 这类未知片段会被<b>静默丢弃</b>，既不渲染也不入库。这是当前的边界，扩展片段类型时必须同时改这里和白名单。</p>
+  <p><b>文本类型</b>则开一条新带：记下 <code>preText = text</code>、<code>preType</code>，并调 <code>_render</code> 渲染第一个片段，
+  拿到的返回值存成 <code>streamFun</code>。<b>注意传的是整个 <code>value</code> 对象</b>（含 <code>type</code> 与 <code>text</code>），
+  而不是只传 <code>text</code>——视图需要知道这是 <code>thinking</code> 还是正文。</p>
+  <p>同类型续写走 <code>else</code>：<code>preText += text</code>，然后 <code>callSafely(streamFun, text)</code> 把<b>增量</b>交给视图。
+  <code>callSafely</code> 在这里是必须的：<code>streamFun</code> 是视图返回的函数，抛错就会打断整个 pump。</p>
+  <p>一个容易忽略的后果：<b>同一个类型连续出现时不会重复渲染</b>，只追加文本。所以界面上看到的是“一条消息在长”，
+  而不是“每条 chunk 一个气泡”。这也是为什么 <code>preText</code> 要在类型切换时才落盘——<b>它同时是渲染缓冲和历史缓冲</b>。</p>
+  </div>
+</section>
+
+<section class="block" id="s-05">
+  <div class="block-head"><span class="idx">05</span><h2>streamFun 为什么会失效，以及为什么不用管</h2></div>
+  <div class="prose">
+  <p><code>task.streamFun</code> 是<b>视图层返回的更新函数</b>，它只对“刚刚那条消息”有效。一旦类型切换、开始一条新消息，旧函数就必须作废——
+  否则增量会被写到上一条消息里。</p>
+  <p>作废的方式是直接置 <code>undefined</code>，而不是调用某种 <code>unmount</code>。<b>这是故意的</b>：视图层自己知道该消息何时结束（它拿到了下一片段），
+  框架不去替它清理。<code>AuiPage</code> 只要保证<b>不再往上一条消息写东西</b>就够了。</p>
+  <p>副作用是：如果视图返回的 <code>streamFun</code> 依赖外部资源（比如定时器），框架不会帮你回收。
+  实现 <code>ChatContentRuntime</code> 时必须在“新片段替代旧片段”处自己收尾。</p>
+  <p>还有一处空窗：<code>_handleChunk</code> 开头 <code>if (task.ended || task.endRequest) return</code>。
+  <b>结束请求一旦发起，后续所有片段被丢弃</b>，包括正在路上的文本。这与 <code>stop()</code> 的语义（“结果要保留”）不冲突：
+  stop 保留的是<b>已经产出的</b>内容，不是“还没到的”。</p>
+  </div>
+</section>
+</main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>5 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>入口：两道卫语句，两个字符串 reject</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>task 句柄：十九个字段，各管一段</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>pump：四个落定点，两条分岔</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>_handleChunk：一条“合并带”</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>streamFun 为什么会失效，以及为什么不用管</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
+
+</body>
+</html>

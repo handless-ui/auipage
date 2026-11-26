@@ -7,6 +7,7 @@ function isPlainBody(body) {
 }
 
 function createFetch(adapter) {
+  // #doc:factory
   return function fetch(options) {
     // 必须返回 Promise<response>，让调用方能 .then(res => res.on(...))
     return new Promise((resolve, reject) => {
@@ -30,6 +31,7 @@ function createFetch(adapter) {
       // adapter 调用前先把 response 交出去，确保 .then(res => ...) 里能立刻 on(...) 注册监听
       // 用 queueMicrotask 推后一拍，避免同步 resolve 后用户立刻注册的监听错过首个 data
       queueMicrotask(() => resolve(response));
+  // #end
 
       const clearTimer = () => {
         if (timer) {
@@ -38,6 +40,7 @@ function createFetch(adapter) {
         }
       };
 
+      // #doc:hooks
       const hooks = {
         onResponse(meta) {
           if (meta && typeof meta.status === 'number') {
@@ -78,7 +81,9 @@ function createFetch(adapter) {
           reject(err);
         }
       };
+      // #end
 
+      // #doc:abort
       const abortWith = (err) => {
         if (controller) controller.abort();
         hooks.onError(err);
@@ -115,6 +120,7 @@ function createFetch(adapter) {
       }
       // adapter 允许返回 Promise，失败也要走同一条错误通道
       if (ret && typeof ret.then === 'function') ret.then(null, hooks.onError);
+      // #end
     });
   };
 }

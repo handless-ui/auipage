@@ -42,6 +42,7 @@ apis/
     packages/core-auipage.html              → docs/packages/core-auipage.html
     packages/core-ports.html                → docs/packages/core-ports.html
     packages/core-utils.html                → docs/packages/core-utils.html
+    read/index.html                          → docs/read/index.html         导读
 ```
 
 ## 教程的固定结构
@@ -87,12 +88,50 @@ node apis/build.mjs --check       # 只检查站内死链与孤立页，不动�
 - 首行是 front-matter：`<!--meta { "title": "…", "desc": "…", "section": "guide", "demos": false }-->`
   - `section`：当前页属于哪一组导航，给 `{{in:…}}` 用
   - `demos`：是否需要底部演示脚本（`{{#if demos}}` 包住的 runtime.js）
-  - `toc`：`"inline"` 正文里插目录、`"rail"` 正文右侧插目录、不写就不生成（当前布局不渲染 rail）
+  - `toc`：`"rail"` 生成页内目录、`false` 明确不要；不写时跟随 `site.json` 的全局值（现在是 `"rail"`）
 - 正文里 `{{base}}` 表示「到站点根的相对前缀」，页面在第几级目录都不用改；
   资源的 `?v=` 由生成器算指纹，不用手写版本号。
-- 目录自动生成：从每个 `<section id="…">` 里的 `<h2>` 取标题；
-  目录文案想比标题短，就在 section 上加 `data-toc-label="短名"`。
+- 目录自动生成，细节见下一节「页内目录」。
 - 代码示例里出现 `{{ }}` 这种像模板的写法，用 `{{#raw}}…{{/raw}}` 包住，会原样输出。
+- 想引用 `packages/` 里的真实源码，不用手抄，写 `{{src 路径#标记}}`，见下一节。
+
+## 页内目录
+
+一页有多个 `<section>` 时，生成器会自动做页内目录（统计顺序号、标题、锚点）：
+
+- 锚点按章节序号生成，`01` → `id="s-01"`，所以改标题不会断链；section 自己写了 `id` 就沿用。
+- 章节数量少于 3 个不生成，避免两三条还做目录。
+- 目录文案默认取 `<h2>` 文字（会剥掉序号徽标和版本标签）；想更短就在 section 上加
+  `data-toc-label="短名"`，这时 `h2` 可以继续写全。
+- `h2` 里的序号写成 `<span class="idx">01</span>`（内容页）或 `<span class="no">01</span>`（首页式版块），
+  没有序号 span 的 section 不会进目录。
+- 首页在 `apis/pages/index.html` 里写了 `"toc": false`，不带目录，也不会被注入锚点。
+
+同一个目录会按视口宽度换三种形态（样式在 `docs/assets/css/docs.css` 的「页内目录」段，
+高亮与跳转在 `docs/assets/js/docs.js` 末尾）：
+
+| 视口 | 形态 |
+| --- | --- |
+| ≥1200px | 右侧固定目录（`toc-rail`），随正文滚动高亮；左侧树里不再重复小节 |
+| 641–1199px | 标题下的 chip 目录条（`toc-chips`）+ 左侧树当前页展开小节（`tree .sub`） |
+| ≤640px | 同上，只是树换成了抽屉，小节在抽屉里当前页下面展开 |
+
+三者共用 `aria-current="true"` 作为当前项标记，`data-toc="s-01"` 用来定位目标章节。
+
+## 源码片段（{{src}}）
+
+`read/` 这一组要求“文档里贴的就是源码里跑的”，所以代码块从源文件抽，不手抄：
+
+```html
+{{src packages/core/src/AuiPage.js#send-loop}}
+```
+
+- 源文件里用 `// #doc:标记` 开始、`// #end` 结束，把要展示的那一段夹在中间。
+  标记本身只占一行，抽取时会去掉；片段整体缩进会被裁掉一层，相对缩进保留。
+- 构建时会渲染成标准代码块，块头的 `文件:起始行` 自动计算，正文里不要手写行号——
+  行号会漂，`#doc:标记` 不会。
+- 标记名在同一文件里不要重名；找不到文件、标记没成对、缺 `#end`，构建会直接报错。
+- 片段里的 `{{ }}` 不会被模板引擎吃掉：指令先换成占位符，渲染完再换回代码。
 
 ## 导航高亮
 

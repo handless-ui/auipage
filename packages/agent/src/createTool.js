@@ -27,6 +27,7 @@ CreateTool.prototype.create = function ({ description, execute }, options) {
             };
 
             // 后端工具调用
+            // #doc:backend
             if (execute) {
                 _this.ms.send(toolInfo); // 开始调用工具
 
@@ -48,6 +49,7 @@ CreateTool.prototype.create = function ({ description, execute }, options) {
                 if (status === "error") throw result;
 
                 return result;
+            // #end
             }
 
             // 前端工具调用

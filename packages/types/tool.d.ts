@@ -27,13 +27,35 @@ export interface ToolDescription {
 }
 
 /**
+ * 工具拿到的任务控制句柄（0.2.0 起提供）。
+ * 页面侧工具由 AuiPage 传入；服务端场景没有这个参数，调用前先判空。
+ */
+export interface ToolTaskControl {
+    /** 当前任务 id */
+    taskId: string;
+    /** 本次工具调用 id */
+    toolCallId: string;
+    /**
+     * 主动结束这一轮：内容保留、消息组标记 stopped、sendMessage 正常 resolve。
+     * 业务上“这件事办完了”用它，不要用 cancel。
+     */
+    stop(): boolean;
+    /**
+     * 取消这一轮：中断底层请求、丢弃界面、消息组标记 cancelled，
+     * sendMessage 以 "已取消" reject。
+     */
+    cancel(): boolean;
+}
+
+/**
  * 工具执行函数：接收模型解析后的入参对象，
- * 返回任意可序列化值，也可以返回 Promise。
+ * 返回任意可序列化值，也可以返回 Promise；
+ * 第二个参数是任务控制句柄，页面侧工具按需使用（0.2.0 起提供）。
  */
 export type ToolExecutor<
     TArgs extends Record<string, unknown> = Record<string, unknown>,
     TResult = unknown
-> = (args: TArgs) => MaybePromise<TResult>;
+> = (args: TArgs, control?: ToolTaskControl) => MaybePromise<TResult>;
 
 /** 一次工具执行的终态（不存在 pending） */
 export type ToolResultStatus = "success" | "error";
@@ -42,7 +64,10 @@ export type ToolResultStatus = "success" | "error";
 export interface ToolRenderContext {
     /** 模型解析出的原始入参 */
     args: Record<string, unknown>;
-    /** execute 的返回值；执行抛错时为错误对象 */
+    /**
+     * execute 的返回值；执行是否成功以 status 为准，
+     * status 为 "error" 时 result 可能是错误对象，也可能是空对象（经 SSE 序列化后）
+     */
     result: unknown;
     /** execute 的执行状态 */
     status: ToolResultStatus;

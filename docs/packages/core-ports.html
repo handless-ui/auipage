@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Adapter 与 Runtime · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="三个适配器与两个运行时的接口、挂载规则和原生 DOM 示例。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -19,6 +19,7 @@
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
       <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
       <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
     </nav>
   </aside>
 
@@ -37,6 +38,7 @@
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
       <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
       <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
     </nav>
     </div>
     <div class="drawer-tree">
@@ -44,7 +46,7 @@
       <aside class="tree">
     <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
     <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
-    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="on">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="on">13 · Adapter 与 Runtime</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>挂载规则</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>ChatTransportAdapter</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>MessageHistoryAdapter</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>ThreadListAdapter</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>ThreadListRuntime</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>ChatContentRuntime</span></a></div><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
   </aside>
 
     </div>
@@ -55,7 +57,7 @@
 <aside class="tree">
     <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
     <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
-    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="on">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="on">13 · Adapter 与 Runtime</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>挂载规则</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>ChatTransportAdapter</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>MessageHistoryAdapter</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>ThreadListAdapter</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>ThreadListRuntime</span></a><a href="#s-06" data-toc="s-06"><i>06</i><span>ChatContentRuntime</span></a></div><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
   </aside>
 
 
@@ -65,7 +67,8 @@
 <p class="lede">两条接缝的全部接口：Adapter 负责数据，Runtime 负责渲染。框架只规定方法，缺省的方法不会被调用；返回值可以是 Promise，也可以直接是同步值<span class="ver fix">0.2.0 修复</span>；你可以 <code>new</code> 一个基类传实现，也可以写子类。</p>
 <div class="badges"><span class="badge">3 Adapter</span><span class="badge">2 Runtime</span><span class="badge">可继承</span></div></div>
 
-<section class="block">
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>挂载规则</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>ChatTransportAdapter</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>MessageHistoryAdapter</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>ThreadListAdapter</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>ThreadListRuntime</span></a><a class="chip" href="#s-06" data-toc="s-06"><i>06</i><span>ChatContentRuntime</span></a></div></nav>
+<section class="block" id="s-01">
   <div class="block-head"><span class="idx">01</span><h2>挂载规则</h2></div>
   <div class="prose">
   <p>框架按实例的 <code>name</code> 属性去掉 <code>Adapter</code> / <code>Runtime</code> 后缀后挂载。基类已内置默认 <code>name</code>（默认为构造器名），子类可覆盖以改变挂载位置；实例上的 <code>aui</code> 反向指向所属 <code>AuiPage</code>。</p>
@@ -82,7 +85,7 @@
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-02">
   <div class="block-head"><span class="idx">02</span><h2>ChatTransportAdapter</h2></div>
   <div class="prose">
   <p>对接模型对话接口，<code>sendMessage</code> 时调用一次。</p>
@@ -133,7 +136,7 @@ const chatTransport = new ChatTransportAdapter({
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-03">
   <div class="block-head"><span class="idx">03</span><h2>MessageHistoryAdapter</h2></div>
   <div class="prose">
   <div class="code">
@@ -163,7 +166,7 @@ const chatTransport = new ChatTransportAdapter({
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-04">
   <div class="block-head"><span class="idx">04</span><h2>ThreadListAdapter</h2></div>
   <div class="prose">
   <div class="code">
@@ -194,7 +197,7 @@ const chatTransport = new ChatTransportAdapter({
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-05">
   <div class="block-head"><span class="idx">05</span><h2>ThreadListRuntime</h2></div>
   <div class="prose">
   <p>会话列表（侧边栏）的渲染，共 6 个回调：</p>
@@ -253,7 +256,7 @@ function renderOne(thread) {
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-06">
   <div class="block-head"><span class="idx">06</span><h2>ChatContentRuntime</h2></div>
   <div class="prose">
   <p>对话内容的渲染，只有两个回调，但 <code>append</code> 的返回值语义需要特别注意：</p>
@@ -311,6 +314,11 @@ const chatUI = new ChatContentRuntime({
 <a class="next" href="../packages/core-utils.html"><span class="dir">下一页 →</span><span class="name">defineTool 与 generator</span></a>
   </nav>
 </main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>6 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>挂载规则</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>ChatTransportAdapter</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>MessageHistoryAdapter</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>ThreadListAdapter</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>ThreadListRuntime</span></a></li><li><a class="toc-item" href="#s-06" data-toc="s-06"><i>06</i><span>ChatContentRuntime</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
 
 </div>
 </div>
@@ -335,6 +343,7 @@ const chatUI = new ChatContentRuntime({
           <a href="../packages/model.html">@auipage/model</a>
           <a href="../packages/agent.html">@auipage/agent</a>
           <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
         </div>
         <div class="col">
           <h4>生态</h4>
@@ -352,8 +361,8 @@ const chatUI = new ChatContentRuntime({
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
-<script src="../assets/js/docs.js?v=83aa83bc"></script>
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
 
 </body>
 </html>

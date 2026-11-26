@@ -35,6 +35,7 @@ function errorFromHttp(meta, body) {
 export default function completions(params, logback, thinkback) {
     return new Promise((resolve, reject) => {
 
+        // #doc:state
         const state = { content: "", tool_calls: [] };
         const callbacks = { logback, thinkback };
 
@@ -49,7 +50,9 @@ export default function completions(params, logback, thinkback) {
             fn(value);
         };
         const fail = value => finish(reject, toError(value, "模型请求失败"));
+        // #end
 
+        // #doc:body
         fetch({
             url: `${this.baseURL.replace(/\/+$/, "")}/chat/completions`,
             method: "POST",
@@ -65,6 +68,7 @@ export default function completions(params, logback, thinkback) {
             }),
             timeout: params.timeout,
             signal: params.signal
+        // #end
         }).then(res => {
 
             // 非 2xx：非流式等错误体读完再判，流式直接中断
@@ -74,6 +78,7 @@ export default function completions(params, logback, thinkback) {
             });
 
             // 数据流
+            // #doc:stream
             res.on("data", chunk => {
                 if (settled) return;
                 if (!params.stream) {
@@ -86,6 +91,7 @@ export default function completions(params, logback, thinkback) {
                 } catch (e) {
                     streamError = e;
                     fail(e);
+            // #end
                     return;
                 }
                 try {

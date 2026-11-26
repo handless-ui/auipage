@@ -1,0 +1,100 @@
+<!--meta {"title": "源码解读 · 端口：Adapter 与 Runtime 的契约", "desc": "五个端口类的同一个模板、initOption 会改写默认值对象带来的污染风险、EmptyFunction 的作用，以及每个方法被谁调用。", "section": "read", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 08</em>端口：Adapter 与 Runtime 的契约</h1>
+<p class="lede"><code>core</code> 里最“无聊”的六个文件，恰恰是整套框架能被替换的原因。它们全是同一个模板：声明默认值、把用户传的合并进来、挂上 <code>name</code>。</p>
+<div class="badges"><span class="badge">6 个文件</span><span class="badge">114 行</span><span class="badge">端口模式</span><span class="badge">零依赖</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>一个模板，抄了五遍</h2></div>
+  <div class="prose">
+  <p><code>ThreadListAdapter</code>、<code>MessageHistoryAdapter</code>、<code>ChatTransportAdapter</code>、<code>ThreadListRuntime</code>、
+  <code>ChatContentRuntime</code> 这五个类，代码结构一模一样，差别只有“默认方法清单”和 <code>name</code>：</p>
+  {{src packages/core/src/ChatTransportAdapter.js#ctor}}
+  <p>把默认实现写成一个常量，再在构造里做一次“合并 + 拷贝”，好处是<b>三个问题一次解决</b>：</p>
+  <p><b>① 用户可以不实现任何方法。</b><code>EmptyFunction</code> 就是 <code>() =&gt; void 0</code>，一行。它让 <code>AuiPage</code> 里那些
+  <code>this.adapter.ThreadList?.list(...)</code> 的调用永远不会因为“方法不存在”抛 <code>TypeError</code>。</p>
+  <p><b>② 没传的键有兜底，传了的键覆盖。</b>顺序是 <code>initOption(options, {...DEFAUTL_OPTIONS})</code>——
+  把用户传的对象覆盖到默认值对象上。<b>方向不能反</b>，反过来会让默认实现盖掉用户的实现。</p>
+  <p><b>③ 只拷贝白名单里的键。</b><code>for (let key in DEFAUTL_OPTIONS)</code> 遍历的是<b>默认值对象的键</b>，不是用户对象的键。
+  <b>这意味着用户多传的属性会被静默丢弃</b>。想在适配器上挂自定义方法，不能通过配置对象传，只能加在原型上或者用闭包。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>那个展开运算符不是装饰</h2></div>
+  <div class="prose">
+  {{src packages/core/src/ChatTransportAdapter.js#merge}}
+  <p><code>{ ...DEFAUTL_OPTIONS }</code> 必须存在。因为 <code>initOption(setOption, defaultOption)</code> 的实现是
+  <b>把 <code>setOption</code> 的每个键写进 <code>defaultOption</code> 并返回它</b>——它是<b>原地改写第二个参数</b>。</p>
+  <p>如果直接写 <code>initOption(options, DEFAUTL_OPTIONS)</code>，模块级常量就被第一个实例改掉了：
+  第一个页面传了 <code>run: A</code>，第二个页面即使不传，也会拿到 <code>run: A</code>。
+  <b>这是“共享可变默认值”的经典坑，展开一次就把每个实例隔离开。</b></p>
+  <p><code>let value = ...</code> 之后还要 <code>for (let key in DEFAUTL_OPTIONS) this[key] = value[key]</code>，而不是直接 <code>this.run = value.run</code>。
+  这样新增一个默认方法只改常量，构造函数不用动。</p>
+  <div class="note"><p><b>注意 <code>DEFAUTL_OPTIONS</code> 的拼写：源码里少了一个 <code>I</code>（正确是 DEFAULT）。你在文件里搜 <code>DEFAULT_OPTIONS</code> 是搜不到的，这是历史遗留，不影响运行。</b></p></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>name 字段：唯一的“接口声明”</h2></div>
+  <div class="prose">
+  <p>每个类都硬编码了一行 <code>this.name = "ChatTransportAdapter"</code>。它没有任何类型检查作用，<b>只被 <code>mount</code> 用来剥后缀</b>：</p>
+  <p><code>name.replace("Adapter","")</code> → <code>"ChatTransport"</code>，于是页面里写 <code>this.adapter.ChatTransport</code>。
+  <b>类名、name 字段、mount 的后缀三者必须一致</b>。改名时漏一处，就是这个端口“接了但调不到”——而且不会报错，因为默认实现本来就是空函数。</p>
+  <p>这也解释了为什么 <code>AuiPage</code> 构造函数里调用的是 <code>this.adapter.ThreadList?.list(...)</code>，而不是 <code>this.adapter.ThreadListAdapter</code>。
+  <b>后缀是给 mount 剥的，不是给业务代码用的</b>。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>每个方法被谁调</h2></div>
+  <div class="prose">
+  <p>端口的方法不多，但每一条都有明确调用点。下表可以直接当“实现适配器时要填什么”的清单。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>端口</th><th>方法</th><th>调用点 / 语义</th></tr></thead>
+  <tbody>
+  <tr><td rowspan="5"><code>ThreadList</code><br><em>Adapter</em></td><td><code>list()</code></td><td>构造时调一次，返回会话列表 → <code>runtime.ThreadList.init</code></td></tr>
+  <tr><td><code>new(group)</code></td><td>没有当前线程时新建，<b>必须返回带 <code>threadId</code> 的对象</b></td></tr>
+  <tr><td><code>append(item)</code></td><td>新建成功后把它塞进列表视图（<code>runtime.ThreadList.append</code>）</td></tr>
+  <tr><td><code>delete</code> / <code>archive</code> / <code>unarchive</code></td><td><code>deleteThread</code> 等三个薄壳，成功后才改视图</td></tr>
+  <tr><td><em>Runtime</em> 侧</td><td><code>init</code> / <code>active</code> / <code>delete</code> / <code>archive</code> / <code>unarchive</code> / <code>append</code> 六个，AuiPage 直接调</td></tr>
+  <tr><td rowspan="2"><code>MessageHistory</code></td><td><code>load(threadId)</code></td><td><code>activeThread</code> 时加载，回传<b>按轮分组</b>的数组</td></tr>
+  <tr><td><code>append(threadId, group)</code></td><td><code>_finalize</code> 入库；<b>存不存由它决定</b>（例如 <code>status</code> 为 cancelled 时可丢）</td></tr>
+  <tr><td rowspan="2"><code>ChatTransport</code></td><td><code>run({messages, context})</code></td><td>必须返回<b>异步迭代器</b>（<code>next()</code> 返回 Promise）</td></tr>
+  <tr><td><code>response(type, payload)</code></td><td>前端工具结果回传，<code>type</code> 固定 <code>"tool-result"</code></td></tr>
+  <tr><td rowspan="2"><code>ChatContent</code><br><em>Runtime</em></td><td><code>init(messages)</code></td><td>切线程时清空并重放历史</td></tr>
+  <tr><td><code>append(role, part)</code></td><td>渲染一条片段，<b>可返回更新函数</b>（<code>void</code> 也合法）</td></tr>
+  </tbody></table></div>
+  <p>这张表里唯一“有返回值要求”的是 <code>ThreadList.new</code>——它必须给出 <code>threadId</code>，否则 <code>_finalize</code> 会抛
+  <code>"新建会话失败"</code>。<code>ChatContent.append</code> 的返回值是<b>可选</b>的：不返回就没有流式更新，但消息仍会入库。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>MessageStream：给工具一个“往页面推”的口子</h2></div>
+  <div class="prose">
+  {{src packages/core/src/MessageStream.js#ctor}}
+  <p>它只有两个字段，没有 <code>name</code>，也不走 <code>mount</code>。因为它不是端口，是<b>一个通道</b>：</p>
+  <p><code>send</code> 被 <code>createTool</code> 用来推 <code>tool-call</code> 事件（<code>pending</code> 与 <code>success/error</code> 两次），
+  <code>end</code> 用来在流结束时收尾。<b>方向是单向的：服务端 → 页面</b>。</p>
+  <p>反方向（页面 → 服务端）不走这里，走的是 <code>ChatTransportAdapter.response("tool-result", ...)</code>。
+  <b>两条通道分开，是因为它们的生命周期不同</b>：<code>MessageStream</code> 跟着一次 HTTP 流，<code>response</code> 是独立的一次请求。</p>
+  <p><code>send || EmptyFunction</code> 这个兜底很重要：没有 <code>ms</code> 时（比如在纯逻辑测试里造一个 <code>CreateTool</code>），
+  工具调用会“静默发不出去”，但不会抛错——这让你可以单独测 <code>execute</code> 而不启动服务端。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">06</span><h2>为什么不写接口声明</h2></div>
+  <div class="prose">
+  <p>这五个类没有 <code>abstract</code>、没有 <code>interface</code>、也没有 <code>throw new Error("not implemented")</code>。
+  <b>全部用空函数兜底</b>，是有意的取舍：</p>
+  <p><b>① 零依赖且跨端</b>：<code>core</code> 要能在浏览器里跑，不能依赖 <code>Node</code> 的 <code>EventEmitter</code>，也不引入类型库。</p>
+  <p><b>② 允许“部分实现”</b>：只想做一个只读列表？只实现 <code>list</code> 就行，其它方法空着，页面能跑。<b>如果强制实现，最小用例就得多写十个空方法</b>。</p>
+  <p><b>③ 契约靠文档和类型文件</b>：<code>@auipage/types</code> 里的 <code>.d.ts</code> 才是真正的契约声明。运行时故意不校验——
+  <b>宁可让开发者少写代码，也不要为了报错而增加启动成本</b>。</p>
+  <p>代价也很明显：<b>实现错了不会在构造期发现</b>。<code>run</code> 返回了非迭代器，要到 <code>sendMessage</code> 里那句
+  <code>typeof generator.next !== "function"</code> 才报 <code>"ChatTransport.run() 返回空值"</code>。排查这类问题时，
+  先怀疑 <code>name</code>，再怀疑返回形状。</p>
+  </div>
+</section>

@@ -1,3 +1,4 @@
+// #doc:merge
 export default function (value) {
 
     let messages = [], index = -1;
@@ -15,3 +16,4 @@ export default function (value) {
     value.messages = messages;
     return value;
 }
+// #end

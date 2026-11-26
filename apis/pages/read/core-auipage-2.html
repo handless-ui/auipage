@@ -1,0 +1,101 @@
+<!--meta {"title": "源码解读 · AuiPage 中：sendMessage 与分片泵", "desc": "入口卫语句、task 句柄的每个字段、pump 的四个落定点、preType/preText 合并带，以及 streamFun 为什么会被丢弃。", "section": "read", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 06</em>AuiPage 中：sendMessage 与分片泵</h1>
+<p class="lede">一轮对话在 <code>AuiPage</code> 里不是 <code>while</code> 循环，而是一串 <code>.then</code> 串起来的泵。<b>每一次 <code>generator.next()</code> 都是一个可以被打断的落定点</b>。</p>
+<div class="badges"><span class="badge">148 行</span><span class="badge">pump</span><span class="badge">endRequest</span><span class="badge">合并带</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>入口：两道卫语句，两个字符串 reject</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#send}}
+  <p>两个拒绝都是<b>字符串</b>而不是 <code>Error</code>：<code>reject("当前正在执行中")</code>、<code>reject("消息格式不正确")</code>。
+  所以 <code>catch (e)</code> 里 <code>e.message</code> 是 <code>undefined</code>，要 <code>String(e)</code> 才能拿到文案。<b>这是当前版本的既有契约</b>，
+  改它属于破坏性变更，暂时别动。</p>
+  <p><code>isExecuting</code> 的复位点有<b>三处</b>：<code>run()</code> 同步抛错、<code>generator</code> 非法、以及最后的 <code>_finalize</code>。
+  前两处是“还没进执行期就失败”，必须手动复位，否则页面会永久卡在“执行中”，再也发不出第二条消息。</p>
+  <p><code>input</code> 那行的三元判断值得注意：<code>content</code> 已经是数组时<b>直接复用 message 对象</b>，不是浅拷贝。
+  所以数组形态的消息会被 <code>task.message</code> 和 <code>taskStart</code> 事件共享同一个引用——监听器里改它，会改到任务自己的记录。</p>
+  <p><code>ChatTransport.run({ messages: [input], context: { history, tools, signal } })</code>：<b>只发当前这一条</b>，
+  历史走 <code>context.history</code>。<code>signal</code> 是给适配器透传到底层 HTTP 的，这也是 <code>cancel()</code> 能真断请求的前提。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>task 句柄：十九个字段，各管一段</h2></div>
+  <div class="prose">
+  <p>这个对象是这一轮对话的<b>全部上下文</b>，被 <code>pump</code>、<code>_handleChunk</code>、<code>_handleToolCall</code>、<code>_finalize</code> 共享。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>字段</th><th>用途</th><th>谁写</th></tr></thead>
+  <tbody>
+  <tr><td><code>taskId</code></td><td>自增序号，进事件与工具控制句柄</td><td>构造</td></tr>
+  <tr><td><code>message</code> / <code>generator</code> / <code>controller</code></td><td>输入、数据源、中断器</td><td>构造</td></tr>
+  <tr><td><code>cacheMessages</code></td><td>本轮要入库的消息数组</td><td>全程</td></tr>
+  <tr><td><code>displayed</code></td><td>已推给界面的条目（取消时撤销用）</td><td><code>_render</code></td></tr>
+  <tr><td><code>preType</code> / <code>preText</code> / <code>streamFun</code></td><td>当前“合并带”的类型、累积文本、更新函数</td><td><code>_handleChunk</code></td></tr>
+  <tr><td><code>textTypes</code></td><td><code>["loading","thinking","text"]</code>，可流式的类型白名单</td><td>构造</td></tr>
+  <tr><td><code>tool_calls</code></td><td><code>id → updater</code>，还没完结的工具卡</td><td><code>_handleToolCall</code></td></tr>
+  <tr><td><code>ended</code> / <code>endRequest</code> / <code>endSignal</code></td><td>终态、结束请求、唤醒信号</td><td>构造 / <code>_requestEnd</code></td></tr>
+  <tr><td><code>busy</code> / <code>nextPending</code></td><td>“正在处理分片”“next 还没落定”</td><td><code>pump</code></td></tr>
+  <tr><td><code>stopTimer</code></td><td>取消的兜底计时器</td><td><code>_requestEnd</code></td></tr>
+  </tbody></table></div>
+  <p><b><code>busy</code> 和 <code>nextPending</code> 是取消逻辑的核心</b>：前者表示“正在处理分片/工具”，后者表示“<code>next()</code> 已调用但 Promise 未落定”。
+  只要有一个为真，<code>_requestEnd</code> 就不会立刻收尾——必须等手上这一块落完，否则这次工具的结果会从消息里丢掉。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>pump：四个落定点，两条分岔</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#pump}}
+  <p><code>pump()</code> 每次只做一件事：调一次 <code>generator.next()</code>，然后<b>把后续交给 <code>.then</code></b>。
+  之所以不用 <code>while</code>，是因为每次 <code>next()</code> 都可能 await 一个网络往返，用 <code>while</code> 就只能写 <code>await</code>，
+  而 <code>await</code> 会把整个函数变成异步，<code>sendMessage</code> 里那些同步卫语句就没法在“进执行期前”拦住了。</p>
+  <p>四个落定点，每个都必须检查 <code>endRequest</code>——顺序不能换：</p>
+  <p><b>① <code>next()</code> 同步返回前</b>：<code>try/catch</code> 包住，同步抛错直接 <code>_finalize("error", false, error)</code>。</p>
+  <p><b>② <code>next()</code> 的 Promise 落定</b>：先 <code>nextPending = false</code>，再判 <code>endRequest</code> → <code>finishEnd()</code>；
+  再判 <code>ended</code>；最后判 <code>res.done</code> → <code>_finalize("complete", true)</code>。</p>
+  <p><b>③ <code>_handleChunk</code> 完成</b>：<code>busy = false</code>，同样先判 <code>endRequest</code>，然后 <code>pump()</code> 递归下一轮。</p>
+  <p><b>④ <code>_handleChunk</code> 拒绝</b>：<code>busy = false</code>，<code>endRequest</code> 优先（丢弃分片异常），否则 <code>_finalize("error")</code>。</p>
+  <p><b>为什么 <code>nextPending = true</code> 写在 <code>next()</code> 之后</b>：<code>next()</code> 可能同步返回一个已 resolve 的值，
+  这时 <code>Promise.resolve(step).then</code> 仍要等一个微任务。把 <code>nextPending</code> 置位在 <code>next()</code> 返回之后、<code>.then</code> 之前，
+  能保证<b>整个这段空窗期里 <code>_requestEnd</code> 走“等待”分支而不是“立刻收尾”</b>。</p>
+  <p><code>finishEnd</code> 的第一行是 <code>if (task.ended || !request) return;</code>。<code>!request</code> 这个判断是为了让“分片完成时顺手调一次”
+  不会在没发起结束请求时误收尾——它是<b>幂等入口</b>，可以被四个落定点都调用一次。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>_handleChunk：一条“合并带”</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#chunk}}
+  <p>生成的片段有两种命运：<b>能流的</b>（<code>loading</code> / <code>thinking</code> / <code>text</code>）和<b>不能流的</b>（<code>tool-call</code> 等）。
+  能流的片段不会一条一条进 <code>cacheMessages</code>，而是先被<b>合并</b>——连续的同类文本会攒成一大段，最后只入一条消息。
+  这条合并带就是 <code>preType</code> + <code>preText</code>。</p>
+  <p>判据是 <code>value.type != task.preType || !task.textTypes.includes(value.type)</code>：<b>类型变了，或者来的是特殊类型</b>，就要关闭当前带。
+  关闭的动作只有两步：<code>streamFun = undefined</code>（旧流作废）、<code>preText</code> 非空则压进 <code>cacheMessages</code>。</p>
+  <p>然后分岔：<b>非文本类型</b>只处理 <code>tool-call</code>（交给 <code>_handleToolCall</code>），其它类型<b>什么都不做</b>——
+  也就是说，适配器发来 <code>{type:"plan"}</code> 这类未知片段会被<b>静默丢弃</b>，既不渲染也不入库。这是当前的边界，扩展片段类型时必须同时改这里和白名单。</p>
+  <p><b>文本类型</b>则开一条新带：记下 <code>preText = text</code>、<code>preType</code>，并调 <code>_render</code> 渲染第一个片段，
+  拿到的返回值存成 <code>streamFun</code>。<b>注意传的是整个 <code>value</code> 对象</b>（含 <code>type</code> 与 <code>text</code>），
+  而不是只传 <code>text</code>——视图需要知道这是 <code>thinking</code> 还是正文。</p>
+  <p>同类型续写走 <code>else</code>：<code>preText += text</code>，然后 <code>callSafely(streamFun, text)</code> 把<b>增量</b>交给视图。
+  <code>callSafely</code> 在这里是必须的：<code>streamFun</code> 是视图返回的函数，抛错就会打断整个 pump。</p>
+  <p>一个容易忽略的后果：<b>同一个类型连续出现时不会重复渲染</b>，只追加文本。所以界面上看到的是“一条消息在长”，
+  而不是“每条 chunk 一个气泡”。这也是为什么 <code>preText</code> 要在类型切换时才落盘——<b>它同时是渲染缓冲和历史缓冲</b>。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>streamFun 为什么会失效，以及为什么不用管</h2></div>
+  <div class="prose">
+  <p><code>task.streamFun</code> 是<b>视图层返回的更新函数</b>，它只对“刚刚那条消息”有效。一旦类型切换、开始一条新消息，旧函数就必须作废——
+  否则增量会被写到上一条消息里。</p>
+  <p>作废的方式是直接置 <code>undefined</code>，而不是调用某种 <code>unmount</code>。<b>这是故意的</b>：视图层自己知道该消息何时结束（它拿到了下一片段），
+  框架不去替它清理。<code>AuiPage</code> 只要保证<b>不再往上一条消息写东西</b>就够了。</p>
+  <p>副作用是：如果视图返回的 <code>streamFun</code> 依赖外部资源（比如定时器），框架不会帮你回收。
+  实现 <code>ChatContentRuntime</code> 时必须在“新片段替代旧片段”处自己收尾。</p>
+  <p>还有一处空窗：<code>_handleChunk</code> 开头 <code>if (task.ended || task.endRequest) return</code>。
+  <b>结束请求一旦发起，后续所有片段被丢弃</b>，包括正在路上的文本。这与 <code>stop()</code> 的语义（“结果要保留”）不冲突：
+  stop 保留的是<b>已经产出的</b>内容，不是“还没到的”。</p>
+  </div>
+</section>

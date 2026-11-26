@@ -23,6 +23,7 @@ function browserAdapter(options, { onData, onEnd, onError, onResponse }) {
         return;
       }
 
+      // #doc:read
       const reader = res.body.getReader();
       const decoder = new TextDecoder('utf-8');
 
@@ -39,6 +40,7 @@ function browserAdapter(options, { onData, onEnd, onError, onResponse }) {
             }
             // value 是 Uint8Array，解码为字符串
             onData(decoder.decode(value, { stream: true }));
+      // #end
           }
         } catch (err) {
           onError(err);

@@ -255,39 +255,49 @@ function parsePage(file) {
   return { meta, preMain, content: rest.trim() };
 }
 
-function buildToc(content) {
+const TOC_MIN = 3;
+
+/** 章节锚点：序号取 .idx / .no；锚点按序号生成（s-01），标题改了链接不会断 */
+function indexSections(content) {
   const items = [];
-  const re = /<section[^>]*\sid="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g;
-  let m;
-  while ((m = re.exec(content))) {
-    const h2 = /<h2[^>]*>([\s\S]*?)<\/h2>/.exec(m[2]);
-    if (!h2) continue;
+  const out = content.replace(/<section\b([^>]*)>([\s\S]*?)<\/section>/g, (all, attrs, body) => {
+    const num = /<span class="(?:idx|no)">([0-9]{1,2})<\/span>/.exec(body);
+    const h2 = /<h2[^>]*>([\s\S]*?)<\/h2>/.exec(body);
+    if (!num || !h2) return all;
+
     // 目录文案可以用 data-toc-label 覆盖；否则取 h2 文字并去掉序号 span
-    const label = /data-toc-label="([^"]*)"/.exec(m[0].slice(0, m[0].indexOf('>')));
-    const text = label ? label[1] : stripTags(h2[1].replace(/^\s*<span[^>]*>[\s\S]*?<\/span>/, ''));
-    items.push({ id: m[1], text });
-  }
-  // 有些页面（比如更新日志）不按 section 分块：认带 data-toc-label 的锚点，再退一步认带 id 的 h2
-  if (!items.length) {
-    const marked = /<([a-z]+)[^>]*\sid="([^"]+)"[^>]*\sdata-toc-label="([^"]*)"/g;
-    let m;
-    while ((m = marked.exec(content))) items.push({ id: m[2], text: m[3] });
-  }
-  if (!items.length) {
-    const h2re = /<h2[^>]*\sid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
-    let m;
-    while ((m = h2re.exec(content))) items.push({ id: m[1], text: stripTags(m[2]) });
-  }
-  return items;
+    const label = /data-toc-label="([^"]*)"/.exec(attrs);
+    // 标题里的序号徽标与版本标签不进目录
+    const clean = h2[1]
+      .replace(/^\s*<span[^>]*>[\s\S]*?<\/span>/, '')
+      .replace(/<span class="ver[^"]*">[\s\S]*?<\/span>/g, '');
+    const text = label ? label[1] : stripTags(clean).trim();
+    const hasId = /\sid="([^"]+)"/.exec(attrs);
+    const id = hasId ? hasId[1] : `s-${num[1]}`;
+    const nextAttrs = hasId ? attrs : `${attrs} id="${id}"`;
+
+    items.push({ id, num: num[1], text });
+    return `<section${nextAttrs}>${body}</section>`;
+  });
+
+  return { content: out, items };
 }
 
-function renderToc(items, style) {
-  if (!items.length) return { toc: '', tocRail: '' };
-  const list = items.map((i) => `<a href="#${i.id}">${i.text}</a>`).join('\n');
-  const rail = items.map((i) => `<a href="#${i.id}">${i.text}</a>`).join('');
+function renderToc(items) {
+  if (items.length < TOC_MIN) return { rail: '', chips: '', sub: '' };
+
+  const item = (i, cls) => `<a class="${cls}" href="#${i.id}" data-toc="${i.id}"><i>${i.num}</i><span>${i.text}</span></a>`;
+
   return {
-    toc: `<div class="toc" data-toc>\n<h6>本页目录</h6>\n${list}\n</div>`,
-    tocRail: `<nav class="toc-rail"><h6>本页目录</h6>${rail}</nav>`,
+    rail: `<nav class="toc-rail" aria-label="本页目录">\n<div class="toc-rail-head"><span>本页目录</span><em>${items.length} 节</em></div>\n<ol>${items
+      .map((i) => `<li>${item(i, 'toc-item')}</li>`)
+      .join('')}</ol>\n<a class="toc-top" href="#main">↑ 回到顶部</a>\n</nav>`,
+    chips: `<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row">${items
+      .map((i) => item(i, 'chip'))
+      .join('')}</div></nav>`,
+    sub: `<div class="sub">${items
+      .map((i) => `<a href="#${i.id}" data-toc="${i.id}"><i>${i.num}</i><span>${i.text}</span></a>`)
+      .join('')}</div>`,
   };
 }
 
@@ -314,6 +324,75 @@ function collectLinks(html) {
   return links;
 }
 
+/* ---------------------------------------------------------------- 源码片段注入 */
+
+/** 占位符前后缀：注入的代码先换成标记，避开模板引擎的 {{ }} */
+const SRC_SLOT = "\u0000SRC";
+
+/**
+ * 抽取 packages 源码里 // #doc:名字 到 // #end 之间的片段。
+ * 用标记而不是行号，源码移动、增删行都不会让文档错位。
+ */
+function readSnippet(spec) {
+  const hash = spec.lastIndexOf("#");
+  if (hash < 0) throw new Error(`{{src}} 要写成 路径#标记：${spec}`);
+
+  const relPath = spec.slice(0, hash).trim();
+  const name = spec.slice(hash + 1).trim();
+  const file = path.join(ROOT, relPath);
+  if (!exists(file)) throw new Error(`{{src}} 找不到文件：${relPath}`);
+
+  const lines = read(file).split("\n");
+  const open = new RegExp("\\/\\/ #doc:" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  let from = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (open.test(lines[i])) {
+      from = i + 1;
+      break;
+    }
+  }
+  if (from < 0) throw new Error(`{{src ${spec}}}：${relPath} 里没有 // #doc:${name}`);
+
+  let to = -1;
+  for (let i = from; i < lines.length; i++) {
+    if (/\/\/ #end/.test(lines[i])) {
+      to = i;
+      break;
+    }
+  }
+  if (to < 0) throw new Error(`{{src ${spec}}}：${relPath} 的 #doc:${name} 少了 // #end`);
+
+  const raw = lines.slice(from, to);
+
+  // 去掉整体缩进（标记常写在函数体内），相对缩进保留
+  const widths = raw.filter(line => line.trim()).map(line => (/^\s*/.exec(line)[0] || "").length);
+  const min = widths.length ? Math.min.apply(null, widths) : 0;
+
+  return {
+    file: relPath,
+    line: from + 1,
+    body: raw.map(line => line.slice(min)).join("\n"),
+  };
+}
+
+/** 片段渲染成站点统一的代码块，文件名后面带上起始行号 */
+function codeBlockOf(snippet) {
+  const esc = snippet.body.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<div class="code"><div class="code-head"><span class="file">${snippet.file}</span><span class="ln">:${snippet.line}</span><button data-copy="">复制</button></div><div class="code-body"><pre>${esc}</pre></div></div>`;
+}
+
+/** 把页面里的 {{src 路径#标记}} 换成占位符，渲染完再换回代码块 */
+function protectSrc(body, slots) {
+  return body.replace(/\{\{src\s+([^}]*)\}\}/g, (all, spec) => {
+    slots.push(codeBlockOf(readSnippet(spec.trim())));
+    return SRC_SLOT + (slots.length - 1) + "\u0000";
+  });
+}
+
+function expandSrc(html, slots) {
+  return html.replace(new RegExp(SRC_SLOT + "(\\d+)\\u0000", "g"), (all, i) => slots[Number(i)]);
+}
+
 /* ---------------------------------------------------------------- 生成 / 检查 */
 
 function build() {
@@ -337,7 +416,9 @@ function build() {
     if (!exists(layoutFile)) throw new Error(`找不到布局 layouts/${layoutName}.html（页面 ${rel}）`);
 
     const tocMode = meta.toc === undefined ? site.toc || false : meta.toc;
-    const generatedToc = tocMode === false ? { toc: '', tocRail: '' } : renderToc(buildToc(content));
+    // 不带目录的页面（如首页）也不动它的 section，避免留下用不上的锚点
+    const indexed = tocMode === false ? { content, items: [] } : indexSections(content);
+    const toc = tocMode === false ? { rail: '', chips: '', sub: '' } : renderToc(indexed.items);
 
     const ctx = {
       ...site,
@@ -351,17 +432,35 @@ function build() {
       home: rel === 'index.html',
       content: '',
       preMain: '',
-      toc: tocMode === 'inline' ? generatedToc.toc : '',
-      tocRail: tocMode === 'rail' ? generatedToc.tocRail : '',
+      tocRail: toc.rail,
       rel,
       __page: { rel, same: (p) => posix(p).replace(/^\.\//, '') === rel },
     };
 
-    // 正文里也可以写模板变量（比如正文中间的 {{toc}} 或代码里的 {{base}}）
-    ctx.content = render(content, ctx);
-    ctx.preMain = preMain ? render(preMain, ctx) : '';
+    // chip 目录条插在 pagehead 之后、第一章之前
+    let pageBody = indexed.content;
+    if (toc.chips) {
+      const at = pageBody.search(/<section\b/);
+      pageBody = at < 0 ? `${pageBody}\n${toc.chips}` : `${pageBody.slice(0, at)}${toc.chips}\n${pageBody.slice(at)}`;
+    }
+
+    // 正文里也可以写模板变量（比如代码里的 {{base}}）
+    // {{src 路径#标记}} 从源码抽片段：先占位，渲染完再换回，避免代码里的 {{ }} 被当成变量
+    const srcSlots = [];
+    ctx.content = expandSrc(render(protectSrc(pageBody, srcSlots), ctx), srcSlots);
+    ctx.preMain = preMain ? expandSrc(render(protectSrc(preMain, srcSlots), ctx), srcSlots) : '';
 
     let html = render(read(layoutFile), ctx);
+
+    // 左侧树（含手机抽屉）里，把当前页的小节挂在当前链接下面
+    if (toc.sub) {
+      const active = site.activeClass || 'active';
+      html = html.replace(/<aside class="tree">([\s\S]*?)<\/aside>/g, (all, inner) => {
+        const hit = new RegExp(`(<a href="[^"]*" class="${active}">[\\s\\S]*?<\\/a>)`);
+        return all.replace(inner, inner.replace(hit, `$1${toc.sub}`));
+      });
+    }
+
     html = html.replace(/^(<!DOCTYPE html>\s*\n)/i, `$1${BANNER}\n`);
     if (!html.endsWith('\n')) html += '\n';
 

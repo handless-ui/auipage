@@ -1,0 +1,147 @@
+<!--meta {"title": "源码解读 · AuiPage 下：工具通道与收尾", "desc": "工具卡的两段式回填、Promise.race 等界面交互、stop 与 cancel 的分岔、_finalize 的四步收尾与线程操作。", "section": "read", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 07</em>AuiPage 下：工具通道与收尾</h1>
+<p class="lede">工具调用在 <code>AuiPage</code> 里是<b>两段式</b>的：<code>pending</code> 先挂卡，<code>success</code> / <code>error</code> 再回填。中间那一段，可能是在等用户点按钮。</p>
+<div class="badges"><span class="badge">2 个频道</span><span class="badge">Promise.race</span><span class="badge">stop ≠ cancel</span><span class="badge">_finalize</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>pending：先挂视图，再决定谁执行</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#toolpending}}
+  <p><code>pending</code> 分片里做的第一件事是 <b>渲染</b>，而不是执行。渲染返回的更新函数被 <code>asUpdater</code> 归一后存进
+  <code>task.tool_calls[call.id]</code>——<b>这张表是“还没完结的工具卡”登记处</b>，后面所有回填都要靠它找到卡片。</p>
+  <p>然后立刻分流：<code>if (call.caller !== "frontend") return;</code>。<b>后端工具的 <code>execute</code></b> 由 <code>ChatTransport</code> 在服务端跑，
+  页面这一侧<b>只负责显示</b>，不该重复执行一次。前端工具（<code>caller === "frontend"</code>）才继续往下走。</p>
+  <p>这个分岔点也解释了为什么会有两条回传通道：服务端的 <code>createTool</code> 直接 <code>await execute</code>，页面的工具则在
+  <code>_handleToolCall</code> 里 <code>await execute</code>，然后用 <code>ChatTransport.response("tool-result")</code> 把结果送回去。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>执行前端工具：失败也要变成“结果”</h2></div>
+  <div class="prose">
+  <p>执行那段只有十几行，但把“工具是人写的”这件事考虑进去了：</p>
+  <p><code>execute</code> 通过 <code>tools_execute[call.name]</code> 查表；查不到就造一个 <code>new Error("未注册的工具：" + call.name)</code>，
+  状态记 <code>error</code>。工具抛错同样落成 <code>result = error</code>、<code>status = "error"</code>。</p>
+  <p><b>异常不外抛</b>：如果这里 <code>throw</code>，<code>_handleChunk</code> 会 reject，<code>pump</code> 会走 <code>_finalize("error")</code>，
+  整轮对话直接失败。而“工具跑挂了”在语义上只是<b>一次调用失败</b>，应该让模型看到错误信息并决定怎么办——所以它被当成结果。</p>
+  <p>第二个参数 <code>control</code> 来自 <code>_toolControl</code>：<code>{ taskId, toolCallId, stop(), cancel() }</code>。
+  <b>这是工具唯一能主动结束对话的入口</b>，它绑定了<b>自己所属的 task</b>，所以不会误杀下一轮。</p>
+  <p>执行完立刻有一次取消检查：<code>if (task.ended || isCancelled(task)) return;</code>。
+  <b>cancel 之后结果丢弃，stop 之后继续落地</b>——这两句就是上一页那条语义分界线的落点。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>要界面拿结果：一场 race</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#toolrender}}
+  <p>如果工具还提供了 <code>render</code>，说明它<b>不只是显示，还要从界面里取一个值</b>（比如“选一个文件”“确认删除”）。
+  于是 <code>updater</code> 被调用，参数是整张卡的数据 + <code>render</code> 函数 + <code>control</code>；
+  <code>updater</code> 的返回值被 <code>Promise.resolve</code> 包起来，<b>界面返回 Promise 就是在等用户</b>，返回普通值就是立刻完成。</p>
+  <p>等待期间必须能被打断，所以有这场 <code>Promise.race</code>：一边是界面的 Promise，另一边是 <code>endSignal.promise</code>
+  （<code>stop()</code> / <code>cancel()</code> 时 resolve）。<b>谁先落定，谁决定这次工具怎么收场</b>。</p>
+  <p>race 的第二个分支是先判 <code>task.endRequest</code> 再等信号的：<b>如果结束请求已经存在，立即结束</b>，不用等到信号被 resolve。
+  这是为了处理“请求发起时，工具刚好在挂卡之前”的时序。</p>
+  <p><b><code>outcome.ended</code> 分支</b>：界面还没回话就被结束，这时拿<b>不</b>到 UI 结果，于是退回 <code>execute</code> 的结果收尾，卡片按
+  <code>result/status</code> 定格，消息入 <code>cacheMessages</code>，<b>但不调用 <code>ChatTransport.response</code></b>——
+  因为对话已经结束了，再回传一个 <code>tool-result</code> 会让服务端多跑一轮。</p>
+  <p><b>正常分支</b>：<code>outcome.error</code> 与 <code>outcome.value</code> 决定 <code>status_ui</code>，卡片用 UI 结果定格，
+  消息里同时记两套结果：<code>result</code> / <code>status</code>（execute 的）与 <code>ui: { status, result }</code>（界面的）。
+  <b>为什么要两套</b>：模型需要的是 execute 的结果，界面需要的是用户选的值，两者可能不一样（比如 execute 返回“拿到参数了”，用户实际选了另一个文件）。</p>
+  <p>最后 <code>invoke(this.adapter.ChatTransport, "response", null, ["tool-result", { id, status, result }])</code>：
+  <b>发回去的是 UI 结果</b>，因为对模型来说“用户选了什么”才是它要的答案。<code>invoke</code> 吞掉异常，所以回传失败不会影响界面。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>没有视图通道时：纯工具调用</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#toolplain}}
+  <p><code>else</code> 分支处理两种情况：工具没有 <code>render</code>，或者视图层没返回 <code>updater</code>（比如纯逻辑测试环境）。
+  这时只做“定格卡片 + 落消息 + 回传”。</p>
+  <p>注意这里的 <code>if (updater)</code>：<b>没有 updater 也要落消息</b>。视图缺失不该让历史缺一条工具结果，
+  否则下一轮模型看到的上下文里，“它调用过工具”这件事就消失了。</p>
+  <p>两个分支的 <code>ChatTransport.response</code> 参数形状略有不同（一个 <code>{id,status,result}</code> 顺序无关，一个多一层），
+  但字段名一致。适配器实现只要认这三个字段。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>后端工具的回填：靠 id 找卡</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#toolbackend}}
+  <p>后端工具的结果是<b>服务端推回来的</b> <code>success</code> / <code>error</code> 分片。这里不做执行，只做回填：
+  从 <code>task.tool_calls[call.id]</code> 拿到卡片更新函数，调一次，删掉登记，再落一条消息。</p>
+  <p><b>外层 <code>if (task.tool_calls[call.id])</code> 是全部条件</b>：如果这张卡不存在（比如 pending 分片丢了、或者取消时已经 <code>delete</code>），
+  这段<b>什么都不做</b>——<b>结果分片被静默丢弃，消息也不会入库</b>。这是当前版本的一个真实缺口：网络抖动导致 pending 丢失时，
+  历史里就会少一条工具调用。<code>id</code> 是唯一线索，所以它必须是全局唯一的（<code>createTool</code> 那个时间戳 + 随机段就是为此）。</p>
+  <p><code>call.result</code> 直接落进消息，不做任何序列化处理。所以后端工具返回 <code>undefined</code> 时，
+  这条消息的 <code>content[0].result</code> 会是 <code>undefined</code>，<code>JSON.stringify</code> 之后这个键直接消失。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">06</span><h2>stop 与 cancel：同一套机制，两种口径</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#end}}
+  {{src packages/core/src/AuiPage.js#stopcancel}}
+  <p><code>_requestEnd</code> 只做四件事：记下请求（<code>endRequest = { status, by }</code>）、<code>abort()</code> 底层请求、
+  resolve <code>endSignal</code>（唤醒卡在界面等待的 race）、然后决定<b>立刻收尾还是等一拍</b>。</p>
+  <p><b>“等一拍”的条件是 <code>task.busy || task.nextPending</code></b>：有分片或工具正在处理时，<code>abort()</code> 不能让它们手里的结果凭空消失。
+  于是挂一个 <code>setTimeout(_stopTimeout)</code>，超时才强制 <code>_finalize</code>。<code>unref()</code> 那一行是给 Node 用的：
+  <b>这个计时器不该阻止进程退出</b>。</p>
+  <p><b><code>stop()</code></b> = <code>_requestEnd("stopped","user")</code>；<b><code>cancel()</code></b> = <code>_requestEnd("cancelled","user")</code>。
+  差别只出现在收尾口径上：stop 当成功收尾（内容保留、入库标 <code>stopped</code>、Promise <b>resolve</b>）；
+  cancel 中断请求、入库标 <code>cancelled</code>、Promise <b>reject("已取消")</b>，并把 <code>displayed</code> 挂到 <code>task:end</code> 上供界面撤销。</p>
+  <p><b>为什么 cancel 也入库</b>：用户取消不等于“这段对话没发生过”。保留半截内容 + 一个 <code>cancelled</code> 标记，
+  刷新后还能看到一个“已取消”的轮次；直接丢弃会让历史出现空洞。</p>
+  <p>重复调用是安全的：<code>if (task.endRequest) return true;</code>，第二次直接返回“已经有任务在结束中”，不重复 abort、不重复计时。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">07</span><h2>_finalize：四步，且每一步都能失败</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#finishA}}
+  <p><b>第 0 步是幂等闸</b>：<code>if (!task || task.ended) return;</code> 然后<b>立刻</b> <code>task.ended = true</code>。
+  因为 <code>_finalize</code> 可能被四个地方同时叫到（pump 的两条分岔、<code>_requestEnd</code> 的两条路径、兜底计时器），
+  <b>先置位再干活</b>，后面无论怎么重入都只会执行一次。</p>
+  <p><b>第 1 步：残留文本归并</b>。把 <code>preText</code> 收尾成一条 assistant 消息，否则最后一段流式文本会丢。
+  这也解释了为什么 <code>preText</code> 要留到类型切换才落盘——<b>流结束时它一定还在</b>，就靠这里兜住。</p>
+  <p>第 2 步：<code>generator.return()</code>。此时 <code>next()</code> 已 settle，调用 return 是安全的，
+  它会让适配器里的 <code>try/finally</code> 跑到，从而关闭 HTTP 流、清理计时器。<code>typeof === "function"</code> 的判空是因为
+  适配器可能返回一个只有 <code>next</code> 的极简迭代器。</p>
+  {{src packages/core/src/AuiPage.js#finishB}}
+  <p>第 3 步：入库。三种情况会走：<code>complete</code>、<code>stopped</code>、<code>cancelled</code>（即 <code>isHistory === true</code>），
+  <code>error</code> 不走。<code>status</code> 被塞进 <code>historyMessages</code> 上作为一个字段——
+  <b>存不存由 <code>MessageHistory.append</code> 自己决定</b>，框架只负责把标记递过去。</p>
+  <p>没有当前线程时先建一个：<code>ThreadList.new(historyMessages)</code> → <code>ThreadList.append</code> → <code>activeThread(threadId, true)</code>。
+  第三个 <code>true</code> 是 <code>__noLoad__</code>：<b>刚建的空线程不需要回头加载历史</b>，省一次往返。</p>
+  <p><b>入库失败会降级成 error</b>：<code>catch (e) { failure = e; }</code>，最后 <code>finalStatus = failure ? "error" : status</code>。
+  这是为了不让前端以为“消息已保存”。代价是：<b>本来成功的这轮，会因为写库失败而让 <code>sendMessage</code> reject</b>。</p>
+  <p>第 4 步：复位与释放。<code>if (this._currentTask === task)</code> 才复位 <code>isExecuting</code>——这个身份判断很关键：
+  兜底计时器可能在下一次 <code>sendMessage</code> 之后才触发，如果无条件复位，就会把新任务的状态给清了。</p>
+  <p>最后按 <code>finalStatus</code> 三选一：<code>error</code> → <code>reject(failure)</code>；<code>cancelled</code> → <code>reject("已取消")</code>；其余 → <code>resolve()</code>。
+  <b><code>resolve()</code> 不带值</b>，调用方拿不到内容，要内容得看视图或 <code>currentMessages</code>。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">08</span><h2>线程操作：四个薄壳，一个开关</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#active}}
+  <p><code>activeThread</code> 有两个守卫：<b>相同 id 直接返回</b>（避免重复加载）和<b>执行中不许切换</b>（<code>isExecuting && !__noLoad__</code>）。
+  第二个守卫是为了不让“正在生成的对话”被切走——那会让 <code>_finalize</code> 把消息写进另一个线程。</p>
+  <p><code>__noLoad__</code> 是<b>内部参数</b>（双下划线命名就是提示“别从外部传”）：跳过 <code>MessageHistory.load</code>。
+  只有 <code>_finalize</code> 新建线程时用得到它。</p>
+  <p>加载历史时有一个拍平动作：<code>messages.forEach(item => plainMessages.push(...item.messages))</code>——
+  <b>存的是“按轮分组”的结构，界面要的是“一条条消息”</b>。这个转换不做去重也不做排序，完全依赖适配器返回的顺序。</p>
+  {{src packages/core/src/AuiPage.js#threads}}
+  <p>删除和归档都遵循同一个模式：<b>先让适配器做，成功后更新视图</b>，如果删的是当前线程就 <code>newThread()</code>。
+  这是“适配器是唯一真相”的体现——视图永远等适配器确认。</p>
+  <p><code>newThread()</code> 就是 <code>activeThread(undefined)</code>：清空 <code>currentMessages</code>、清空视图、不发任何请求。</p>
+  <p>到这里 <code>AuiPage</code> 讲完了。剩下的三个包都是配角：<code>Adapter</code> / <code>Runtime</code> 的契约、以及
+  <code>defineTool</code> / <code>generator</code> / <code>toModelMessages</code> 这几个纯函数，各占下一页的一半。</p>
+  </div>
+</section>

@@ -4,6 +4,7 @@ import { Emitter } from './emitter.js';
 class Response extends Emitter {
   constructor() {
     super();
+    // #doc:state
     this.status = 0;
     this.headers = {};
     this.ok = false;
@@ -12,9 +13,11 @@ class Response extends Emitter {
     this._sseBuffer = ''; // SSE 缓冲区，处理 chunk 边界
     this._cancel = null; // 由 createFetch 注入，用于中断底层请求
     this._errorPending = null; // 消费者还没来得及注册时就发生的错误，注册后补发
+    // #end
   }
 
   // 注册监听；error 是一次性终态，注册时若已发生则补发
+  // #doc:replay
   on(event, listener) {
     super.on(event, listener);
     if (event === 'error' && this._errorPending) {
@@ -24,6 +27,7 @@ class Response extends Emitter {
       queueMicrotask(() => this.emit('error', err));
     }
     return this;
+  // #end
   }
 
   // 主动取消请求，失败统一从 error 事件返回
@@ -45,6 +49,7 @@ class Response extends Emitter {
     if (this._done && type !== 'error') return;
 
     // SSE 模式：缓冲 + 按 \n\n 分割，提取 data: 字段原始字符串
+    // #doc:sse
     if (type === 'data' && this._sseMode) {
       this._sseBuffer += payload;
 
@@ -59,6 +64,7 @@ class Response extends Emitter {
         }
       }
       return;
+    // #end
     }
 
     if (type === 'end') {
@@ -86,6 +92,7 @@ class Response extends Emitter {
   }
 
   // 从一个 SSE 事件块中提取 data: 字段内容（去掉前缀，多行用 \n 拼接）
+  // #doc:extract
   _extractSSEData(raw) {
     const dataLines = [];
     for (const line of raw.split('\n')) {
@@ -95,6 +102,7 @@ class Response extends Emitter {
     }
     if (dataLines.length === 0) return null;
     return dataLines.join('\n');
+  // #end
   }
 }
 

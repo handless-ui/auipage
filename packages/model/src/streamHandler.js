@@ -13,6 +13,7 @@ function normalizeCall(toolCall) {
 }
 
 // 续片：按 index 优先归并，否则追加到最后一个槽位
+// #doc:merge
 function mergeToolCall(state, toolCall) {
     if (!state._toolSlots) state._toolSlots = new Map();
 
@@ -45,6 +46,7 @@ function mergeToolCall(state, toolCall) {
     }
 
     appendArguments(slot, toolCall);
+// #end
 }
 
 function appendArguments(slot, toolCall) {

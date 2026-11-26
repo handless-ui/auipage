@@ -1,3 +1,4 @@
+// #doc:shape
 export default function (options) {
     return {
         description: {
@@ -11,4 +12,5 @@ export default function (options) {
         execute: options.execute,
         render: options.render
     };
+// #end
 };

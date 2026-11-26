@@ -3,11 +3,13 @@
 // 运行时不通过顶层 import 静态拉取 node 内置模块，而是 await import 按需加载，
 // 避免在浏览器 / bundler 解析阶段触发对 'http' / 'https' / 'url' 的静态分析。
 async function nodeAdapter(options, { onData, onEnd, onError, onResponse }) {
+  // #doc:lazy
   const [{ default: http }, { default: https }, { URL }] = await Promise.all([
     import('http'),
     import('https'),
     import('url')
   ]);
+  // #end
 
   const { url, method = 'GET', headers = {}, body, signal } = options;
 
@@ -30,6 +32,7 @@ async function nodeAdapter(options, { onData, onEnd, onError, onResponse }) {
     headers
   };
 
+  // #doc:req
   const req = lib.request(reqOptions, (res) => {
     // 把 status / headers 同步给 Response（若上游关心）
     if (typeof onResponse === 'function') {
@@ -46,8 +49,10 @@ async function nodeAdapter(options, { onData, onEnd, onError, onResponse }) {
   });
 
   req.on('error', (err) => onError(err));
+  // #end
 
   // 取消 / 超时：直接中断底层请求，错误从 req 的 error 事件返回
+  // #doc:abort
   if (signal) {
     if (signal.aborted) {
       onError(new Error('请求已取消'));
@@ -55,6 +60,7 @@ async function nodeAdapter(options, { onData, onEnd, onError, onResponse }) {
     }
     signal.addEventListener('abort', () => {
       req.destroy(new Error('请求已取消'));
+  // #end
     });
   }
 

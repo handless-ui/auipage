@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
-<html lang="zh-CN" data-theme="light">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>@auipage/agent · auipage 文档</title>
 <link rel="icon" href="../assets/img/logo.png">
 <meta name="description" content="Agent 对话循环、工具编排与 CreateTool 前后端桥接。">
-<link rel="stylesheet" href="../assets/css/docs.css?v=83aa83bc">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
 </head>
 <body>
 <a class="skip" href="#main">跳到正文</a>
@@ -19,6 +19,7 @@
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
       <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
       <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
     </nav>
   </aside>
 
@@ -37,6 +38,7 @@
       <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
       <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
       <a href="../packages/fetch.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
     </nav>
     </div>
     <div class="drawer-tree">
@@ -44,7 +46,7 @@
       <aside class="tree">
     <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
     <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
-    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="on">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="on">10 · @auipage/agent</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>基本用法</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>工具循环</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>前后端工具桥接：CreateTool</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>为什么这样设计</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>这个包不是必须的</span></a></div><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
   </aside>
 
     </div>
@@ -55,7 +57,7 @@
 <aside class="tree">
     <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
     <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
-    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="on">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="on">10 · @auipage/agent</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>基本用法</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>工具循环</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>前后端工具桥接：CreateTool</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>为什么这样设计</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>这个包不是必须的</span></a></div><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="">15 · 导读</a><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
   </aside>
 
 
@@ -70,7 +72,8 @@
   <div><span class="k">位置</span><span class="v">packages/agent</span></div>
 </div>
 
-<section class="block">
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>基本用法</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>工具循环</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>前后端工具桥接：CreateTool</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>为什么这样设计</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>这个包不是必须的</span></a></div></nav>
+<section class="block" id="s-01">
   <div class="block-head"><span class="idx">01</span><h2>基本用法</h2></div>
   <div class="prose">
   <div class="code">
@@ -94,7 +97,7 @@ const answer = await agent.generate([
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-02">
   <div class="block-head"><span class="idx">02</span><h2>工具循环</h2></div>
   <div class="prose">
   <p>一次 <code>generate</code> 内部可能跑好几轮，全部由 Agent 接管：</p>
@@ -116,7 +119,7 @@ const answer = await agent.generate([
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-03">
   <div class="block-head"><span class="idx">03</span><h2>前后端工具桥接：CreateTool</h2></div>
   <div class="prose">
   <p>Agent 跑在服务端、部分工具必须浏览器执行时，用 <code>CreateTool</code> 包装。
@@ -163,7 +166,7 @@ const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-04">
   <div class="block-head"><span class="idx">04</span><h2>为什么这样设计</h2></div>
   <div class="prose">
   <p>读文件、查数据库的工具必须在服务端；取本地时间、弹窗让用户确认的工具必须在页面。
@@ -174,7 +177,7 @@ const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
 </div>
 </section>
 
-<section class="block">
+<section class="block" id="s-05">
   <div class="block-head"><span class="idx">05</span><h2>这个包不是必须的</h2></div>
   <div class="prose">
   <div class="table-wrap"><table class="spec">
@@ -195,6 +198,11 @@ const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
 <a class="next" href="../packages/core.html"><span class="dir">下一页 →</span><span class="name">@auipage/core</span></a>
   </nav>
 </main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>5 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>基本用法</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>工具循环</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>前后端工具桥接：CreateTool</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>为什么这样设计</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>这个包不是必须的</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
 
 </div>
 </div>
@@ -219,6 +227,7 @@ const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
           <a href="../packages/model.html">@auipage/model</a>
           <a href="../packages/agent.html">@auipage/agent</a>
           <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
         </div>
         <div class="col">
           <h4>生态</h4>
@@ -236,8 +245,8 @@ const agent = new Agent({ model: { /* ... */ }, tools });</pre></div>
     </div>
   </footer>
 
-<script src="../assets/vendor/shader.min.js?v=83aa83bc"></script>
-<script src="../assets/js/docs.js?v=83aa83bc"></script>
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
 
 </body>
 </html>

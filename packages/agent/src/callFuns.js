@@ -8,6 +8,7 @@
  */
 export default function callFuns(_this, tool_calls) {
 
+    // #doc:map
     const tasks = (tool_calls || []).map(call => {
         const fn = (call && call.function) || {};
         const tool = (_this.tools || []).find(
@@ -35,6 +36,7 @@ export default function callFuns(_this, tool_calls) {
             return Promise.resolve(tool.execute(args)).catch(e => "运行出错:" + e);
         } catch (e) {
             return Promise.resolve("运行出错:" + e);
+    // #end
         }
     });
 

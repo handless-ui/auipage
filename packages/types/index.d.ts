@@ -27,6 +27,7 @@ export type {
     FunctionDescriptor,
     ToolDescription,
     ToolExecutor,
+    ToolTaskControl,
     ToolResultStatus,
     ToolRenderContext,
     ToolRenderFunction,

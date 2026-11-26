@@ -1,0 +1,103 @@
+<!--meta {"title": "源码解读 · AuiPage 上：挂载、工具表与事件带", "desc": "六个前置小函数的分工、适配器挂载的命名约定、三份工具表的拆分理由，以及 displayed 记账为什么存在。", "section": "read", "demos": false}-->
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="{{base}}index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 05</em>AuiPage 上：挂载、工具表与事件带</h1>
+<p class="lede"><code>AuiPage.js</code> 692 行，是整套框架的心脏。拆三页讲：这页讲它怎么被搭起来（前置函数、构造、事件），中页讲一轮对话怎么被泵出来，下页讲工具通道与收尾。</p>
+<div class="badges"><span class="badge">692 行</span><span class="badge">上 / 中 / 下</span><span class="badge">零依赖</span><span class="badge">控制反转</span></div></div>
+
+<section class="block">
+  <div class="block-head"><span class="idx">01</span><h2>先用六个函数把“出错”这件事关进笼子</h2></div>
+  <div class="prose">
+  <p>文件开头到构造函数之前有六个小函数，它们不是工具函数，而是<b>六个约束</b>：让后面 600 行的主流程可以假设“外部调用不会炸我”。</p>
+  <p><b>1. <code>mount</code>：把适配器和运行时按名字挂上</b></p>
+  {{src packages/core/src/AuiPage.js#mount}}
+  <p>两个细节：<code>instance.aui = aui</code> 是<b>反向引用</b>，适配器里可以直接回调页面（比如工具需要读当前线程）；<code>name.replace(suffix,"")</code> 是命名约定——
+  类名统一以 <code>Adapter</code> / <code>Runtime</code> 结尾，挂上来时把后缀剥掉，于是代码里写的是 <code>this.adapter.ChatTransport</code>、
+  <code>this.runtime.ThreadList</code>。<b>这个名字是唯一契约</b>，改类名不改后缀就会挂到错的位置。</p>
+  <p>没有 <code>name</code> 时回退到配置对象的 key（同样剥后缀），这样 <code>{ ChatTransport: MyImpl }</code> 这种临时替身也能用。
+  <code>if (!instance) continue</code> 让 <code>{ ChatTransport: null }</code> 变成“这个端口没接”，而不是崩在 <code>instance.aui</code> 那一行。</p>
+  <p><b>2. <code>invoke</code>：同步 / Promise / 未实现，三态归一</b></p>
+  {{src packages/core/src/AuiPage.js#invoke}}
+  <p>这个方法承载了“适配器可以是同步的，也可以是异步的”这个承诺。<code>ret === undefined</code> 被当作<b>未实现</b>而不是“完成”，
+  因为绝大多数可选端口（<code>list</code>、<code>load</code>、<code>append</code>）不实现时就是空函数。区分二者会让每个调用点都得写 <code>!== undefined</code>。
+  同步抛错直接 <code>return</code>（吞掉），Promise 拒绝也吞掉——<b>适配器失败不该让页面白屏</b>，最坏情况是列表空着。</p>
+  <p><b>3. <code>callSafely</code> / <code>asUpdater</code>：视图回调的两层兜底</b></p>
+  {{src packages/core/src/AuiPage.js#safe}}
+  <p><code>callSafely</code> 的名字就是它的全部逻辑：异常吞掉、拒绝吞掉。它用在<b>所有</b>“交给外面”（<code>streamFun</code>、<code>updater</code>、事件 handler）的地方。
+  理由很实际：视图层一个 DOM 异常不该让整轮对话中断，也不该让取消流程卡住。</p>
+  <p><code>asUpdater</code> 处理的是类型契约和实现的缝：<code>ChatContent.append</code> 的声明允许返回 <code>void</code>，但实现通常返回一个“更新这条消息”的函数。
+  <b>允许不返回，就必须每次判断</b>——所以这里把它归一成“函数或 <code>null</code>”，后面只判 <code>null</code>。</p>
+  <p><b>4. <code>normalizeContent</code>：字符串不许被逐字符渲染</b></p>
+  {{src packages/core/src/AuiPage.js#content}}
+  <p>用户消息的 <code>content</code> 允许传字符串（好写），但渲染接口只认片段数组。这里把字符串包成<b>一个</b> <code>text</code> 片段。
+  如果直接 <code>[...content]</code>，一个中文字符串会被拆成 N 个片段，界面就会渲染成 N 条独立气泡——这是最容易踩的一脚。
+  空串返回 <code>[]</code> 而不是 <code>[{text:""}]</code>，避免渲染一个空气泡。</p>
+  <p><b>5. <code>isCancelled</code> 与那个 5000</b></p>
+  {{src packages/core/src/AuiPage.js#cancelchk}}
+  <p><code>isCancelled</code> 只认 <code>endRequest.status === "cancelled"</code>，<b>不认 <code>stopped</code></b>。这是全篇最重要的一条语义分界线：
+  <b>stop 要结果，cancel 不要结果</b>。stop 之后工具结果继续落地，cancel 之后一切分片和工具结果直接丢弃。
+  <code>DEFAULT_STOP_TIMEOUT = 5000</code> 是给“适配器忽略 signal”的适配器准备的兜底——下页会看到它挂在哪个计时器上。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">02</span><h2>构造函数：为什么工具要拆成三份</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#ctor}}
+  <p><code>options.tools</code> 里的每个元素都是 <code>defineTool</code> 的产物：<code>{ description, execute, render }</code>。构造时被<b>拆成三张表</b>：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>表</th><th>内容</th><th>谁在用</th></tr></thead>
+  <tbody>
+  <tr><td><code>tools_description</code></td><td><code>[{ description }]</code></td><td>发给模型（<code>ChatTransport.run</code> 的 <code>context.tools</code>）</td></tr>
+  <tr><td><code>tools_execute</code></td><td><code>name → execute</code></td><td><code>_handleToolCall</code> 执行前端工具</td></tr>
+  <tr><td><code>tools_render</code></td><td><code>name → render</code></td><td><code>_handleToolCall</code> 需要界面拿结果时</td></tr>
+  </tbody></table></div>
+  <p>不拆的话，每次查工具都要 <code>find</code> 一遍数组（O(n)），而且 <code>description</code> 与 <code>execute</code> 混在一个对象里，
+  很容易被误发给模型。<b>拆表 = 物理隔离“能发给模型的”和“只能留在本地的”</b>。</p>
+  <p>注意 <code>tools_description</code> 里只放 <code>{ description }</code>，连 <code>execute</code> 的引用都不带——这样即使有人把它 <code>JSON.stringify</code> 发出去，也不会把函数序列化成一坨 <code>undefined</code>。</p>
+  <p>构造函数最后那个 <code>invoke(this.adapter.ThreadList, "list", ...)</code> 是<b>启动即拉列表</b>：同步适配器会在构造里就完成，异步适配器在 Promise 落定后完成。
+  这就是为什么文档里说“构造完界面可能还没列表”——它不保证已完成，只保证“问了”。</p>
+  <p><code>this._stopTimeout = options.stopTimeout &gt; 0 ? options.stopTimeout : DEFAULT_STOP_TIMEOUT</code> 沿用全库统一的“0 表示默认”的口子。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">03</span><h2>只有两个事件，而且必须复制数组</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#events}}
+  <p>生命周期事件只有 <code>task:start</code> 和 <code>task:end</code>。<b>没有 <code>chunk</code>、没有 <code>message</code></b>：
+  流式内容走 <code>runtime.ChatContent.append</code> 的返回函数，是<b>推给视图</b>而不是<b>广播给订阅者</b>。
+  两者分开是为了让“渲染”和“业务监听”互不打扰——订阅者不该为了拿增量而抢渲染顺序。</p>
+  <p><code>handlers.slice().forEach</code> 有两个作用：<b>复制</b>防止回调里 <code>off()</code> 改数组导致跳过；<b>每个 handler 单独 try/catch</b>
+  防止一个监听器抛错让后面的监听器收不到事件。<code>_emit</code> 的 catch 是显式吞掉的，注释写明了。</p>
+  <p><code>on</code> 允许订阅未知事件名（<code>if (!this._events[event]) this._events[event] = []</code>），所以<b>第三方可以自己发明事件名</b>，
+  只是永远不会被 <code>_emit</code> 触发——除非它自己也调 <code>_emit</code>。<code>off</code> 只删第一个匹配，重复注册三次就要删三次。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">04</span><h2>_render 里那本账：displayed</h2></div>
+  <div class="prose">
+  {{src packages/core/src/AuiPage.js#render}}
+  <p>这个方法只做两件事，但第二件——<code>task.displayed.push({ index, role, part })</code>——是<b>取消功能能用的前提</b>。</p>
+  <p>原因是：<code>runtime.ChatContent.append</code> 一旦渲染，内容就进了视图层的状态，AuiPage 没有能力“撤回”。
+  所以要提前记下<b>这一轮我到底往界面推了几条、分别是什么</b>，取消时把 <code>displayed</code> 挂到 <code>task:end</code> 上，
+  由界面自己决定怎么撤销（删 DOM、回滚列表、还是只打个灰标）。</p>
+  <p><code>index</code> 是<b>本轮内的自增序号</b>（<code>displayed.length</code>），不是全局消息下标。这样界面可以拿它判断“撤销这一轮的最后 N 条”。
+  <code>role</code> 与 <code>part</code> 原样存，是为了让界面不必回头去查自己刚才渲染了什么。</p>
+  <p>如果 <code>runtime.ChatContent</code> 没有 <code>append</code>（纯逻辑场景，比如服务端跑），这个方法直接 <code>return</code>，
+  <b>连 displayed 都不记</b>。所以别指望在没有视图的环境里靠 <code>displayed</code> 撤销什么东西。</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head"><span class="idx">05</span><h2>这一页的边界：什么已经定了</h2></div>
+  <div class="prose">
+  <p>到这里，<code>AuiPage</code> 已经具备的能力是：能挂端口、能存工具、能发事件、能渲染并记账。它<b>还不具备</b>的是：一轮对话怎么跑、分片怎么合、工具怎么回传。</p>
+  <p>两个值得先记住的约定，后面两页会反复用到：</p>
+  <p><b>端口名 = 类名去掉后缀</b>。<code>ChatTransportAdapter</code> → <code>adapter.ChatTransport</code>；<code>ThreadListRuntime</code> → <code>runtime.ThreadList</code>。
+  自己写适配器时，类名必须以对应后缀结尾，否则挂上去的 key 会变成整个类名，运行时找不到。</p>
+  <p><b>外部一切调用都经过 <code>invoke</code> 或 <code>callSafely</code></b>。这意味着适配器里抛的错不会传到 <code>sendMessage</code> 的 Promise 上，
+  你在适配器里写的异常<b>不会</b>变成用户看到的报错。要报错就得走 <code>generator</code> 的 throw，或者 <code>task:end.status = "error"</code>。</p>
+  <p>下一页从这里接上：<code>sendMessage</code> 怎么把这一堆东西变成一条会流动的管线。</p>
+  </div>
+</section>

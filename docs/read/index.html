@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!-- 本文件由 apis 生成，请勿直接编辑；改 apis 里的页面、模板或 site.json 后运行 npm run docs 重新生成。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>导读：怎么读这套源码</title>
+<link rel="icon" href="../assets/img/logo.png">
+<meta name="description" content="五个包的依赖方向、两条真实链路、术语表与三种阅读路线；写给准备动手改 auipage 的人。">
+<link rel="stylesheet" href="../assets/css/docs.css?v=bf049af8">
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<aside class="rail">
+    <a class="rail-brand" href="../index.html" aria-label="auipage 文档首页">
+      <img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36">
+    </a>
+    <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+  </aside>
+
+<div class="mobiletop">
+    <a class="m-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"><span class="m-name">auipage</span></a>
+    <button class="m-burger" type="button" data-drawer="open" aria-controls="drawer" aria-expanded="false" aria-label="打开导航">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+<div class="scrim" data-drawer="close" hidden></div>
+  <div class="drawer" id="drawer" aria-hidden="true" hidden>
+    <div class="drawer-rail">
+      <button class="drawer-close" type="button" data-drawer="close" aria-label="关闭导航"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6l-12 12"/></svg></button>
+      <a class="rail-brand" href="../index.html"><img class="rail-mark" src="../assets/img/logo.png" alt="auipage" width="36" height="36"></a>
+      <nav class="rail-nav" aria-label="主导航">
+      <a href="../index.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg><em>总览</em></a>
+      <a href="../guide/start.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v3M13 3v3M5 6h10v3a5 5 0 0 1-10 0z"/><path d="M10 14v3"/></svg><em>教程</em></a>
+      <a href="../packages/fetch.html" class=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 17 6v8L10 17.5 3 14V6z"/><path d="M3 6l7 3.5L17 6M10 9.5v8"/></svg><em>参考</em></a>
+      <a href="../read/index.html" class="on"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 6.8 4.8 10 8 13.2M12 6.8 15.2 10 12 13.2"/></svg><em>进阶</em></a>
+    </nav>
+    </div>
+    <div class="drawer-tree">
+      <div class="drawer-tree-title">文档目录</div>
+      <aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="on">15 · 导读</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>五个包，一条从页面到模型的通路</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>两条真实链路</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>术语表</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>三种阅读路线</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>版本锚点与编写约定</span></a></div><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+    </div>
+  </div>
+
+<div class="stage">
+<div class="shell">
+<aside class="tree">
+    <div class="group">开始</div><a href="../index.html" class="">01 · 总览</a><a href="../guide/start.html" class="">02 · 跑起示例</a>
+    <div class="group">教程 · 从零到智能体</div><a href="../guide/zero-dep.html" class="">03 · 一个包都不用</a><a href="../guide/model.html" class="">04 · 接真实模型</a><a href="../guide/tool.html" class="">05 · 让模型做事</a><a href="../guide/core.html" class="">06 · 装框架</a><a href="../guide/ui.html" class="">07 · 换界面</a>
+    <div class="group">参考 · API</div><a href="../packages/fetch.html" class="">08 · @auipage/fetch</a><a href="../packages/model.html" class="">09 · @auipage/model</a><a href="../packages/agent.html" class="">10 · @auipage/agent</a><a href="../packages/core.html" class="">11 · @auipage/core</a><a href="../packages/core-auipage.html" class="">12 · AuiPage</a><a href="../packages/core-ports.html" class="">13 · Adapter 与 Runtime</a><a href="../packages/core-utils.html" class="">14 · defineTool 与 generator</a><div class="group">进阶 · 源码解读</div><a href="../read/index.html" class="on">15 · 导读</a><div class="sub"><a href="#s-01" data-toc="s-01"><i>01</i><span>五个包，一条从页面到模型的通路</span></a><a href="#s-02" data-toc="s-02"><i>02</i><span>两条真实链路</span></a><a href="#s-03" data-toc="s-03"><i>03</i><span>术语表</span></a><a href="#s-04" data-toc="s-04"><i>04</i><span>三种阅读路线</span></a><a href="#s-05" data-toc="s-05"><i>05</i><span>版本锚点与编写约定</span></a></div><a href="../read/fetch.html" class="">16 · fetch：双通道</a><a href="../read/model.html" class="">17 · model：流式解析</a><a href="../read/agent.html" class="">18 · agent：工具循环</a><a href="../read/core-auipage-1.html" class="">19 · AuiPage 上：挂载与事件</a><a href="../read/core-auipage-2.html" class="">20 · AuiPage 中：一轮对话</a><a href="../read/core-auipage-3.html" class="">21 · AuiPage 下：工具与收尾</a><a href="../read/core-ports.html" class="">22 · 端口：Adapter 与 Runtime</a><a href="../read/core-utils.html" class="">23 · 纯函数：defineTool 与 generator</a><a href="../read/advanced.html" class="">24 · 进阶：时序与测试矩阵</a>
+  </aside>
+
+
+<main class="article">
+<div class="pagehead"><span class="ph-deco" aria-hidden="true"></span><div class="crumbs"><a href="../index.html">文档</a><span class="sep">/</span><span>进阶</span><span class="sep">/</span><span>源码解读</span></div>
+<h1><em>Read 01</em>导读：怎么读这套源码</h1>
+<p class="lede">这一组文档不讲“怎么用”，只讲“为什么这么写”。五个包 <code>src</code> 一共 2010 行，<code>AuiPage.js</code> 一个文件占 692 行，所以它被拆成上、中、下三页单独讲。</p>
+<div class="badges"><span class="badge">5 个包</span><span class="badge">2010 行源码</span><span class="badge">10 篇</span><span class="badge">v0.2.0</span></div></div>
+
+<nav class="toc-chips" aria-label="本页目录"><i class="toc-chips-h">本页目录</i><div class="toc-chips-row"><a class="chip" href="#s-01" data-toc="s-01"><i>01</i><span>五个包，一条从页面到模型的通路</span></a><a class="chip" href="#s-02" data-toc="s-02"><i>02</i><span>两条真实链路</span></a><a class="chip" href="#s-03" data-toc="s-03"><i>03</i><span>术语表</span></a><a class="chip" href="#s-04" data-toc="s-04"><i>04</i><span>三种阅读路线</span></a><a class="chip" href="#s-05" data-toc="s-05"><i>05</i><span>版本锚点与编写约定</span></a></div></nav>
+<section class="block" id="s-01">
+  <div class="block-head"><span class="idx">01</span><h2>五个包，一条从页面到模型的通路</h2></div>
+  <div class="prose">
+  <p>依赖方向是单向的，没有环：<code>core</code> 和 <code>agent</code> 都只往上依赖，<code>fetch</code> 在最底下。所以单独装 <code>@auipage/model</code> 用、不装 <code>core</code>，是完全成立的。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>包</th><th>依赖</th><th>一句话职责</th></tr></thead>
+  <tbody>
+  <tr><td><code>fetch</code><br><em>273 行</em></td><td>宿主环境</td><td>跨端请求、SSE 识别、超时与中断</td></tr>
+  <tr><td><code>model</code><br><em>277 行</em></td><td><code>fetch</code></td><td>拼 <code>chat/completions</code>、解析流、归并 <code>tool_calls</code></td></tr>
+  <tr><td><code>agent</code><br><em>200 行</em></td><td><code>model</code></td><td>对话循环、工具编排、SSE 下发</td></tr>
+  <tr><td><code>core</code><br><em>1107 行</em></td><td><code>types</code></td><td>消息与线程状态机、端口契约、工具定义</td></tr>
+  <tr><td><code>types</code><br><em>只有 .d.ts</em></td><td>无</td><td>只放 <code>.d.ts</code>，运行时零依赖</td></tr>
+  </tbody></table></div>
+  <p>两条链路在 <code>model</code> 这里才真正汇合：页面侧从来不碰 <code>model</code>，服务端侧也不碰 <code>core</code>。
+  它们之间唯一共享的东西是 <code>@auipage/types</code> 里的消息与事件结构，所以类型包出现在每个包的依赖表里，自己却什么实现都不带。</p>
+  <p>这里有一个刻意的<b>控制反转</b>：<code>core</code> 不直接发请求，它只认端口。<code>sendMessage</code> 把消息交给
+  <code>ChatTransportAdapter</code>，真实的网络、SSE 解析、鉴权全在适配器里。所以把文档站换成自家后端，或者拿去接一个第三方的
+  Agent 服务，都不用改 <code>core</code> 一行代码。</p>
+
+  <p><code>core</code> 的导出面很窄，非好奇不用全看一眼；但它是这一组的入口，先认清有哪几个东西：</p>
+  <div class="code"><div class="code-head"><span class="file">packages/core/src/index.js</span><span class="ln">:2</span><button data-copy="">复制</button></div><div class="code-body"><pre>export { default as AuiPage } from "./AuiPage.js";
+
+export { default as ChatTransportAdapter } from "./ChatTransportAdapter.js";
+export { default as MessageHistoryAdapter } from "./MessageHistoryAdapter.js";
+export { default as ThreadListAdapter } from "./ThreadListAdapter.js";
+
+export { default as ThreadListRuntime } from "./ThreadListRuntime.js";
+export { default as ChatContentRuntime } from "./ChatContentRuntime.js";
+
+export { default as defineTool } from "./defineTool.js";
+export { default as generator } from "./generator.js";
+export { default as MessageStream } from "./MessageStream.js";
+
+export { default as toModelMessages } from "./tools/toModelMessages.js";</pre></div></div>
+  </div>
+</section>
+
+<section class="block" id="s-02">
+  <div class="block-head"><span class="idx">02</span><h2>两条真实链路</h2></div>
+  <div class="prose">
+  <p>后面十页反复出现的就是这两条路。先记住它们的“交接点”，读细节时就知道自己在哪一段。</p>
+  <p><b>页面侧</b>：<code>AuiPage.sendMessage()</code> 建一个 task → 把消息交给 <code>ChatTransportAdapter</code> →
+  适配器把服务端 SSE 的每个事件（<code>text</code> / <code>thinking</code> / <code>tool-call</code>）翻译成片段 →
+  <code>_handleChunk</code> 落成消息片段 → 前端工具在这里执行，结果经 <code>response("tool-result")</code> 回传 →
+  <code>task:end</code> 收尾、可选入库。<b>交接点是“片段”</b>：适配器只要产得出片段，页面就能显示。</p>
+  <p><b>服务端</b>：<code>CreateTool</code> 收到请求 → <code>Agent.generate()</code> 注入 system 提示 →
+  <code>runConversation</code> 调 <code>Model.completions()</code> → 拿到 <code>content</code> 或 <code>tool_calls</code>
+  → <code>callFuns</code> 执行工具 → 结果作为 <code>tool</code> 消息再进一轮 → 直到没有工具调用。
+  <b>交接点是“ChatMessage 数组”</b>：模型只认这一种入参。</p>
+  <div class="code">
+  <div class="code-head"><span class="file">page / server / model</span><button data-copy="">复制</button></div>
+  <div class="code-body"><pre>page                      server
+|                         |
+| sendMessage             |
+|------------------------>|  Agent.generate → model
+|                         | model 流式返回
+<-------------------------| text / thinking
+<-------------------------| tool-call
+| frontend tool runs      |
+|------------------------>|  append tool message → model
+|                         |
+| task:end + save         |</pre></div>
+  </div>
+  <p>左列是页面（<code>AuiPage</code>），中列是服务端（<code>agent</code> 的 <code>CreateTool</code>），右列是模型。
+  注意 <code>tool-call</code> 到 <code>tool-result</code> 之间那一行：前端工具是在<b>页面</b>里跑的，模型这一轮其实还挂着没结束。</p>
+  </div>
+</section>
+
+<section class="block" id="s-03">
+  <div class="block-head"><span class="idx">03</span><h2>术语表</h2></div>
+  <div class="prose">
+  <p>这套源码的术语有点重名，先钉死含义，后面不再解释。</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>词</th><th>准确含义（顺带标出它属于哪一层）</th></tr></thead>
+  <tbody>
+  <tr><td><b>thread</b><br><em>core</em></td><td>会话线程，存标题与归档状态，由 <code>ThreadListAdapter</code> 持久化。不是“聊天记录”，记录在 message 里。</td></tr>
+  <tr><td><b>message</b><br><em>core</em></td><td>一条完整消息，含 <code>role</code> 与 <code>parts</code>；页面按 part 展示。它也不是模型入参，模型入参要经 <code>toModelMessages</code>。</td></tr>
+  <tr><td><b>part</b><br><em>core</em></td><td>消息片段，<code>text</code> / <code>thinking</code> / <code>loading</code> / <code>tool-call</code> 四类，<b>都是增量</b>，要自己拼。不是整段文本。</td></tr>
+  <tr><td><b>task</b><br><em>core</em></td><td>一轮发送的执行上下文：<code>id</code>、<code>endSignal</code>、<code>items</code>、<code>status</code>、<code>signal</code>。不是线程。</td></tr>
+  <tr><td><b>adapter</b><br><em>core 定义 / 业务实现</em></td><td>端口：<code>ChatTransport</code>、<code>MessageHistory</code>、<code>ThreadList</code>，方法可缺省。不是数据库层，只是方法契约。</td></tr>
+  <tr><td><b>runtime</b><br><em>core 定义 / 业务实现</em></td><td>页面上要渲染的 UI 能力：<code>ThreadListRuntime</code>、<code>ChatContentRuntime</code>。不是状态容器。</td></tr>
+  <tr><td><b>chunk</b><br><em>适配器 → core</em></td><td>适配器吐出的一批片段，即 <code>_handleChunk</code> 的入参。不是原始 SSE 行。</td></tr>
+  <tr><td><b>tool-result</b><br><em>core → 适配器</em></td><td>前端工具跑完后回传服务端的载荷 <code>{ id, status, result }</code>。不是工具函数的返回值本身。</td></tr>
+  <tr><td><b>signal</b><br><em>core 透传到 model</em></td><td><code>AbortSignal</code>，<code>stop()</code> 与 <code>cancel()</code> 都会 abort 它。它只管网络请求，不是 task 的“取消开关”。</td></tr>
+  </tbody></table></div>
+  </div>
+</section>
+
+<section class="block" id="s-04">
+  <div class="block-head"><span class="idx">04</span><h2>三种阅读路线</h2></div>
+  <div class="prose">
+  <p>十页都读是 4 万多字，多数人不需要。按你的目的挑一条：</p>
+  <div class="table-wrap"><table class="spec">
+  <thead><tr><th>你的目的</th><th>读这几页</th><th>大概能拿到</th></tr></thead>
+  <tbody>
+  <tr><td>接自家后端</td><td>16 fetch → 19 core 总览 → 20 发消息</td><td>知道适配器要产什么片段、什么时候能回传 tool-result</td></tr>
+  <tr><td>换一套 UI 渲染</td><td>19 core 总览 → 20 发消息 → 23 消息转换</td><td>知道 <code>items</code> 里存了什么、什么时机重绘</td></tr>
+  <tr><td>改框架本身 / 接手维护</td><td>15 → 24 顺着读</td><td>每个变量的生命周期、每条失败路径的收尾</td></tr>
+  </tbody></table></div>
+  <p>只想“用起来”的话，这一组可以整组跳过——去读 <a href="../guide/zero-dep.html">教程</a> 和
+  <a href="../packages/core-auipage.html">API 参考</a> 就够。</p>
+  </div>
+</section>
+
+<section class="block" id="s-05">
+  <div class="block-head"><span class="idx">05</span><h2>版本锚点与编写约定</h2></div>
+  <div class="prose">
+  <p>这十页对应 <b>v0.2.0</b>。源码变了文档没跟上，就是我们这边的问题，欢迎开 issue。</p>
+  <p>为了让“事无巨细”不变成“代码朗读”，这一组有三条硬规矩：</p>
+  <div class="prose-list">
+  <ul>
+  <li><b>代码块不是手抄的。</b>每段代码由构建期从 <code>packages/</code> 里按 <code>// #doc:标记</code> 抽取，块头的 <code>文件:起始行</code> 由构建自动算出。源码一改，文档下次构建就跟着变，不存在“文档写的是老代码”。</li>
+  <li><b>正文只按函数名引用。</b>文里不会出现“第 137 行”这种写法，只写 <code>sendMessage</code> 的前半段、<code>_handleToolCall</code> 的后半段。行号会漂，函数名不会。</li>
+  <li><b>每段必须回答五问。</b>这段解决什么问题、为什么不用更简单的写法、输入输出与状态副作用是什么、出错时什么样、哪个测试锁住它。答不满五问的段落，我们就删掉。</li>
+  </ul>
+  </div>
+  <p>另外两个看文档的小提示：每页右上（宽屏是右栏）都有页内目录，可以按章节跳；页末的「继续」是推荐顺序，不是唯一顺序。</p>
+  </div>
+</section>
+
+<nav class="pager">
+<a href="../packages/core-utils.html"><span class="dir">← 上一页</span><span class="name">defineTool 与 generator</span></a>
+<a class="next" href="../index.html"><span class="dir">下一页 →</span><span class="name">回到总览（第 16 篇：fetch 传输层 待补）</span></a>
+  </nav>
+</main>
+<nav class="toc-rail" aria-label="本页目录">
+<div class="toc-rail-head"><span>本页目录</span><em>5 节</em></div>
+<ol><li><a class="toc-item" href="#s-01" data-toc="s-01"><i>01</i><span>五个包，一条从页面到模型的通路</span></a></li><li><a class="toc-item" href="#s-02" data-toc="s-02"><i>02</i><span>两条真实链路</span></a></li><li><a class="toc-item" href="#s-03" data-toc="s-03"><i>03</i><span>术语表</span></a></li><li><a class="toc-item" href="#s-04" data-toc="s-04"><i>04</i><span>三种阅读路线</span></a></li><li><a class="toc-item" href="#s-05" data-toc="s-05"><i>05</i><span>版本锚点与编写约定</span></a></li></ol>
+<a class="toc-top" href="#main">↑ 回到顶部</a>
+</nav>
+
+</div>
+</div>
+<footer class="foot" id="site-foot">
+    <div class="foot-inner">
+      <div class="foot-brand">
+        <span class="foot-kicker">agent web app framework</span>
+        <div class="foot-word">auipage<span>.</span></div>
+        <p>把智能体做进网页，四个包按需拆装。</p>
+      </div>
+      <nav class="foot-links" aria-label="页脚导航">
+        <div class="col">
+          <h4>开始与教程</h4>
+          <a href="../index.html">总览</a>
+          <a href="../guide/start.html">跑起示例</a>
+          <a href="../guide/zero-dep.html">一个包都不用</a>
+          <a href="../guide/core.html">装框架</a>
+        </div>
+        <div class="col">
+          <h4>参考</h4>
+          <a href="../packages/fetch.html">@auipage/fetch</a>
+          <a href="../packages/model.html">@auipage/model</a>
+          <a href="../packages/agent.html">@auipage/agent</a>
+          <a href="../packages/core.html">@auipage/core</a>
+          <a href="../read/index.html">源码解读（进阶）</a>
+        </div>
+        <div class="col">
+          <h4>生态</h4>
+          <a href="https://github.com/handless-ui/auipage" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://gitee.com/handless-ui/auipage" target="_blank" rel="noopener">Gitee</a>
+          <a href="https://github.com/handless-ui/auipage-react" target="_blank" rel="noopener">React 组件库</a>
+          <a href="https://github.com/handless-ui/auipage-vue" target="_blank" rel="noopener">Vue 组件库</a>
+        </div>
+      </nav>
+      <div class="foot-meta">
+        <span>MIT License</span>
+        <span>© <a href="https://zxl20070701.github.io/notebook/home.html" target="_blank" rel="noopener">zxl20070701</a></span>
+        <span class="foot-ver">v0.2.0</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="../assets/vendor/shader.min.js?v=bf049af8"></script>
+<script src="../assets/js/docs.js?v=bf049af8"></script>
+
+</body>
+</html>
