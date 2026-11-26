@@ -1,6 +1,6 @@
 import { toModelMessages, generator } from "@auipage/core";
 import toHistoryMessages from "@auipage/core/src/tools/toHistoryMessages.js";
-import { createPage, withTimeout } from "./helper.js";
+import { createPage, withTimeout, flush } from "./helper.js";
 
 export default function ({ describe, it, expect }) {
 
@@ -353,6 +353,298 @@ export default function ({ describe, it, expect }) {
                 return g.next();
             }).then((r) => {
                 expect(r.done).toBe(true);
+            });
+        });
+    });
+
+    // ----------------------- 主动结束与取消 -----------------------
+    describe("AuiPage 主动结束与取消", () => {
+
+        it("空闲时 stop() / cancel() 都返回 false", () => {
+            const { page } = createPage();
+            expect(page.stop()).toBe(false);
+            expect(page.cancel()).toBe(false);
+        });
+
+        it("stop() 当成功收尾：resolve、标记 stopped、已产出内容保留", () => {
+            let context = null;
+
+            const { page, log } = createPage({
+                run: (params) => {
+                    context = params.context;
+                    return (async function* () {
+                        yield { type: "thinking", text: "想" };
+                        // 等页面停止后才继续，用于验证后续分片被丢弃
+                        await new Promise((resolve) => {
+                            params.context.signal.addEventListener("abort", resolve);
+                        });
+                        yield { type: "text", text: "不该出现" };
+                    })();
+                }
+            });
+
+            const events = [];
+            page.on("task:end", (payload) => events.push(payload));
+
+            const promise = page.sendMessage({ role: "user", content: "你好" });
+
+            return flush().then(() => {
+                expect(page.isExecuting).toBe(true);
+                expect(page.stop()).toBe(true);
+                expect(context.signal.aborted).toBe(true);
+
+                return withTimeout(promise).then(() => {
+                    // stop 属于成功收尾，不该 reject
+                });
+            }).then(() => {
+                const payload = events[events.length - 1];
+
+                expect(payload.status).toBe("stopped");
+                expect(payload.by).toBe("user");
+                expect(payload.displayed).toBe(undefined);
+
+                // 停止后的分片不再渲染
+                expect(log.chat.every(([, part]) => part.text !== "不该出现")).toBe(true);
+
+                // 这轮照样入库，带 stopped 标记
+                expect(log.appends.length).toBe(1);
+                expect(log.appends[0][1].status).toBe("stopped");
+
+                expect(page.isExecuting).toBe(false);
+                expect(page.stop()).toBe(false);
+            });
+        });
+
+        it("cancel() 取消本轮：以「已取消」reject，进度上报，入库标记 cancelled", () => {
+            let context = null;
+
+            const { page, log } = createPage({
+                run: (params) => {
+                    context = params.context;
+                    return (async function* () {
+                        yield { type: "thinking", text: "想" };
+                        await new Promise((resolve) => {
+                            params.context.signal.addEventListener("abort", resolve);
+                        });
+                        yield { type: "text", text: "不该出现" };
+                    })();
+                }
+            });
+
+            const events = [];
+            page.on("task:end", (payload) => events.push(payload));
+
+            const promise = page.sendMessage({ role: "user", content: "你好" });
+
+            return flush().then(() => {
+                expect(page.cancel()).toBe(true);
+                expect(context.signal.aborted).toBe(true);
+
+                return withTimeout(promise).then(
+                    () => { throw new Error("取消后应 reject"); },
+                    (error) => { expect(error).toBe("已取消"); }
+                );
+            }).then(() => {
+                const payload = events[events.length - 1];
+
+                expect(payload.status).toBe("cancelled");
+                expect(payload.by).toBe("user");
+                expect(payload.displayed.length).toBe(2);
+                expect(payload.displayed[0].index).toBe(0);
+                expect(payload.displayed[1].role).toBe("assistant");
+
+                expect(log.chat.every(([, part]) => part.text !== "不该出现")).toBe(true);
+
+                expect(log.appends.length).toBe(1);
+                expect(log.appends[0][1].status).toBe("cancelled");
+
+                expect(page.isExecuting).toBe(false);
+                expect(page.cancel()).toBe(false);
+            });
+        });
+
+        it("适配器忽略 signal 时，兜底超时强制收尾", () => {
+            const { page } = createPage({
+                stopTimeout: 60,
+                run: () => (async function* () {
+                    await new Promise(() => { });
+                })()
+            });
+
+            const promise = page.sendMessage({ role: "user", content: "你好" });
+
+            return flush().then(() => {
+                expect(page.cancel()).toBe(true);
+                return withTimeout(promise, 1000, "取消兜底");
+            }).then(
+                () => { throw new Error("取消后应 reject"); },
+                (error) => {
+                    expect(error).toBe("已取消");
+                    expect(page.isExecuting).toBe(false);
+                }
+            );
+        });
+
+        it("取消后可以立即发送下一条", () => {
+            let calls = 0;
+
+            const { page } = createPage({
+                stopTimeout: 80,
+                run: () => {
+                    calls += 1;
+
+                    // 第一条挂住，模拟一个不理 signal 的适配器
+                    if (calls === 1) {
+                        return (async function* () {
+                            await new Promise(() => { });
+                        })();
+                    }
+
+                    return generator((next, done) => {
+                        next({ type: "text", text: "第二条" });
+                        done();
+                    });
+                }
+            });
+
+            const first = page.sendMessage({ role: "user", content: "一" });
+
+            return flush().then(() => {
+                page.cancel();
+                return withTimeout(first, 1000, "第一条").then(
+                    null,
+                    (error) => { expect(error).toBe("已取消"); }
+                );
+            }).then(() => withTimeout(page.sendMessage({ role: "user", content: "二" }), 1000, "第二条"))
+                .then(() => {
+                    expect(page.isExecuting).toBe(false);
+                });
+        });
+    });
+
+    // ----------------------- 工具里的 stop / cancel -----------------------
+    describe("AuiPage 工具控制句柄", () => {
+
+        const tool = (execute, render) => [{
+            description: {
+                type: "function",
+                function: { name: "finish", description: "结束这一轮", parameters: {} }
+            },
+            execute,
+            render
+        }];
+
+        const toolPart = (extra = {}) => Object.assign({
+            type: "tool-call",
+            id: "c1",
+            name: "finish",
+            caller: "frontend",
+            args: {},
+            status: "pending"
+        }, extra);
+
+        it("execute 里 stop()：结果照常入库，整轮按 stopped 结束", () => {
+            const { page, log } = createPage({
+                tools: tool((args, control) => {
+                    expect(typeof control.stop).toBe("function");
+                    expect(control.toolCallId).toBe("c1");
+                    control.stop();
+                    return "已完成";
+                }),
+                run: () => (async function* () {
+                    yield toolPart();
+                })()
+            });
+
+            const events = [];
+            page.on("task:end", (payload) => events.push(payload));
+
+            return withTimeout(page.sendMessage({ role: "user", content: "开始" })).then(() => {
+                const payload = events[events.length - 1];
+
+                expect(payload.status).toBe("stopped");
+                expect(payload.by).toBe("tool");
+
+                // 这次工具调用要落进消息里，不能因为提前结束被丢掉
+                const group = log.appends[0][1];
+                expect(group.status).toBe("stopped");
+
+                const parts = group.messages.reduce((all, msg) => all.concat(msg.content), []);
+                const call = parts.filter((part) => part.type === "tool-call")[0];
+                expect(call.result).toBe("已完成");
+            });
+        });
+
+        it("execute 里 cancel()：结果丢弃，整轮按 cancelled 结束", () => {
+            const { page, log } = createPage({
+                tools: tool((args, control) => {
+                    control.cancel();
+                    return "不该落库";
+                }),
+                run: () => (async function* () {
+                    yield toolPart();
+                })()
+            });
+
+            const events = [];
+            page.on("task:end", (payload) => events.push(payload));
+
+            return withTimeout(page.sendMessage({ role: "user", content: "开始" })).then(
+                () => { throw new Error("取消后应 reject"); },
+                (error) => {
+                    expect(error).toBe("已取消");
+
+                    const payload = events[events.length - 1];
+                    expect(payload.status).toBe("cancelled");
+                    expect(payload.by).toBe("tool");
+
+                    // 取消的那次调用不写进消息
+                    const group = log.appends[0][1];
+                    expect(group.status).toBe("cancelled");
+                    const parts = group.messages.reduce((all, msg) => all.concat(msg.content), []);
+                    expect(parts.filter((part) => part.type === "tool-call").length).toBe(0);
+                }
+            );
+        });
+
+        it("render 里 stop()：结束悬挂的界面等待，按 execute 结果收尾", () => {
+            let control = null;
+
+            const { page, log } = createPage({
+                tools: tool(() => "已查", (data) => {
+                    // 模拟一个等用户点击的卡片：永不 resolve，只能靠 stop 打断
+                    control = data;
+                    return new Promise(() => { });
+                }),
+                onAppend: (role, part) => {
+                    // 把 append 的返回值当作 updater：界面在这里调用 render
+                    return (data) => data.render ? data.render(data) : undefined;
+                },
+                run: () => (async function* () {
+                    yield toolPart();
+                })()
+            });
+
+            const events = [];
+            page.on("task:end", (payload) => events.push(payload));
+
+            const promise = page.sendMessage({ role: "user", content: "开始" });
+
+            return flush().then(() => {
+                expect(typeof control.stop).toBe("function");
+                expect(control.stop()).toBe(true);
+
+                return withTimeout(promise);
+            }).then(() => {
+                const payload = events[events.length - 1];
+                expect(payload.status).toBe("stopped");
+                expect(payload.by).toBe("tool");
+
+                const group = log.appends[0][1];
+                expect(group.status).toBe("stopped");
+                const parts = group.messages.reduce((all, msg) => all.concat(msg.content), []);
+                const call = parts.filter((part) => part.type === "tool-call")[0];
+                expect(call.result).toBe("已查");
             });
         });
     });

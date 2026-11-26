@@ -12,5 +12,11 @@ fetchUnit({ describe, it, expect });
 import agentUnit from "./agent.unit.js";
 agentUnit({ describe, it, expect });
 
+import agentFlowUnit from "./agent-flow.unit.js";
+agentFlowUnit({ describe, it, expect });
+
 import coreUnit from "./core.unit.js";
 coreUnit({ describe, it, expect });
+
+import coreFlowUnit from "./core-flow.unit.js";
+coreFlowUnit({ describe, it, expect });

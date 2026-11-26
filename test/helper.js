@@ -98,7 +98,8 @@ export function createPage(config = {}) {
     const page = new AuiPage({
         adapter,
         runtime,
-        tools: config.tools || []
+        tools: config.tools || [],
+        stopTimeout: config.stopTimeout
     });
 
     return { page, log, adapter, runtime };
